@@ -2807,6 +2807,12 @@ async function loadFromGrave() {
                     const gOverlay = document.getElementById('globalLoadingOverlay');
                     if (gOverlay) gOverlay.classList.remove('show');
                     
+                    // 📢 云端加载完成后，如果用户密码验证通过了，弹出公告
+                    if (sessionStorage.getItem('TX_SHOW_NOTICE') === '1') {
+                        sessionStorage.removeItem('TX_SHOW_NOTICE');
+                        openNoticePanel();
+                    }
+                    
                     hideProgress();
                     showLoadNotification(`✅ 已加载 ${cardCount} 个资源`, true);
                     return true; // 成功
@@ -2853,6 +2859,12 @@ async function loadFromGrave() {
             _cloudLoadDone = true; // 🌀 标记完成（即使失败也不再阻塞）
             const gOverlay = document.getElementById('globalLoadingOverlay');
             if (gOverlay) gOverlay.classList.remove('show');
+            
+            // 📢 云端失败后也要弹出公告（显示本地缓存的公告内容）
+            if (sessionStorage.getItem('TX_SHOW_NOTICE') === '1') {
+                sessionStorage.removeItem('TX_SHOW_NOTICE');
+                openNoticePanel();
+            }
             
             const cached = localStorage.getItem("TX_CACHE");
             if (cached) {
@@ -3314,8 +3326,8 @@ function verifyAccess() {
         sessionStorage.setItem('TX_GATE_PASSED', '1');
         document.getElementById("gateKeeper").style.display = "none";
         document.getElementById("contentBlocker").style.display = "none";
-        // 📢 门禁通过后立即弹出公告，确保不被忽略
-        openNoticePanel();
+        // 📢 标记：本次会话需要弹出公告（等云端加载完成后再弹，确保有内容）
+        sessionStorage.setItem('TX_SHOW_NOTICE', '1');
         // 🌀 如果云端还没加载完，显示全局加载遮罩
         if (!_cloudLoadDone) {
             const overlay = document.getElementById('globalLoadingOverlay');
