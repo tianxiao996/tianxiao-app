@@ -854,8 +854,18 @@
         /* card-thumb-fav: 紧凑模式缩略图上的收藏浮层，始终隐藏（不在非详情页暴露） */
         .card-thumb-fav { display: none !important; }
 
-        /* ── 图片加载动画 + 404 回退 ── */
-        .img-loader {
+        /* ── 图片加载动画 + 404 回退（重写）── */
+        .img-wrap {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .img-wrap > img {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .img-wrap > .img-skeleton {
             position: absolute;
             inset: 0;
             display: flex;
@@ -864,29 +874,13 @@
             justify-content: center;
             gap: 10px;
             background: linear-gradient(135deg, #ffe0eb, #fff0f5);
-            z-index: 1;
+            z-index: 2;
             pointer-events: none;
         }
-        .img-loader-spinner {
-            width: 32px;
-            height: 32px;
-            border: 3px solid rgba(255,102,153,0.2);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: imgSpin 0.8s linear infinite;
-        }
-        @keyframes imgSpin {
-            to { transform: rotate(360deg); }
-        }
-        .img-loader-text {
-            font-size: 12px;
-            color: var(--primary);
-            font-weight: 600;
-        }
-        .img-404 {
+        .img-wrap > .img-error {
             position: absolute;
             inset: 0;
-            display: flex;
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -897,22 +891,21 @@
             font-weight: 700;
             z-index: 2;
         }
-        .img-404 small {
+        .img-error small {
             font-size: 11px;
             font-weight: 400;
             color: #999;
         }
-        /* 图片加载完成后隐藏loader */
-        img[data-img-loaded="true"] + .img-loader,
-        img[data-img-loaded="true"] ~ .img-loader,
-        img[data-img-404="true"] + .img-loader,
-        img[data-img-404="true"] ~ .img-loader {
-            display: none !important;
+        .img-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(255,102,153,0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: imgSpin 0.8s linear infinite;
         }
-        /* 图片加载完成后隐藏404 */
-        img[data-img-loaded="true"] + .img-404,
-        img[data-img-loaded="true"] ~ .img-404 {
-            display: none !important;
+        @keyframes imgSpin {
+            to { transform: rotate(360deg); }
         }
 
         /* 下载页悬浮球 */
@@ -2443,7 +2436,7 @@ function cancelTurnstile() {
 })();
 // ================================
 
-const ACCESS_PASS = "tianxiao"; 
+const ACCESS_PASS = "tx"; 
 // 🔒 管理员密码已移至 Cloudflare Worker（环境变量加密存储）
 const PAGE_SIZE = 30;
 const FAV_KEY = "TX_FAVORITES";
@@ -3333,34 +3326,46 @@ function verifyAccess() {
 }
 
 // ── 图片加载回退处理 ──
-function handleImgLoad(img) {
-    const wrap = img.closest('.card-thumb, .slider-box, .banner-slide, .detail-slide') || img.parentElement;
-    if (!wrap) { img.style.opacity = '1'; return; }
-    const loader = wrap.querySelector('.img-loader');
-    const err404 = wrap.querySelector('.img-404');
-    if (loader) loader.style.display = 'none';
-    if (err404) err404.style.display = 'none';
-    img.style.opacity = '1';
-}
-function handleImgError(img) {
-    const wrap = img.closest('.card-thumb, .slider-box, .banner-slide, .detail-slide') || img.parentElement;
-    if (img.dataset.isFallback) {
-        // 连404图都加载失败
-        img.style.display = 'none';
+// ── 绑定图片加载/失败事件（不用内联 onload，更可靠）──
+function bindImgEvents(img) {
+    img.addEventListener('load', function() {
+        const wrap = img.closest('.img-wrap') || img.parentElement;
         if (wrap) {
-            const loader = wrap.querySelector('.img-loader');
-            if (loader) loader.style.display = 'none';
-            // .img-404 保持显示
+            const skel = wrap.querySelector('.img-skeleton');
+            const err = wrap.querySelector('.img-error');
+            if (skel) skel.style.display = 'none';
+            if (err) err.style.display = 'none';
         }
-    } else {
-        // 首次失败，尝试加载占位图
-        img.dataset.isFallback = 'true';
-        img.src = 'images/image_404.jpg';
-    }
+        img.style.opacity = '1';
+    });
+    img.addEventListener('error', function() {
+        if (img.dataset.isFallback) {
+            // 连404图都加载失败
+            const wrap = img.closest('.img-wrap') || img.parentElement;
+            if (wrap) {
+                const skel = wrap.querySelector('.img-skeleton');
+                const err = wrap.querySelector('.img-error');
+                if (skel) skel.style.display = 'none';
+                if (err) err.style.display = 'flex';
+            }
+        } else {
+            img.dataset.isFallback = 'true';
+            img.src = 'images/image_404.jpg';
+        }
+    });
 }
-// 生成图片加载骨架HTML（loader + 404）
-function imgSkeletonHtml() {
-    return `<div class="img-loader"><div class="img-loader-spinner"></div><div class="img-loader-text">正在用力加载</div></div><div class="img-404">404<small>图片走丢了</small></div>`;
+// 生成图片骨架 DOM（返回 DocumentFragment）
+function imgSkeletonFrag() {
+    const frag = document.createDocumentFragment();
+    const skel = document.createElement('div');
+    skel.className = 'img-skeleton';
+    skel.innerHTML = '<div class="img-spinner"></div><div class="img-loader-text">正在用力加载</div>';
+    const err = document.createElement('div');
+    err.className = 'img-error';
+    err.innerHTML = '404<small>图片走丢了</small>';
+    frag.appendChild(skel);
+    frag.appendChild(err);
+    return frag;
 }
 
 function filterTab(cat, el) {
@@ -4697,11 +4702,23 @@ function generateCompactCardHTML(card) {
         const thumb = document.createElement('div');
         thumb.className = 'card-thumb';
         if (thumbSrc) {
-            thumb.innerHTML = `
-                <img src="${thumbSrc}" loading="lazy" alt="" style="opacity:0;transition:opacity 0.3s;position:relative;z-index:2;" onload="handleImgLoad(this)" onerror="handleImgError(this)">
-                ${imgSkeletonHtml()}
-                <div class="thumb-count" style="display:none;">${imgCount}张</div>
-            `;
+            const iwrap = document.createElement('div');
+            iwrap.className = 'img-wrap';
+            const img = document.createElement('img');
+            img.src = thumbSrc;
+            img.loading = 'lazy';
+            img.alt = '';
+            img.style.opacity = '0';
+            img.style.transition = 'opacity 0.3s';
+            bindImgEvents(img);
+            iwrap.appendChild(img);
+            iwrap.appendChild(imgSkeletonFrag());
+            thumb.appendChild(iwrap);
+            const tcount = document.createElement('div');
+            tcount.className = 'thumb-count';
+            tcount.style.display = 'none';
+            tcount.textContent = imgCount + '张';
+            thumb.appendChild(tcount);
         } else {
             thumb.innerHTML = `
                 <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:28px;">🖼️</div>
@@ -7047,18 +7064,20 @@ function openCardDetail(card) {
             const img = document.createElement('img');
             img.src = src;
             img.loading = 'lazy';
-            img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;position:relative;z-index:2;';
-            img.onload = function() { handleImgLoad(this); };
-            img.onerror = function() { handleImgError(this); };
+            img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;position:relative;z-index:2;opacity:0;transition:opacity 0.3s;';
+            bindImgEvents(img);
             // 点击放大预览
             slide.addEventListener('click', () => {
                 const modal = document.getElementById('imagePreviewModal');
                 const previewImg = document.getElementById('previewImage');
                 if (modal && previewImg) { previewImg.src = src; modal.style.display = 'flex'; }
             });
-            // 添加loader和404骨架
-            slide.innerHTML = imgSkeletonHtml();
-            slide.insertBefore(img, slide.firstChild);
+            // 用 img-wrap 包裹图片 + 骨架
+            const imgWrap = document.createElement('div');
+            imgWrap.className = 'img-wrap';
+            imgWrap.appendChild(img);
+            imgWrap.appendChild(imgSkeletonFrag());
+            slide.appendChild(imgWrap);
             track.appendChild(slide);
         });
         aspect.appendChild(track);
