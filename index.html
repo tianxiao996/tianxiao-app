@@ -1455,6 +1455,7 @@
             padding-left: 17px;
         }
         .sidebar-item-icon { font-size: 18px; flex-shrink: 0; width: 26px; text-align: center; }
+        .sidebar-divider { height: 1px; background: var(--border); margin: 8px 16px; opacity: 0.5; }
         .sidebar-burger {
             font-size: 20px; cursor: pointer; padding: 4px 6px;
             border-radius: 6px; touch-action: manipulation; line-height: 1;
@@ -2083,6 +2084,7 @@ function __safeFixDeleteImage(card){
         <button onclick="toggleCatPanel()" style="background:#e91e63!important;">🏷️ 分类</button>
         <button onclick="toggleBannerEdit()" style="background:#ff9800!important;">🖼️ 轮播图</button>
         <button onclick="openGalleryPanel()" style="background:#673ab7!important;">📖 傻子必看</button>
+        <button onclick="openInvitePanel()" style="background:#00bcd4!important;">🎫 邀请码</button>
         <button onclick="toggleShortlinkPanel()" style="background:#9c27b0!important;">🔗 短链</button>
         <button onclick="exportHTML()" style="background:#17a2b8!important;">💾 导出备份</button>
         <button onclick="migrateAllLinksToKV()" style="background:#c62828!important;">🔒 迁移链接</button>
@@ -2249,6 +2251,66 @@ function __safeFixDeleteImage(card){
         <div class="modal-btns">
             <button class="modal-btn btn-cancel" onclick="closeLogin()">取消</button>
             <button class="modal-btn btn-confirm" onclick="checkPass()">确定</button>
+        </div>
+    </div>
+</div>
+
+<!-- 🔐 用户注册/登录弹窗 -->
+<div id="userAuthModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box" style="max-width: 380px;">
+        <div class="modal-title" id="authModalTitle">📝 注册账号</div>
+        <div id="authFormRegister">
+            <input type="text" id="regUsername" class="modal-input" placeholder="用户名" maxlength="20">
+            <input type="password" id="regPassword" class="modal-input" placeholder="密码（8位以上+字母）">
+            <input type="password" id="regConfirm" class="modal-input" placeholder="再次输入密码">
+            <input type="text" id="regInvite" class="modal-input" placeholder="邀请码">
+            <div id="regError" style="color:#e91e63;font-size:12px;margin-bottom:8px;display:none;"></div>
+            <button class="modal-btn btn-confirm" style="width:100%;margin-bottom:8px;" onclick="submitRegister()">注册</button>
+            <div style="text-align:center;font-size:13px;color:#888;">
+                已有账号？<a href="javascript:void(0)" onclick="switchAuthMode('login')" style="color:var(--primary);">去登录</a>
+            </div>
+        </div>
+        <div id="authFormLogin" style="display:none;">
+            <input type="text" id="loginUsername" class="modal-input" placeholder="用户名">
+            <input type="password" id="loginPassword" class="modal-input" placeholder="密码">
+            <div id="loginError" style="color:#e91e63;font-size:12px;margin-bottom:8px;display:none;"></div>
+            <button class="modal-btn btn-confirm" style="width:100%;margin-bottom:8px;" onclick="submitLogin()">登录</button>
+            <div style="text-align:center;font-size:13px;color:#888;">
+                没有账号？<a href="javascript:void(0)" onclick="switchAuthMode('register')" style="color:var(--primary);">去注册</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 👤 个人中心弹窗 -->
+<div id="userProfileModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box" style="max-width: 360px;text-align:center;">
+        <div class="modal-title">👤 个人中心</div>
+        <div style="font-size:14px;color:var(--primary);font-weight:700;margin-bottom:4px;" id="profileUsername"></div>
+        <div style="font-size:12px;color:#888;margin-bottom:12px;">你的账号ID</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;">
+            <div id="profileDisplayId" style="font-size:20px;font-weight:800;color:var(--primary);letter-spacing:2px;font-family:monospace;"></div>
+            <button onclick="copyDisplayId()" style="padding:4px 10px;border-radius:6px;border:none;background:var(--primary);color:#fff;font-size:12px;cursor:pointer;">📋 复制</button>
+        </div>
+        <div style="font-size:11px;color:#e91e63;margin-bottom:16px;">⚠️ 丢失账号ID无法找回，请妥善保管</div>
+        <div style="font-size:11px;color:#aaa;margin-bottom:16px;">3个月内未登录将自动注销账号</div>
+        <button class="modal-btn btn-danger" style="width:100%;" onclick="logoutUser()">退出登录</button>
+    </div>
+</div>
+
+<!-- 🎫 邀请码管理面板 -->
+<div id="invitePanelPage" class="fullpage-panel" style="display:none;">
+    <div class="fullpage-header">
+        <div class="fullpage-back-btn" onclick="closeInvitePanel()">←</div>
+        <div class="fullpage-header-title">🎫 邀请码管理</div>
+        <div style="width:40px;"></div>
+    </div>
+    <div class="fullpage-body">
+        <div style="max-width:400px;margin:0 auto;padding:20px;text-align:center;">
+            <div style="font-size:14px;color:#888;margin-bottom:12px;">当前邀请码</div>
+            <div id="currentInviteCode" style="font-size:28px;font-weight:800;color:var(--primary);letter-spacing:4px;font-family:monospace;margin-bottom:20px;">---</div>
+            <input type="text" id="newInviteInput" class="modal-input" placeholder="输入新邀请码" style="margin-bottom:12px;text-align:center;">
+            <button class="modal-btn btn-confirm" style="width:100%;" onclick="saveInviteCode()">💾 保存新邀请码</button>
         </div>
     </div>
 </div>
@@ -4131,6 +4193,330 @@ async function checkPass() {
         alert("验证失败，请检查网络连接");
         closeLogin();
     }
+}
+
+function handleAuthClick() {
+    closeSidebar();
+    if (currentUser) { openProfileModal(); }
+    else { openAuthModal('login'); }
+}
+
+// ==========================================
+// 🔐 用户认证（注册/登录/个人中心）
+// ==========================================
+const API_BASE = '';
+const USER_TOKEN_KEY = 'TX_USER_TOKEN';
+const USER_INFO_KEY = 'TX_USER_INFO';
+let currentUser = null;
+
+function openAuthModal(mode) {
+    const modal = document.getElementById('userAuthModal');
+    document.getElementById('authFormRegister').style.display = mode === 'register' ? 'block' : 'none';
+    document.getElementById('authFormLogin').style.display = mode === 'login' ? 'block' : 'none';
+    document.getElementById('authModalTitle').textContent = mode === 'register' ? '📝 注册账号' : '🔑 登录账号';
+    document.getElementById('regError').style.display = 'none';
+    document.getElementById('loginError').style.display = 'none';
+    modal.style.display = 'flex';
+}
+
+function closeAuthModal() {
+    document.getElementById('userAuthModal').style.display = 'none';
+    document.getElementById('regError').style.display = 'none';
+    document.getElementById('loginError').style.display = 'none';
+}
+
+function switchAuthMode(mode) {
+    document.getElementById('authFormRegister').style.display = mode === 'register' ? 'block' : 'none';
+    document.getElementById('authFormLogin').style.display = mode === 'login' ? 'block' : 'none';
+    document.getElementById('authModalTitle').textContent = mode === 'register' ? '📝 注册账号' : '🔑 登录账号';
+    document.getElementById('regError').style.display = 'none';
+    document.getElementById('loginError').style.display = 'none';
+}
+
+async function submitRegister() {
+    const username = document.getElementById('regUsername').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const confirm = document.getElementById('regConfirm').value;
+    const inviteCode = document.getElementById('regInvite').value.trim();
+    const errorEl = document.getElementById('regError');
+
+    if (!username || !password || !confirm || !inviteCode) {
+        errorEl.textContent = '请填写所有字段';
+        errorEl.style.display = 'block';
+        return;
+    }
+    if (password !== confirm) {
+        errorEl.textContent = '两次输入的密码不一致';
+        errorEl.style.display = 'block';
+        return;
+    }
+    if (password.length < 8) {
+        errorEl.textContent = '密码必须至少8位';
+        errorEl.style.display = 'block';
+        return;
+    }
+    if (!/[a-zA-Z]/.test(password)) {
+        errorEl.textContent = '密码必须包含字母';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    errorEl.textContent = '正在验证人机...';
+    errorEl.style.display = 'block';
+
+    try {
+        const tsToken = await requestTurnstileToken(30000);
+        errorEl.textContent = '正在注册...';
+
+        const res = await fetch(`${API_BASE}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, confirmPassword: confirm, inviteCode, tsToken })
+        });
+        const data = await res.json();
+        if (data.success) {
+            localStorage.setItem(USER_TOKEN_KEY, data.token);
+            localStorage.setItem(USER_INFO_KEY, JSON.stringify({ username: data.username, displayId: data.displayId }));
+            currentUser = { username: data.username, displayId: data.displayId };
+            closeAuthModal();
+            // 显示注册成功弹窗
+            showRegisterSuccess(data.displayId);
+            updateAuthUI();
+        } else {
+            errorEl.textContent = data.error || '注册失败';
+            errorEl.style.display = 'block';
+        }
+    } catch (e) {
+        errorEl.textContent = '注册失败: ' + e.message;
+        errorEl.style.display = 'block';
+    }
+}
+
+function showRegisterSuccess(displayId) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="modal-box" style="max-width:360px;text-align:center;">
+            <div class="modal-title">🎉 注册成功！</div>
+            <div style="font-size:14px;color:#888;margin-bottom:12px;">你的账号ID</div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;">
+                <div style="font-size:22px;font-weight:800;color:var(--primary);letter-spacing:2px;font-family:monospace;">${displayId}</div>
+                <button onclick="copyText('${displayId}');this.textContent='✅已复制';setTimeout(()=>this.textContent='📋 复制',2000);" style="padding:4px 10px;border-radius:6px;border:none;background:var(--primary);color:#fff;font-size:12px;cursor:pointer;">📋 复制</button>
+            </div>
+            <div style="font-size:11px;color:#e91e63;margin-bottom:16px;">⚠️ 丢失账号ID无法找回，请妥善保管</div>
+            <button class="modal-btn btn-confirm" style="width:100%;" onclick="this.closest('.modal-overlay').remove()">知道了</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+}
+
+async function submitLogin() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errorEl = document.getElementById('loginError');
+
+    if (!username || !password) {
+        errorEl.textContent = '请填写用户名和密码';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    errorEl.textContent = '登录中...';
+    errorEl.style.display = 'block';
+
+    try {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+            localStorage.setItem(USER_TOKEN_KEY, data.token);
+            localStorage.setItem(USER_INFO_KEY, JSON.stringify({ username: data.username, displayId: data.displayId }));
+            currentUser = { username: data.username, displayId: data.displayId };
+            closeAuthModal();
+            showToast('✅ 登录成功');
+            updateAuthUI();
+        } else {
+            errorEl.textContent = data.error || '登录失败';
+            errorEl.style.display = 'block';
+        }
+    } catch (e) {
+        errorEl.textContent = '登录失败: ' + e.message;
+        errorEl.style.display = 'block';
+    }
+}
+
+function openProfileModal() {
+    if (!currentUser) return;
+    document.getElementById('profileUsername').textContent = currentUser.username;
+    document.getElementById('profileDisplayId').textContent = currentUser.displayId;
+    document.getElementById('userProfileModal').style.display = 'flex';
+}
+
+function closeProfileModal() {
+    document.getElementById('userProfileModal').style.display = 'none';
+}
+
+function copyDisplayId() {
+    if (currentUser) copyText(currentUser.displayId);
+}
+
+function logoutUser() {
+    localStorage.removeItem(USER_TOKEN_KEY);
+    localStorage.removeItem(USER_INFO_KEY);
+    currentUser = null;
+    closeProfileModal();
+    updateAuthUI();
+    showToast('👋 已退出登录');
+}
+
+function updateAuthUI() {
+    // 更新侧边栏或顶部的登录状态按钮
+    const btn = document.getElementById('userAuthBtn');
+    if (!btn) return;
+    if (currentUser) {
+        btn.textContent = '👤 ' + currentUser.username;
+        btn.onclick = openProfileModal;
+    } else {
+        btn.textContent = '🔑 登录/注册';
+        btn.onclick = () => openAuthModal('login');
+    }
+}
+
+async function checkUserLogin() {
+    const token = localStorage.getItem(USER_TOKEN_KEY);
+    if (!token) return;
+    try {
+        const res = await fetch(`${API_BASE}/api/auth/me`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.success) {
+            currentUser = { username: data.username, displayId: data.displayId };
+            localStorage.setItem(USER_INFO_KEY, JSON.stringify(currentUser));
+            updateAuthUI();
+        } else {
+            localStorage.removeItem(USER_TOKEN_KEY);
+            localStorage.removeItem(USER_INFO_KEY);
+            if (data.error && data.error.includes('注销')) {
+                showToast('⚠️ 账号已因长期未登录被注销');
+            }
+        }
+    } catch (e) {
+        console.log('登录状态检查失败:', e);
+    }
+}
+
+// ==========================================
+// 🎫 邀请码管理（管理员）
+// ==========================================
+async function openInvitePanel() {
+    if (!isEditMode) return;
+    document.getElementById('invitePanelPage').style.display = 'flex';
+    try {
+        const res = await fetch(`${API_BASE}/api/auth/invite`);
+        const data = await res.json();
+        document.getElementById('currentInviteCode').textContent = data.code || '未设置';
+        document.getElementById('newInviteInput').value = data.code || '';
+    } catch (e) {
+        document.getElementById('currentInviteCode').textContent = '加载失败';
+    }
+}
+
+function closeInvitePanel() {
+    document.getElementById('invitePanelPage').style.display = 'none';
+}
+
+async function saveInviteCode() {
+    const code = document.getElementById('newInviteInput').value.trim();
+    if (!code) { showToast('❌ 邀请码不能为空'); return; }
+    try {
+        const res = await fetch(`${API_BASE}/api/auth/invite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+            body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('currentInviteCode').textContent = code;
+            showToast('✅ 邀请码已更新');
+        } else {
+            showToast('❌ ' + (data.error || '更新失败'));
+        }
+    } catch (e) {
+        showToast('❌ 更新失败');
+    }
+}
+
+// ==========================================
+// ⭐ 评分评论系统
+// ==========================================
+async function submitReview(cardId) {
+    if (!currentUser) {
+        openAuthModal('login');
+        return;
+    }
+    const score = document.getElementById('reviewScore_' + cardId);
+    const comment = document.getElementById('reviewComment_' + cardId);
+    const s = score ? parseFloat(score.value) : 0;
+    if (isNaN(s) || s < 0 || s > 10) {
+        showToast('❌ 评分必须在 0-10 之间');
+        return;
+    }
+    const token = localStorage.getItem(USER_TOKEN_KEY);
+    try {
+        const res = await fetch(`${API_BASE}/api/reviews/submit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ cardId, score: s, comment: comment ? comment.value : '' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ 评分成功！均分 ${data.avgScore}（${data.total}人）`);
+            loadReviews(cardId);
+        } else {
+            showToast('❌ ' + (data.error || '评分失败'));
+        }
+    } catch (e) {
+        showToast('❌ 评分失败');
+    }
+}
+
+async function loadReviews(cardId) {
+    try {
+        const res = await fetch(`${API_BASE}/api/reviews/get?cardId=${encodeURIComponent(cardId)}`);
+        const data = await res.json();
+        const container = document.getElementById('reviewList_' + cardId);
+        const avgEl = document.getElementById('reviewAvg_' + cardId);
+        if (avgEl) avgEl.textContent = `⭐ ${data.avgScore} / 10（${data.total}人评分）`;
+        if (!container) return;
+        if (data.reviews.length === 0) {
+            container.innerHTML = '<div style="text-align:center;color:#aaa;font-size:13px;padding:12px;">暂无评论</div>';
+            return;
+        }
+        container.innerHTML = data.reviews.map(r => `
+            <div style="padding:10px;border-bottom:1px solid #f0f0f0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    <span style="font-size:12px;font-weight:700;color:var(--primary);">${escapeHtml(r.username)}</span>
+                    <span style="font-size:12px;color:#ff9800;font-weight:700;">${r.score}分</span>
+                </div>
+                ${r.comment ? `<div style="font-size:13px;color:#555;line-height:1.5;">${escapeHtml(r.comment)}</div>` : ''}
+                <div style="font-size:11px;color:#aaa;margin-top:2px;">${new Date(r.timestamp).toLocaleString('zh-CN')}</div>
+            </div>
+        `).join('');
+    } catch (e) {
+        console.log('加载评论失败:', e);
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function toggleAdminBarCollapse() {
@@ -6503,6 +6889,7 @@ window.onload = async () => {
     checkForUpdates();
     noticeText = localStorage.getItem(NOTICE_KEY) || '';
     loadGalleryData(); // 📖 加载傻子必看数据
+    checkUserLogin(); // 🔐 检查用户登录状态
     // 🏷️ 先渲染导航，不依赖云端
     loadCategories();
     renderNav();
@@ -7012,6 +7399,11 @@ function copyText(text) {
             <span class="sidebar-item-icon">🗑️</span>
             <span>清理全部数据</span>
         </div>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-item" id="userAuthBtn" onclick="handleAuthClick()">
+            <span class="sidebar-item-icon" id="userAuthIcon">🔑</span>
+            <span id="userAuthLabel">登录/注册</span>
+        </div>
     </div>
     <div style="padding: 16px 0 0; text-align: center; overflow: hidden; pointer-events: none; user-select: none;">
         <img src="images/sticker.png" alt="" style="width: 85%; max-width: 220px; display: block; margin: 0 auto; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));">
@@ -7187,6 +7579,32 @@ function openCardDetail(card) {
             btnWrap.appendChild(b);
         }
         body.appendChild(btnWrap);
+    }
+
+    // ⭐ 评分评论区域
+    const cardId = card.dataset.cardId || '';
+    if (cardId) {
+        const reviewSection = document.createElement('div');
+        reviewSection.className = 'detail-glass';
+        reviewSection.style.cssText = 'margin:0 auto 24px;max-width:600px;width:calc(100% - 40px);border-radius:14px;padding:16px 18px;';
+        reviewSection.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <div style="font-size:15px;font-weight:700;color:var(--primary);">⭐ 评分评论</div>
+                <div id="reviewAvg_${cardId}" style="font-size:13px;color:#888;">暂无评分</div>
+            </div>
+            <div id="reviewList_${cardId}" style="margin-bottom:12px;max-height:200px;overflow-y:auto;">
+                <div style="text-align:center;color:#aaa;font-size:13px;padding:12px;">加载中...</div>
+            </div>
+            <div id="reviewForm_${cardId}" style="border-top:1px solid rgba(0,0,0,0.06);padding-top:12px;">
+                <div style="font-size:13px;color:#888;margin-bottom:8px;">${currentUser ? '你的评分 (0-10):' : '登录后参与评分'}</div>
+                <input type="range" id="reviewScore_${cardId}" min="0" max="10" step="0.5" value="5" style="width:100%;margin-bottom:8px;" ${currentUser ? '' : 'disabled'}>
+                <textarea id="reviewComment_${cardId}" placeholder="写下你的评论（可选）..." style="width:100%;height:60px;padding:8px;border-radius:8px;border:1px solid #ddd;font-size:13px;resize:none;" ${currentUser ? '' : 'disabled'}></textarea>
+                <button class="modal-btn btn-confirm" style="width:100%;margin-top:8px;" onclick="submitReview('${cardId}')" ${currentUser ? '' : 'disabled'}>提交评分</button>
+            </div>
+        `;
+        body.appendChild(reviewSection);
+        // 异步加载评论列表
+        loadReviews(cardId);
     }
 
     // ── 显示详情页（右侧滑入）──
