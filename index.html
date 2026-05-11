@@ -4418,13 +4418,22 @@ async function checkUserLogin() {
 async function openInvitePanel() {
     if (!isEditMode) return;
     document.getElementById('invitePanelPage').style.display = 'flex';
+    document.getElementById('currentInviteCode').textContent = '加载中...';
     try {
         const res = await fetch(`${API_BASE}/api/auth/invite`);
+        if (!res.ok) {
+            document.getElementById('currentInviteCode').textContent = 'HTTP ' + res.status;
+            return;
+        }
         const data = await res.json();
+        if (data.error) {
+            document.getElementById('currentInviteCode').textContent = '错误: ' + data.error;
+            return;
+        }
         document.getElementById('currentInviteCode').textContent = data.code || '未设置';
         document.getElementById('newInviteInput').value = data.code || '';
     } catch (e) {
-        document.getElementById('currentInviteCode').textContent = '加载失败';
+        document.getElementById('currentInviteCode').textContent = '网络错误: ' + (e.message || '无法连接');
     }
 }
 
@@ -4437,12 +4446,17 @@ async function saveInviteCode() {
     if (!code) { showToast('❌ 邀请码不能为空'); return; }
     const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN') || '';
     if (!token) { showToast('❌ 未授权，请先验证管理身份'); return; }
+    showToast('⏳ 正在保存...');
     try {
         const res = await fetch(`${API_BASE}/api/auth/invite`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
             body: JSON.stringify({ code })
         });
+        if (!res.ok) {
+            showToast('❌ HTTP ' + res.status);
+            return;
+        }
         const data = await res.json();
         if (data.success) {
             document.getElementById('currentInviteCode').textContent = code;
@@ -4451,7 +4465,7 @@ async function saveInviteCode() {
             showToast('❌ ' + (data.error || '更新失败'));
         }
     } catch (e) {
-        showToast('❌ 更新失败');
+        showToast('❌ 网络错误: ' + (e.message || '无法连接'));
     }
 }
 
