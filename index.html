@@ -2298,10 +2298,20 @@ function __safeFixDeleteImage(card){
         <button onclick="debugCardStructure()" style="background:#333!important;">🐛 调试</button>
         <button onclick="clearCacheAndReload()" style="background:#ff9800!important;">🔄 清缓存</button>
         <button onclick="setInviteCode()" style="background:#673ab7!important;">🎫 邀请码</button>
+        <button onclick="openUserQueryPanel()" style="background:#2196f3!important;">🔍 查用户</button>
         <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button>
         </div>
     </div>
     <!-- 🏷️ 分类管理面板 -->
+    <!-- 🔍 用户查询面板（管理员） -->
+    <div id="userQueryPanel" style="display:none; background:#e3f2fd; border:1px dashed #2196f3; border-radius:12px; padding:12px; margin:0 auto 12px auto; max-width:550px;">
+        <div style="font-size:13px; font-weight:bold; color:#1565c0; margin-bottom:10px;">🔍 用户查询</div>
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <input type="text" id="userQueryInput" placeholder="输入用户名或账号ID..." style="flex:1; border:1px solid #90caf9; border-radius:8px; padding:8px 10px; font-size:13px; outline:none; min-width:0;">
+            <button onclick="queryUser()" style="background:#2196f3; color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:bold; cursor:pointer; flex-shrink:0;">查询</button>
+        </div>
+        <div id="userQueryResult" style="display:none; flex-direction:column; gap:8px;"></div>
+    </div>
     <div id="catPanel">
         <div class="cat-panel-title">🏷️ 分类管理（新增 / 排序 / 删除）</div>
         <div class="cat-add-row">
@@ -8611,6 +8621,23 @@ function closeNavPanel() {
         <span class="user-modal-close" onclick="closeUserModal()">关闭</span>
     </div>
 </div>
+<!-- 管理员封号弹窗 -->
+<div id="banModal" class="user-modal-overlay">
+    <div class="user-modal-box" style="max-width:320px;">
+        <div class="user-modal-title">🔨 账号管理</div>
+        <div id="banTargetInfo" style="font-size:13px; color:#666; margin-bottom:12px; text-align:center;"></div>
+        <div class="user-field">
+            <label>封号天数（填0表示解封）</label>
+            <input type="number" id="banDaysInput" placeholder="如：7" min="0" max="3650">
+        </div>
+        <div class="user-field">
+            <label>原因（可选）</label>
+            <input type="text" id="banReasonInput" placeholder="违规原因...">
+        </div>
+        <button class="user-submit-btn" onclick="submitBan()" id="banSubmitBtn">确认</button>
+        <span class="user-modal-close" onclick="closeBanModal()">取消</span>
+    </div>
+</div>
 <div id="bg-layer"></div>
 
 <script>
@@ -8864,11 +8891,12 @@ async function loadComments(cardId) {
             listEl.innerHTML = '<div class="comment-empty">还没有评论，来第一个评论吧！</div>';
         } else {
             listEl.innerHTML = data.comments.map(c => `
-                <div class="comment-item">
+                <div class="comment-item" data-comment-user="${escapeHtml(c.userId)}">
                     <div class="comment-item-header">
-                        <span class="comment-username">${escapeHtml(c.username)}</span>
+                        <span class="comment-username" onclick="openBanModal('${escapeHtml(c.userId)}', '${escapeHtml(c.username)}')" style="cursor:pointer; text-decoration:underline; text-decoration-color:var(--primary);">${escapeHtml(c.username)}</span>
                         ${c.score ? `<span class="comment-score-display">${'⭐'.repeat(Math.round(c.score))} ${c.score}分</span>` : ''}
                         <span class="comment-time">${formatTime(c.createdAt)}</span>
+                        ${isEditMode ? `<span style="margin-left:auto; font-size:12px; color:#ff4466; cursor:pointer; padding:2px 6px;" onclick="deleteComment('${escapeHtml(currentCommentCardId)}', '${escapeHtml(c.userId)}')">🗑️</span>` : ''}
                     </div>
                     <div class="comment-content">${escapeHtml(c.comment)}</div>
                 </div>
