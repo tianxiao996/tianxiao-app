@@ -2306,6 +2306,7 @@ function __safeFixDeleteImage(card){
         <button onclick="migrateAllLinksToKV()" style="background:#c62828!important;">🔒 迁移链接</button>
         <button onclick="debugCardStructure()" style="background:#333!important;">🐛 调试</button>
         <button onclick="clearCacheAndReload()" style="background:#ff9800!important;">🔄 清缓存</button>
+        <button onclick="setInviteCode()" style="background:#673ab7!important;">🎫 邀请码</button>
         <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button>
         </div>
     </div>
@@ -4457,6 +4458,53 @@ function exitAdmin() {
     refreshUI();
 }
 
+
+// 🎫 管理员设置邀请码
+async function setInviteCode() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('❌ 请先登录管理员'); return; }
+
+    const action = confirm('点击「确定」设置新邀请码，点击「取消」查看当前邀请码。');
+
+    if (action) {
+        const code = prompt('请输入新的邀请码（至少1位字符）:');
+        if (code === null) return;
+        if (!code.trim()) { showToast('❌ 邀请码不能为空'); return; }
+
+        try {
+            const res = await fetch(WORKER_BASE + '/api/admin/invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ inviteCode: code.trim() })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('✅ 邀请码已更新: ' + code.trim());
+            } else {
+                showToast('❌ ' + (data.error || '更新失败'));
+            }
+        } catch(e) {
+            showToast('❌ 网络错误: ' + e.message);
+        }
+    } else {
+        // 查看当前邀请码
+        try {
+            const res = await fetch(WORKER_BASE + '/api/admin/invite', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert('当前邀请码: ' + (data.inviteCode || '未设置'));
+            } else {
+                showToast('❌ ' + (data.error || '获取失败'));
+            }
+        } catch(e) {
+            showToast('❌ 网络错误: ' + e.message);
+        }
+    }
+}
+
+
 function togglePin(btn) {
     const card = btn.parentElement;
     const isPinned = card.classList.toggle("is-pinned");
@@ -4872,18 +4920,22 @@ function initCompactCards() {
     if (!box._compactClickBound) {
         box._compactClickBound = true;
         box.addEventListener('click', function(e) {
-            const card = e.target.closest('.card');
-            if (!card) return;
-            // 管理员模式下不触发
-            if (isEditMode) return;
-            // 点击这些元素时不触发展开
-            if (e.target.closest('.del-btn, .pin-btn, .fav-btn, .slide-btn, .edit-img-btn, .link-jump-btn, .direct-dl-btn, .expand-btn, .desc-expand-btn')) {
-                return;
+            try {
+                const card = e.target.closest('.card');
+                if (!card) return;
+                // 管理员模式下不触发
+                if (isEditMode) return;
+                // 点击这些元素时不触发展开
+                if (e.target.closest('.del-btn, .pin-btn, .fav-btn, .slide-btn, .edit-img-btn, .link-jump-btn, .direct-dl-btn, .expand-btn, .desc-expand-btn')) {
+                    return;
+                }
+                if (e.target.tagName === 'IMG' && e.target.closest('.slider-box')) {
+                    return;
+                }
+                openCardDetail(card);
+            } catch(err) {
+                console.error('卡片点击处理错误:', err);
             }
-            if (e.target.tagName === 'IMG' && e.target.closest('.slider-box')) {
-                return;
-            }
-            openCardDetail(card);
         });
     }
 }
@@ -7244,7 +7296,8 @@ function copyText(text) {
 let _cardDetailSource = null; // 当前详情页对应的卡片DOM
 
 function openCardDetail(card) {
-    _cardDetailSource = card;
+    try {
+_cardDetailSource = card;
 
     // ── 读取卡片数据 ──
     const sliderBox   = card.querySelector('.slider-box');
@@ -7425,7 +7478,14 @@ function openCardDetail(card) {
         if (loadLayer) loadLayer.classList.add('hidden');
     };
 
-        // 注入评论区\n    injectCommentSection(card.dataset.cardId || '');\n    requestAnimationFrame(() => page.style.transform = 'translateX(0)');
+    requestAnimationFrame(() => page.style.transform = 'translateX(0)');
+
+    // 注入评论区
+    injectCommentSection(card.dataset.cardId || '');
+    } catch(err) {
+        console.error('打开详情页失败:', err);
+        showToast('❌ 详情页加载失败: ' + err.message);
+    }
 }
 
 function closeCardDetail() {
