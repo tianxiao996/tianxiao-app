@@ -3361,6 +3361,10 @@ async function loadFromGrave() {
             refreshUI();
         }
     }
+    // 确保无论哪种退出方式都标记完成
+    _cloudLoadDone = true;
+    const gOverlay = document.getElementById('globalLoadingOverlay');
+    if (gOverlay) gOverlay.classList.remove('show');
 }
 
 // 保存到云端（通过Worker，需要 Token 验证）
