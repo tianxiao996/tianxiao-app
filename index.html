@@ -3347,17 +3347,12 @@ function exportHTML() {
 
 // 本地自动缓存
 function autoSave() {
-    stripCompactCardElements();
     const data = document.getElementById("box").innerHTML;
     localStorage.setItem("TX_CACHE", data);
     // 🐛 修复：保存后重新生成链接按钮，确保按钮指向最新的链接
     addLinkJumpButtons();
     // 🖼️ 重新初始化图片预览（确保新图片也能预览）
     initImagePreview();
-        // 🐛 修复：审核评论模式下卡片是紧凑的，strip 后需立即重新生成，否则 5 秒后卡片会变空白
-        if (adminAuditMode) {
-            initCompactCards();
-        }
 }
 
 // Toast提示（保留）
@@ -9170,6 +9165,14 @@ function formatTime(ts) {
     if (diff < 3600000) return `${Math.floor(diff/60000)}分钟前`;
     if (diff < 86400000) return `${Math.floor(diff/3600000)}小时前`;
     return `${d.getMonth()+1}/${d.getDate()}`;
+}
+
+// ── 关闭弹窗点击背景 ──
+document.getElementById('userModal').addEventListener('click', function(e) {
+    if (e.target === this) closeUserModal();
+});
+</script>
+</body></html>return `${d.getMonth()+1}/${d.getDate()}`;
 }
 
 // ── 关闭弹窗点击背景 ──
