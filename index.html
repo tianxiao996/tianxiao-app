@@ -2096,16 +2096,7 @@
     margin-top: 8px; text-align: center;
 }
 
-/* 顶部用户入口按钮 */
-#userEntryBtn {
-    position: fixed; top: 10px; right: 56px;
-    z-index: 900; background: var(--primary);
-    color: #fff; border: none; border-radius: 20px;
-    padding: 6px 14px; font-size: 13px;
-    font-weight: bold; cursor: pointer;
-    box-shadow: 2px 2px 0 rgba(255,130,180,0.3);
-    touch-action: manipulation;
-}
+
 
 /* 评论区 */
 .comment-section {
@@ -7253,6 +7244,10 @@ function copyText(text) {
         <div class="sidebar-subtitle">自由之地 · 资源导航</div>
     </div>
     <div class="sidebar-menu">
+        <div class="sidebar-item" id="sidebarLogin" onclick="openUserModal()">
+            <span class="sidebar-item-icon">👤</span>
+            <span id="sidebarLoginText">登录</span>
+        </div>
         <div class="sidebar-item active" id="sidebarHome" onclick="sidebarGoHome()">
             <span class="sidebar-item-icon">🏠</span>
             <span>首页</span>
@@ -8533,7 +8528,6 @@ function closeNavPanel() {
 
 
 <!-- 顶部用户入口按钮 -->
-<button id="userEntryBtn" onclick="openUserModal()">👤 登录</button>
 
 <!-- 用户注册/登录弹窗 -->
 <div id="userModal" class="user-modal-overlay">
@@ -8549,8 +8543,8 @@ function closeNavPanel() {
         <!-- 登录表单 -->
         <div id="userLoginForm">
             <div class="user-field">
-                <label>用户名</label>
-                <input type="text" id="loginUsername" placeholder="请输入用户名" autocomplete="off">
+                <label>账号ID</label>
+                <input type="text" id="loginUsername" placeholder="请输入账号ID" autocomplete="off">
             </div>
             <div class="user-field">
                 <label>密码</label>
@@ -8566,8 +8560,8 @@ function closeNavPanel() {
                 <input type="text" id="regInviteCode" placeholder="请输入邀请码" autocomplete="off">
             </div>
             <div class="user-field">
-                <label>用户名（3-20位字母数字下划线）</label>
-                <input type="text" id="regUsername" placeholder="请输入用户名" autocomplete="off">
+                <label>用户名（最多7个字或字母）</label>
+                <input type="text" id="regUsername" placeholder="请输入用户名" autocomplete="off" maxlength="7">
             </div>
             <div class="user-field">
                 <label>密码（8位以上含字母）</label>
@@ -8658,9 +8652,9 @@ let currentCommentScore = 0;
 })();
 
 function updateUserEntryBtn() {
-    const btn = document.getElementById('userEntryBtn');
-    if (!btn) return;
-    btn.textContent = currentUser ? `👤 ${currentUser.username}` : '👤 登录';
+    const text = document.getElementById('sidebarLoginText');
+    if (!text) return;
+    text.textContent = currentUser ? currentUser.username : '登录';
 }
 
 // ── 打开/关闭弹窗 ──
@@ -8701,9 +8695,9 @@ function showLoggedInState() {
 
 // ── 登录 ──
 async function doLogin() {
-    const username = document.getElementById('loginUsername').value.trim();
+    const userId = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
-    if (!username || !password) { showToast('请填写完整信息'); return; }
+    if (!userId || !password) { showToast('请填写账号ID和密码'); return; }
 
     const btn = document.querySelector('#userLoginForm .user-submit-btn');
     btn.disabled = true; btn.textContent = '登录中...';
@@ -8712,7 +8706,7 @@ async function doLogin() {
         const res = await fetch(`${USER_API}/api/user/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ userId, password })
         });
         const data = await res.json();
         if (data.success) {
