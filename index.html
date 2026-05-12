@@ -8876,6 +8876,8 @@ async function loadComments(cardId) {
         }
     } catch(e) {
         console.error('加载评论失败', e);
+        const listEl = document.getElementById('commentList');
+        if (listEl) listEl.innerHTML = '<div class="comment-empty">加载评论失败，请刷新重试</div>';
     }
 }
 
@@ -8932,16 +8934,15 @@ function setScore(score) {
 
 // 提交评论
 async function submitComment(cardId) {
-    const content = document.getElementById('commentText')?.value.trim();
-    if (!content) { showToast('请填写评论内容'); return; }
+    const comment = document.getElementById('commentText')?.value.trim();
+    if (!comment) { showToast('请填写评论内容'); return; }
     if (!currentUser) { showToast('请先登录'); openUserModal(); return; }
 
     const btn = document.querySelector('.comment-submit-btn');
     if (btn) { btn.disabled = true; btn.textContent = '发送中...'; }
 
     try {
-        const body = { cardId, content };
-        if (currentCommentScore > 0) body.score = currentCommentScore;
+        const body = { cardId, comment, score: currentCommentScore || 0 };
 
         const res = await fetch(`${USER_API}/api/comment`, {
             method: 'POST',
@@ -8956,11 +8957,12 @@ async function submitComment(cardId) {
             showToast('✅ 评论成功！');
             loadComments(cardId);
         } else {
-            showToast('❌ ' + data.message);
+            const errMsg = data.error || data.message || '评论失败';
+            showToast('❌ ' + errMsg);
             if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
         }
     } catch(e) {
-        showToast('❌ 网络错误');
+        showToast('❌ 网络错误: ' + (e.message || '请检查网络'));
         if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
     }
 }
