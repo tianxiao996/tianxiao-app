@@ -3354,6 +3354,10 @@ function autoSave() {
     addLinkJumpButtons();
     // 🖼️ 重新初始化图片预览（确保新图片也能预览）
     initImagePreview();
+        // 🐛 修复：审核评论模式下卡片是紧凑的，strip 后需立即重新生成，否则 5 秒后卡片会变空白
+        if (adminAuditMode) {
+            initCompactCards();
+        }
 }
 
 // Toast提示（保留）
