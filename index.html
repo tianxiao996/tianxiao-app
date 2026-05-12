@@ -1999,6 +1999,224 @@
     .next { border-radius: 6px 0 0 6px !important; }
 
 </style>
+
+<style>
+/* 用户系统弹窗 */
+.user-modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: none; align-items: center;
+    justify-content: center; z-index: 3000;
+    backdrop-filter: blur(4px);
+}
+.user-modal-overlay.show { display: flex; }
+.user-modal-box {
+    background: var(--pixel-white);
+    width: 90%; max-width: 360px;
+    border-radius: 16px; padding: 24px;
+    box-shadow: 5px 5px 0 rgba(255,130,180,0.3);
+    border: 2px solid var(--primary-light);
+    max-height: 90vh; overflow-y: auto;
+}
+[data-theme="dark"] .user-modal-box {
+    background: #160a14; color: #f0d0e0;
+    border-color: rgba(255,102,153,0.4);
+}
+.user-modal-title {
+    font-size: 17px; font-weight: bold;
+    color: var(--primary); margin-bottom: 16px;
+    text-align: center;
+}
+.user-modal-tab {
+    display: flex; gap: 8px; margin-bottom: 18px;
+}
+.user-tab-btn {
+    flex: 1; padding: 8px; border: 2px solid var(--primary-light);
+    border-radius: 10px; background: transparent;
+    color: var(--primary); font-size: 14px;
+    font-weight: bold; cursor: pointer;
+    transition: all 0.15s;
+}
+.user-tab-btn.active {
+    background: var(--primary); color: #fff;
+    border-color: var(--primary);
+}
+.user-field {
+    margin-bottom: 14px;
+}
+.user-field label {
+    display: block; font-size: 12px;
+    color: var(--primary); margin-bottom: 5px;
+    font-weight: bold;
+}
+.user-field input {
+    width: 100%; padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px; font-size: 14px;
+    outline: none; background: transparent;
+    color: var(--text); box-sizing: border-box;
+    transition: border-color 0.15s;
+}
+.user-field input:focus { border-color: var(--primary); }
+[data-theme="dark"] .user-field input {
+    border-color: rgba(255,102,153,0.3);
+    color: #f0d0e0;
+}
+.user-submit-btn {
+    width: 100%; padding: 12px;
+    background: var(--primary); color: #fff;
+    border: none; border-radius: 12px;
+    font-size: 15px; font-weight: bold;
+    cursor: pointer; margin-top: 4px;
+    transition: opacity 0.15s;
+}
+.user-submit-btn:active { opacity: 0.8; }
+.user-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.user-modal-close {
+    display: block; text-align: center;
+    margin-top: 12px; color: #aaa;
+    font-size: 13px; cursor: pointer;
+}
+.user-modal-close:hover { color: var(--primary); }
+.user-id-box {
+    background: var(--pixel-soft);
+    border: 1.5px solid var(--primary-light);
+    border-radius: 10px; padding: 12px;
+    margin: 12px 0; font-size: 13px;
+    color: var(--text); word-break: break-all;
+}
+.user-id-copy {
+    display: inline-block; margin-top: 6px;
+    padding: 4px 12px; background: var(--primary);
+    color: #fff; border-radius: 8px;
+    font-size: 12px; cursor: pointer;
+}
+.user-warning {
+    color: #e05; font-size: 12px;
+    margin-top: 8px; text-align: center;
+}
+
+/* 顶部用户入口按钮 */
+#userEntryBtn {
+    position: fixed; top: 10px; right: 56px;
+    z-index: 900; background: var(--primary);
+    color: #fff; border: none; border-radius: 20px;
+    padding: 6px 14px; font-size: 13px;
+    font-weight: bold; cursor: pointer;
+    box-shadow: 2px 2px 0 rgba(255,130,180,0.3);
+    touch-action: manipulation;
+}
+
+/* 评论区 */
+.comment-section {
+    margin: 0 12px 24px;
+    background: var(--card);
+    border-radius: 14px;
+    border: 1.5px solid var(--border);
+    overflow: hidden;
+}
+.comment-section-title {
+    padding: 12px 14px;
+    font-size: 14px; font-weight: bold;
+    color: var(--primary);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    gap: 6px;
+}
+.comment-avg-score {
+    margin-left: auto;
+    font-size: 13px; color: var(--text);
+    opacity: 0.7;
+}
+.comment-input-area {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+}
+.comment-textarea {
+    width: 100%; min-height: 70px;
+    padding: 10px 12px; border: 1.5px solid var(--border);
+    border-radius: 10px; font-size: 13px;
+    resize: none; outline: none;
+    background: transparent; color: var(--text);
+    box-sizing: border-box; font-family: inherit;
+}
+.comment-textarea:focus { border-color: var(--primary); }
+[data-theme="dark"] .comment-textarea {
+    border-color: rgba(255,102,153,0.3);
+    color: #f0d0e0;
+}
+.comment-score-row {
+    display: flex; align-items: center;
+    gap: 6px; margin: 8px 0;
+}
+.comment-score-label {
+    font-size: 12px; color: var(--primary);
+    font-weight: bold; flex-shrink: 0;
+}
+.score-stars {
+    display: flex; gap: 3px;
+}
+.score-star {
+    font-size: 20px; cursor: pointer;
+    transition: transform 0.1s;
+    user-select: none;
+}
+.score-star:active { transform: scale(1.3); }
+.comment-submit-row {
+    display: flex; justify-content: flex-end;
+    margin-top: 8px;
+}
+.comment-submit-btn {
+    padding: 7px 18px;
+    background: var(--primary); color: #fff;
+    border: none; border-radius: 10px;
+    font-size: 13px; font-weight: bold;
+    cursor: pointer;
+}
+.comment-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.comment-login-hint {
+    padding: 14px; text-align: center;
+    font-size: 13px; color: #aaa;
+}
+.comment-login-hint span {
+    color: var(--primary); cursor: pointer;
+    font-weight: bold;
+}
+.comment-list { padding: 4px 0; }
+.comment-item {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+}
+.comment-item:last-child { border-bottom: none; }
+.comment-item-header {
+    display: flex; align-items: center;
+    gap: 6px; margin-bottom: 5px;
+}
+.comment-username {
+    font-size: 12px; font-weight: bold;
+    color: var(--primary);
+}
+.comment-score-display {
+    font-size: 11px; color: #f5a623;
+}
+.comment-time {
+    margin-left: auto; font-size: 11px;
+    color: #aaa;
+}
+.comment-content {
+    font-size: 13px; color: var(--text);
+    line-height: 1.5; word-break: break-word;
+}
+.comment-empty {
+    padding: 20px; text-align: center;
+    font-size: 13px; color: #bbb;
+}
+.comment-load-more {
+    padding: 10px; text-align: center;
+    font-size: 13px; color: var(--primary);
+    cursor: pointer;
+}
+</style>
 </head>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer>
 // === 删除图片索引修复：删除第N张后自动回退到前一张，防止黑屏 ===
@@ -7207,7 +7425,7 @@ function openCardDetail(card) {
         if (loadLayer) loadLayer.classList.add('hidden');
     };
 
-    requestAnimationFrame(() => page.style.transform = 'translateX(0)');
+        // 注入评论区\n    injectCommentSection(card.dataset.cardId || '');\n    requestAnimationFrame(() => page.style.transform = 'translateX(0)');
 }
 
 function closeCardDetail() {
@@ -8253,5 +8471,456 @@ function closeNavPanel() {
     </div>
 </div>
 
+
+<!-- 顶部用户入口按钮 -->
+<button id="userEntryBtn" onclick="openUserModal()">👤 登录</button>
+
+<!-- 用户注册/登录弹窗 -->
+<div id="userModal" class="user-modal-overlay">
+    <div class="user-modal-box">
+        <div class="user-modal-title">🌸 天笑の窝 - 用户中心</div>
+
+        <!-- Tab切换：未登录时显示 -->
+        <div class="user-modal-tab" id="userModalTabs">
+            <button class="user-tab-btn active" onclick="switchUserTab('login')">登录</button>
+            <button class="user-tab-btn" onclick="switchUserTab('register')">注册</button>
+        </div>
+
+        <!-- 登录表单 -->
+        <div id="userLoginForm">
+            <div class="user-field">
+                <label>用户名</label>
+                <input type="text" id="loginUsername" placeholder="请输入用户名" autocomplete="off">
+            </div>
+            <div class="user-field">
+                <label>密码</label>
+                <input type="password" id="loginPassword" placeholder="请输入密码">
+            </div>
+            <button class="user-submit-btn" onclick="doLogin()">登录</button>
+        </div>
+
+        <!-- 注册表单 -->
+        <div id="userRegisterForm" style="display:none;">
+            <div class="user-field">
+                <label>邀请码</label>
+                <input type="text" id="regInviteCode" placeholder="请输入邀请码" autocomplete="off">
+            </div>
+            <div class="user-field">
+                <label>用户名（3-20位字母数字下划线）</label>
+                <input type="text" id="regUsername" placeholder="请输入用户名" autocomplete="off">
+            </div>
+            <div class="user-field">
+                <label>密码（8位以上含字母）</label>
+                <input type="password" id="regPassword" placeholder="请输入密码">
+            </div>
+            <div class="user-field">
+                <label>确认密码</label>
+                <input type="password" id="regPassword2" placeholder="再次输入密码">
+            </div>
+            <!-- Turnstile验证 -->
+            <div class="cf-turnstile" data-sitekey="0x4AAAAAACxkhwPrw1gO9XFQ" data-theme="auto" style="margin:10px 0;"></div>
+            <button class="user-submit-btn" onclick="doRegister()">注册账号</button>
+        </div>
+
+        <!-- 已登录状态 -->
+        <div id="userLoggedIn" style="display:none;">
+            <div style="text-align:center;margin-bottom:12px;">
+                <div style="font-size:32px;margin-bottom:6px;">🌸</div>
+                <div style="font-weight:bold;font-size:15px;color:var(--primary);" id="loggedUsername"></div>
+                <div style="font-size:12px;color:#aaa;margin-top:4px;">欢迎回来！</div>
+            </div>
+            <div class="user-id-box">
+                <div style="font-size:11px;color:#aaa;margin-bottom:4px;">你的账号ID（请妥善保管）</div>
+                <div id="loggedUserId" style="font-weight:bold;letter-spacing:1px;"></div>
+                <span class="user-id-copy" onclick="copyUserId()">复制</span>
+            </div>
+            <div class="user-warning">⚠️ 账号丢失无法找回，3个月未登录将自动注销</div>
+            <button class="user-submit-btn" style="margin-top:14px;background:#aaa;" onclick="doLogout()">退出登录</button>
+        </div>
+
+        <!-- 注册成功提示 -->
+        <div id="userRegSuccess" style="display:none;">
+            <div style="text-align:center;padding:10px 0;">
+                <div style="font-size:40px;margin-bottom:10px;">🎉</div>
+                <div style="font-weight:bold;color:var(--primary);font-size:16px;margin-bottom:8px;">注册成功！</div>
+                <div style="font-size:13px;color:#666;margin-bottom:14px;">请记好你的账号ID，丢失后无法找回</div>
+            </div>
+            <div class="user-id-box">
+                <div style="font-size:11px;color:#aaa;margin-bottom:4px;">你的账号ID</div>
+                <div id="newUserId" style="font-weight:bold;letter-spacing:1px;"></div>
+                <span class="user-id-copy" onclick="copyNewUserId()">复制</span>
+            </div>
+            <div class="user-warning">⚠️ 此ID仅显示一次，请截图保存！</div>
+            <button class="user-submit-btn" style="margin-top:14px;" onclick="closeUserModal()">我已记好，进入网站</button>
+        </div>
+
+        <span class="user-modal-close" onclick="closeUserModal()">关闭</span>
+    </div>
+</div>
 <div id="bg-layer"></div>
+
+<script>
+// ============================================================
+// 用户系统 & 评论区
+// ============================================================
+const USER_API = 'https://api.tianxiao.us.kg'; // 你的Worker地址
+let currentUser = null; // { userId, username, sessionToken }
+let currentCommentCardId = null;
+let currentCommentScore = 0;
+
+// ── 初始化：从localStorage读取登录状态 ──
+(function initUserSystem() {
+    const saved = localStorage.getItem('tx_user');
+    if (saved) {
+        try {
+            currentUser = JSON.parse(saved);
+            updateUserEntryBtn();
+            // 验证Token是否还有效
+            fetch(`${USER_API}/api/user/me`, {
+                headers: { 'Authorization': `Bearer ${currentUser.sessionToken}` }
+            }).then(r => r.json()).then(data => {
+                if (!data.success) {
+                    currentUser = null;
+                    localStorage.removeItem('tx_user');
+                    updateUserEntryBtn();
+                }
+            }).catch(() => {});
+        } catch(e) {
+            localStorage.removeItem('tx_user');
+        }
+    }
+})();
+
+function updateUserEntryBtn() {
+    const btn = document.getElementById('userEntryBtn');
+    if (!btn) return;
+    btn.textContent = currentUser ? `👤 ${currentUser.username}` : '👤 登录';
+}
+
+// ── 打开/关闭弹窗 ──
+function openUserModal() {
+    const modal = document.getElementById('userModal');
+    modal.classList.add('show');
+    if (currentUser) {
+        showLoggedInState();
+    } else {
+        switchUserTab('login');
+    }
+}
+
+function closeUserModal() {
+    document.getElementById('userModal').classList.remove('show');
+}
+
+function switchUserTab(tab) {
+    document.querySelectorAll('.user-tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'register' && i === 1));
+    });
+    document.getElementById('userLoginForm').style.display = tab === 'login' ? 'block' : 'none';
+    document.getElementById('userRegisterForm').style.display = tab === 'register' ? 'block' : 'none';
+    document.getElementById('userLoggedIn').style.display = 'none';
+    document.getElementById('userRegSuccess').style.display = 'none';
+    document.getElementById('userModalTabs').style.display = 'flex';
+}
+
+function showLoggedInState() {
+    document.getElementById('userModalTabs').style.display = 'none';
+    document.getElementById('userLoginForm').style.display = 'none';
+    document.getElementById('userRegisterForm').style.display = 'none';
+    document.getElementById('userRegSuccess').style.display = 'none';
+    document.getElementById('userLoggedIn').style.display = 'block';
+    document.getElementById('loggedUsername').textContent = currentUser.username;
+    document.getElementById('loggedUserId').textContent = currentUser.userId;
+}
+
+// ── 登录 ──
+async function doLogin() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!username || !password) { showToast('请填写完整信息'); return; }
+
+    const btn = document.querySelector('#userLoginForm .user-submit-btn');
+    btn.disabled = true; btn.textContent = '登录中...';
+
+    try {
+        const res = await fetch(`${USER_API}/api/user/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+            currentUser = { userId: data.userId, username: data.username, sessionToken: data.sessionToken };
+            localStorage.setItem('tx_user', JSON.stringify(currentUser));
+            updateUserEntryBtn();
+            showLoggedInState();
+            showToast('✅ 登录成功！');
+        } else {
+            showToast('❌ ' + data.message);
+        }
+    } catch(e) {
+        showToast('❌ 网络错误，请重试');
+    } finally {
+        btn.disabled = false; btn.textContent = '登录';
+    }
+}
+
+// ── 注册 ──
+async function doRegister() {
+    const inviteCode = document.getElementById('regInviteCode').value.trim();
+    const username = document.getElementById('regUsername').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const password2 = document.getElementById('regPassword2').value;
+
+    if (!inviteCode || !username || !password) { showToast('请填写完整信息'); return; }
+    if (password !== password2) { showToast('两次密码不一致'); return; }
+    if (password.length < 8 || !/[a-zA-Z]/.test(password)) {
+        showToast('密码须8位以上且包含字母'); return;
+    }
+
+    // 获取Turnstile Token
+    const turnstileEl = document.querySelector('#userRegisterForm .cf-turnstile iframe');
+    let turnstileToken = '';
+    try {
+        turnstileToken = turnstile.getResponse(document.querySelector('#userRegisterForm .cf-turnstile'));
+    } catch(e) {}
+    if (!turnstileToken) { showToast('请完成人机验证'); return; }
+
+    const btn = document.querySelector('#userRegisterForm .user-submit-btn');
+    btn.disabled = true; btn.textContent = '注册中...';
+
+    try {
+        const res = await fetch(`${USER_API}/api/user/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, inviteCode, turnstileToken })
+        });
+        const data = await res.json();
+        if (data.success) {
+            currentUser = { userId: data.userId, username: data.username, sessionToken: data.sessionToken };
+            localStorage.setItem('tx_user', JSON.stringify(currentUser));
+            updateUserEntryBtn();
+            // 显示注册成功页
+            document.getElementById('userModalTabs').style.display = 'none';
+            document.getElementById('userRegisterForm').style.display = 'none';
+            document.getElementById('userRegSuccess').style.display = 'block';
+            document.getElementById('newUserId').textContent = data.userId;
+        } else {
+            showToast('❌ ' + data.message);
+            try { turnstile.reset(); } catch(e) {}
+        }
+    } catch(e) {
+        showToast('❌ 网络错误，请重试');
+    } finally {
+        btn.disabled = false; btn.textContent = '注册账号';
+    }
+}
+
+// ── 退出登录 ──
+async function doLogout() {
+    if (!currentUser) return;
+    try {
+        await fetch(`${USER_API}/api/user/logout`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${currentUser.sessionToken}` }
+        });
+    } catch(e) {}
+    currentUser = null;
+    localStorage.removeItem('tx_user');
+    updateUserEntryBtn();
+    closeUserModal();
+    showToast('已退出登录');
+    // 刷新评论区
+    if (currentCommentCardId) loadComments(currentCommentCardId);
+}
+
+// ── 复制账号ID ──
+function copyUserId() {
+    navigator.clipboard.writeText(currentUser?.userId || '').then(() => showToast('✅ 已复制账号ID'));
+}
+function copyNewUserId() {
+    navigator.clipboard.writeText(document.getElementById('newUserId').textContent).then(() => showToast('✅ 已复制账号ID'));
+}
+
+// ============================================================
+// 评论区
+// ============================================================
+
+// 在详情页注入评论区（在你原有的 renderCardDetail 函数末尾调用此函数）
+function injectCommentSection(cardId) {
+    currentCommentCardId = cardId;
+    currentCommentScore = 0;
+
+    const body = document.getElementById('cardDetailBody');
+    if (!body) return;
+
+    // 避免重复注入
+    let existing = document.getElementById('commentSection');
+    if (existing) existing.remove();
+
+    const section = document.createElement('div');
+    section.id = 'commentSection';
+    section.className = 'comment-section';
+    section.innerHTML = `
+        <div class="comment-section-title">
+            💬 玩家评论
+            <span class="comment-avg-score" id="commentAvgScore"></span>
+        </div>
+        <div id="commentInputArea"></div>
+        <div class="comment-list" id="commentList">
+            <div class="comment-empty">加载中...</div>
+        </div>
+    `;
+    body.appendChild(section);
+
+    loadComments(cardId);
+}
+
+// 加载评论
+async function loadComments(cardId) {
+    try {
+        const headers = {};
+        if (currentUser) headers['Authorization'] = `Bearer ${currentUser.sessionToken}`;
+
+        const res = await fetch(`${USER_API}/api/comment?cardId=${encodeURIComponent(cardId)}`, { headers });
+        const data = await res.json();
+        if (!data.success) return;
+
+        // 更新平均分
+        const avgEl = document.getElementById('commentAvgScore');
+        if (avgEl) {
+            avgEl.textContent = data.avgScore ? `平均分 ⭐ ${data.avgScore}` : '';
+        }
+
+        // 渲染输入区
+        renderCommentInput(cardId, data.hasCommented);
+
+        // 渲染评论列表
+        const listEl = document.getElementById('commentList');
+        if (!listEl) return;
+        if (data.comments.length === 0) {
+            listEl.innerHTML = '<div class="comment-empty">还没有评论，来第一个评论吧！</div>';
+        } else {
+            listEl.innerHTML = data.comments.map(c => `
+                <div class="comment-item">
+                    <div class="comment-item-header">
+                        <span class="comment-username">${escapeHtml(c.username)}</span>
+                        ${c.score ? `<span class="comment-score-display">${'⭐'.repeat(Math.round(c.score))} ${c.score}分</span>` : ''}
+                        <span class="comment-time">${formatTime(c.createdAt)}</span>
+                    </div>
+                    <div class="comment-content">${escapeHtml(c.content)}</div>
+                </div>
+            `).join('');
+        }
+    } catch(e) {
+        console.error('加载评论失败', e);
+    }
+}
+
+// 渲染评论输入区
+function renderCommentInput(cardId, hasCommented) {
+    const inputArea = document.getElementById('commentInputArea');
+    if (!inputArea) return;
+
+    if (!currentUser) {
+        inputArea.innerHTML = `
+            <div class="comment-login-hint">
+                <span onclick="openUserModal()">登录</span> 后才能发表评论和打分
+            </div>
+        `;
+        return;
+    }
+
+    if (hasCommented) {
+        inputArea.innerHTML = `
+            <div class="comment-login-hint">你已经评论过这个游戏了 ✅</div>
+        `;
+        return;
+    }
+
+    inputArea.innerHTML = `
+        <div class="comment-input-area">
+            <textarea class="comment-textarea" id="commentText" placeholder="分享你的游戏体验..." maxlength="500"></textarea>
+            <div class="comment-score-row">
+                <span class="comment-score-label">打分：</span>
+                <div class="score-stars" id="scoreStars">
+                    ${[1,2,3,4,5,6,7,8,9,10].map(i =>
+                        `<span class="score-star" onclick="setScore(${i})" data-score="${i}">☆</span>`
+                    ).join('')}
+                </div>
+                <span id="scoreValue" style="font-size:12px;color:#aaa;margin-left:4px;"></span>
+            </div>
+            <div class="comment-submit-row">
+                <button class="comment-submit-btn" onclick="submitComment('${cardId}')">发表评论</button>
+            </div>
+        </div>
+    `;
+}
+
+// 设置评分
+function setScore(score) {
+    currentCommentScore = score;
+    const stars = document.querySelectorAll('.score-star');
+    stars.forEach((star, i) => {
+        star.textContent = i < score ? '⭐' : '☆';
+    });
+    const scoreVal = document.getElementById('scoreValue');
+    if (scoreVal) scoreVal.textContent = `${score}分`;
+}
+
+// 提交评论
+async function submitComment(cardId) {
+    const content = document.getElementById('commentText')?.value.trim();
+    if (!content) { showToast('请填写评论内容'); return; }
+    if (!currentUser) { showToast('请先登录'); openUserModal(); return; }
+
+    const btn = document.querySelector('.comment-submit-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '发送中...'; }
+
+    try {
+        const body = { cardId, content };
+        if (currentCommentScore > 0) body.score = currentCommentScore;
+
+        const res = await fetch(`${USER_API}/api/comment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.sessionToken}`
+            },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ 评论成功！');
+            loadComments(cardId);
+        } else {
+            showToast('❌ ' + data.message);
+            if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
+        }
+    } catch(e) {
+        showToast('❌ 网络错误');
+        if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
+    }
+}
+
+// 工具函数
+function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatTime(ts) {
+    const d = new Date(ts);
+    const now = Date.now();
+    const diff = now - ts;
+    if (diff < 60000) return '刚刚';
+    if (diff < 3600000) return `${Math.floor(diff/60000)}分钟前`;
+    if (diff < 86400000) return `${Math.floor(diff/3600000)}小时前`;
+    return `${d.getMonth()+1}/${d.getDate()}`;
+}
+
+// ── 关闭弹窗点击背景 ──
+document.getElementById('userModal').addEventListener('click', function(e) {
+    if (e.target === this) closeUserModal();
+});
+</script>
 </body></html>
