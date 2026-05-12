@@ -2296,9 +2296,9 @@ function __safeFixDeleteImage(card){
         <button onclick="exportHTML()" style="background:#17a2b8!important;">💾 导出备份</button>
         <button onclick="migrateAllLinksToKV()" style="background:#c62828!important;">🔒 迁移链接</button>
         <button onclick="debugCardStructure()" style="background:#333!important;">🐛 调试</button>
-        <button onclick="clearCacheAndReload()" style="background:#ff9800!important;">🔄 清缓存</button>
         <button onclick="setInviteCode()" style="background:#673ab7!important;">🎫 邀请码</button>
         <button onclick="openUserQueryPanel()" style="background:#2196f3!important;">🔍 查用户</button>
+        <button id="adminAuditBtn" onclick="toggleAdminAuditMode()" style="background:#ff5722!important;">💬 审核评论</button>
         <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button>
         </div>
     </div>
@@ -2672,6 +2672,7 @@ const WORKER_BASE = "https://api.tianxiao.us.kg";
 // ===================================
 
 let isEditMode = false;
+let adminAuditMode = false; // 💬 审核评论模式
 let currentCat = "all";
 
 // ==========================================
@@ -4362,6 +4363,42 @@ function toggleAdminBarCollapse() {
     btn.textContent = collapsed ? '▲ 收起面板' : '▼ 展开面板';
 }
 
+
+// 💬 审核评论模式切换
+function toggleAdminAuditMode() {
+    adminAuditMode = !adminAuditMode;
+    const btn = document.getElementById('adminAuditBtn');
+    if (adminAuditMode) {
+        // 切换到审核模式：卡片像普通用户一样可点击进详情页
+        document.body.classList.remove('admin-mode');
+        document.querySelectorAll('.card').forEach(c => {
+            c.classList.remove('card-expanded');
+            const sb = c.querySelector('.slider-box');
+            if (sb) {
+                sb.dataset.slideIdx = '0';
+                const track = sb.querySelector('.slider-track');
+                if (track) track.style.transform = 'translateX(0%)';
+            }
+        });
+        if (btn) btn.textContent = '📝 编辑模式';
+        refreshUI();
+        showToast('💬 审核模式：点击卡片查看评论、删评论、封号');
+    } else {
+        // 切回编辑模式
+        document.body.classList.add('admin-mode');
+        document.querySelectorAll('.card').forEach(c => {
+            c.classList.add('card-expanded');
+            const sb = c.querySelector('.slider-box');
+            if (sb) {
+                initSliderTrack(sb);
+                requestAnimationFrame(() => requestAnimationFrame(() => updateSliderTrack(sb)));
+            }
+        });
+        if (btn) btn.textContent = '💬 审核评论';
+        refreshUI();
+        showToast('📝 编辑模式');
+    }
+}
 function enterAdmin() {
     // 🔒 安全检查：必须有 Token
     const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
@@ -4909,6 +4946,7 @@ function initImagePreview() {
 
 // 🎯 v4.0 紧凑卡片功能
 function initCompactCards() {
+    if (isEditMode && !adminAuditMode) return; // 编辑模式下不生成紧凑卡片（审核模式除外）
     document.querySelectorAll('.card.active-render').forEach(card => {
         // 生成紧凑模式的缩略图和预览（如果还没有）
         if (!card.querySelector('.card-thumb')) {
@@ -4925,7 +4963,7 @@ function initCompactCards() {
                 const card = e.target.closest('.card');
                 if (!card) return;
                 // 管理员模式下不触发
-                if (isEditMode) return;
+                if (isEditMode && !adminAuditMode) return;
                 // 点击这些元素时不触发展开
                 if (e.target.closest('.del-btn, .pin-btn, .fav-btn, .slide-btn, .edit-img-btn, .link-jump-btn, .direct-dl-btn, .expand-btn, .desc-expand-btn')) {
                     return;
@@ -5644,7 +5682,7 @@ function addLinkJumpButtons() {
             }
 
             // 管理员模式下加「修改链接」按钮
-            if (isEditMode && cardId) {
+            if (isEditMode && !adminAuditMode && cardId) {
                 const editBtn = document.createElement('button');
                 editBtn.className = 'link-jump-btn edit-kv-btn';
                 editBtn.style.cssText = 'background:#ff9800; flex:0 0 auto; padding:8px 12px;';
@@ -7120,6 +7158,126 @@ function saveBannerConfig() {
     renderBanner();
     renderBannerEditPanel();
     alert('✅ 轮播图已保存！\n\n提示：轮播图数据存储在本地，若需多端同步请导出备份。');
+}
+
+
+// ========== 管理员：用户查询 & 封号 & 删评论 ==========
+let _banTargetUserId = '';
+
+function openUserQueryPanel() {
+    const panel = document.getElementById('userQueryPanel');
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+async function queryUser() {
+    const input = document.getElementById('userQueryInput');
+    const result = document.getElementById('userQueryResult');
+    const keyword = input.value.trim();
+    if (!keyword) { showToast('请输入用户名或账号ID'); return; }
+
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('请先登录管理员'); return; }
+
+    result.style.display = 'none';
+    result.innerHTML = '<div style="text-align:center;color:#999;font-size:13px;">查询中...</div>';
+    result.style.display = 'flex';
+
+    try {
+        const res = await fetch(`${USER_API}/api/admin/user?keyword=${encodeURIComponent(keyword)}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!data.success) {
+            result.innerHTML = `<div style="color:#ff4466;font-size:13px;">❌ ${data.error || '查询失败'}</div>`;
+            return;
+        }
+        if (!data.users || data.users.length === 0) {
+            result.innerHTML = '<div style="color:#999;font-size:13px;">未找到用户</div>';
+            return;
+        }
+        result.innerHTML = data.users.map(u => `
+            <div style="background:#fff; border:1px solid #90caf9; border-radius:8px; padding:8px 10px; display:flex; align-items:center; gap:8px; cursor:pointer;"
+                 onclick="openBanModal('${escapeHtml(u.userId)}', '${escapeHtml(u.username)}')">
+                <span style="font-size:11px; color:#666; flex:1;">
+                    <b>${escapeHtml(u.username)}</b> · ${escapeHtml(u.userId)}
+                    ${u.bannedUntil ? `<span style="color:#ff4466; margin-left:4px;">(封禁至 ${new Date(u.bannedUntil).toLocaleString('zh-CN')})</span>` : ''}
+                </span>
+                <span style="font-size:12px; color:#2196f3;">🔨</span>
+            </div>
+        `).join('');
+    } catch(e) {
+        result.innerHTML = `<div style="color:#ff4466;font-size:13px;">❌ ${e.message}</div>`;
+    }
+}
+
+function openBanModal(userId, username) {
+    _banTargetUserId = userId;
+    const modal = document.getElementById('banModal');
+    document.getElementById('banTargetInfo').innerHTML = `目标：<b>${escapeHtml(username)}</b>（${escapeHtml(userId)}）`;
+    document.getElementById('banDaysInput').value = '';
+    document.getElementById('banReasonInput').value = '';
+    modal.classList.add('show');
+}
+
+function closeBanModal() {
+    document.getElementById('banModal').classList.remove('show');
+    _banTargetUserId = '';
+}
+
+async function submitBan() {
+    const days = parseInt(document.getElementById('banDaysInput').value);
+    const reason = document.getElementById('banReasonInput').value.trim();
+    const btn = document.getElementById('banSubmitBtn');
+
+    if (isNaN(days) || days < 0) { showToast('请输入有效天数'); return; }
+
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('请先登录管理员'); return; }
+
+    btn.disabled = true; btn.textContent = '处理中...';
+    try {
+        const res = await fetch(`${USER_API}/api/admin/ban`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ userId: _banTargetUserId, days, reason })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(days === 0 ? '✅ 已解封' : `✅ 已封号 ${days} 天`);
+            closeBanModal();
+            const result = document.getElementById('userQueryResult');
+            if (result && result.style.display === 'flex') queryUser();
+        } else {
+            showToast('❌ ' + (data.error || '操作失败'));
+        }
+    } catch(e) {
+        showToast('❌ ' + e.message);
+    } finally {
+        btn.disabled = false; btn.textContent = '确认';
+    }
+}
+
+async function deleteComment(cardId, userId) {
+    if (!confirm('确定删除该用户的这条评论？')) return;
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('请先登录管理员'); return; }
+    try {
+        const res = await fetch(`${USER_API}/api/admin/comment`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ cardId, userId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ 评论已删除');
+            loadComments(cardId);
+        } else {
+            showToast('❌ ' + (data.error || '删除失败'));
+        }
+    } catch(e) {
+        showToast('❌ ' + e.message);
+    }
 }
 
 // 字符转义
