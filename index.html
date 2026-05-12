@@ -8876,7 +8876,7 @@ async function loadComments(cardId) {
                         ${c.score ? `<span class="comment-score-display">${'⭐'.repeat(Math.round(c.score))} ${c.score}分</span>` : ''}
                         <span class="comment-time">${formatTime(c.createdAt)}</span>
                     </div>
-                    <div class="comment-content">${escapeHtml(c.content)}</div>
+                    <div class="comment-content">${escapeHtml(c.comment)}</div>
                 </div>
             `).join('');
         }
