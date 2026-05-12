@@ -8643,6 +8643,12 @@ let currentCommentScore = 0;
                     currentUser = null;
                     localStorage.removeItem('tx_user');
                     updateUserEntryBtn();
+                } else {
+                    // 兼容旧格式：如果存的是 sessionToken 为 undefined，修正
+                    if (!currentUser.sessionToken && currentUser.token) {
+                        currentUser.sessionToken = currentUser.token;
+                        localStorage.setItem('tx_user', JSON.stringify(currentUser));
+                    }
                 }
             }).catch(() => {});
         } catch(e) {
@@ -8710,7 +8716,7 @@ async function doLogin() {
         });
         const data = await res.json();
         if (data.success) {
-            currentUser = { userId: data.userId, username: data.username, sessionToken: data.sessionToken };
+            currentUser = { userId: data.userId, username: data.username, sessionToken: data.token };
             localStorage.setItem('tx_user', JSON.stringify(currentUser));
             updateUserEntryBtn();
             showLoggedInState();
@@ -8758,7 +8764,7 @@ async function doRegister() {
         });
         const data = await res.json();
         if (data.success) {
-            currentUser = { userId: data.userId, username: data.username, sessionToken: data.sessionToken };
+            currentUser = { userId: data.userId, username: data.username, sessionToken: data.token };
             localStorage.setItem('tx_user', JSON.stringify(currentUser));
             updateUserEntryBtn();
             // 显示注册成功页
