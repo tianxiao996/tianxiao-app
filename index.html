@@ -8716,7 +8716,7 @@ async function doLogin() {
             showLoggedInState();
             showToast('✅ 登录成功！');
         } else {
-            showToast('❌ ' + data.message);
+            showToast('❌ ' + (data.error || data.message || '登录失败'));
         }
     } catch(e) {
         showToast('❌ 网络错误，请重试');
@@ -8738,13 +8738,14 @@ async function doRegister() {
         showToast('密码须8位以上且包含字母'); return;
     }
 
-    // 获取Turnstile Token
-    const turnstileEl = document.querySelector('#userRegisterForm .cf-turnstile iframe');
-    let turnstileToken = '';
+    // 获取Turnstile Token（隐式渲染：不传参获取第一个widget）
+    let tsToken = '';
     try {
-        turnstileToken = turnstile.getResponse(document.querySelector('#userRegisterForm .cf-turnstile'));
-    } catch(e) {}
-    if (!turnstileToken) { showToast('请完成人机验证'); return; }
+        tsToken = turnstile.getResponse();
+    } catch(e) {
+        console.log('Turnstile getResponse error:', e);
+    }
+    if (!tsToken) { showToast('请完成人机验证（等待验证框变为绿色）'); return; }
 
     const btn = document.querySelector('#userRegisterForm .user-submit-btn');
     btn.disabled = true; btn.textContent = '注册中...';
@@ -8753,7 +8754,7 @@ async function doRegister() {
         const res = await fetch(`${USER_API}/api/user/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, inviteCode, turnstileToken })
+            body: JSON.stringify({ username, password, password2, inviteCode, tsToken })
         });
         const data = await res.json();
         if (data.success) {
@@ -8766,11 +8767,12 @@ async function doRegister() {
             document.getElementById('userRegSuccess').style.display = 'block';
             document.getElementById('newUserId').textContent = data.userId;
         } else {
-            showToast('❌ ' + data.message);
+            const errMsg = data.error || data.message || '注册失败';
+            showToast('❌ ' + errMsg);
             try { turnstile.reset(); } catch(e) {}
         }
     } catch(e) {
-        showToast('❌ 网络错误，请重试');
+        showToast('❌ 网络错误: ' + (e.message || '请检查网络'));
     } finally {
         btn.disabled = false; btn.textContent = '注册账号';
     }
