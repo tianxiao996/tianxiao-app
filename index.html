@@ -2297,7 +2297,6 @@ function __safeFixDeleteImage(card){
         <button onclick="migrateAllLinksToKV()" style="background:#c62828!important;">🔒 迁移链接</button>
         <button onclick="debugCardStructure()" style="background:#333!important;">🐛 调试</button>
         <button onclick="setInviteCode()" style="background:#673ab7!important;">🎫 邀请码</button>
-        <button onclick="openBanwordPanel()" style="background:#d32f2f!important;">🛡️ 屏蔽词</button>
         <button onclick="openUserQueryPanel()" style="background:#2196f3!important;">🔍 查用户</button>
         <button id="adminAuditBtn" onclick="toggleAdminAuditMode()" style="background:#ff5722!important;">💬 审核评论</button>
         <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button>
@@ -2459,32 +2458,6 @@ function __safeFixDeleteImage(card){
             <div class="gallery-edit-hint" id="galleryEditHint"></div>
             <button class="gallery-save-btn" onclick="saveGalleryContent()">💾 保存内容</button>
             <button class="gallery-insert-img-btn" id="galleryInsertImgBtn" onclick="insertGalleryImage()">🖼️ 插入图片</button>
-        </div>
-    </div>
-</div>
-
-<!-- 🛡️ 屏蔽词管理面板 -->
-<div id="banwordPanel" class="fullpage-panel" style="display:none;">
-    <div class="fullpage-header">
-        <div class="fullpage-back-btn" onclick="closeBanwordPanel()">←</div>
-        <div class="fullpage-header-title">🛡️ 屏蔽词管理</div>
-        <div style="width:40px;"></div>
-    </div>
-    <div class="fullpage-body">
-        <div style="max-width:500px;margin:0 auto;padding:20px;">
-            <!-- 导入区域 -->
-            <div style="background:var(--card);border:3px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:4px 4px 0 var(--shadow);">
-                <div style="font-size:16px;font-weight:700;color:var(--primary);margin-bottom:12px;">📥 导入屏蔽词合集</div>
-                <div style="font-size:12px;color:#888;margin-bottom:10px;">选择txt文件，每行一个词，文件名作为合集名称</div>
-                <input type="file" id="banwordFileInput" accept=".txt" style="display:none;" onchange="importBanwordFile(this)">
-                <button class="user-btn" onclick="document.getElementById('banwordFileInput').click()">📁 选择txt文件导入</button>
-                <div id="banwordImportStatus" style="margin-top:8px;font-size:13px;color:var(--primary);display:none;"></div>
-            </div>
-            <!-- 合集列表 -->
-            <div style="font-size:16px;font-weight:700;color:var(--primary);margin-bottom:12px;">📂 屏蔽词合集列表</div>
-            <div id="banwordCollectionsList">
-                <div style="text-align:center;color:#aaa;padding:20px;font-size:13px;">加载中...</div>
-            </div>
         </div>
     </div>
 </div>
@@ -4565,165 +4538,6 @@ async function setInviteCode() {
         } catch(e) {
             showToast('❌ 网络错误: ' + e.message);
         }
-    }
-}
-
-
-// ── 显示屏蔽词挑战弹窗（人机验证）──
-function showBanwordChallenge(word) {
-    // 关闭已有的弹窗
-    const existing = document.getElementById('banwordChallengeModal');
-    if (existing) existing.remove();
-
-    const modal = document.createElement('div');
-    modal.id = 'banwordChallengeModal';
-    modal.className = 'modal-overlay';
-    modal.style.cssText = 'display:flex;z-index:2600;';
-    modal.innerHTML = `
-        <div class="modal-box" style="max-width:400px;text-align:center;">
-            <div style="font-size:48px;margin-bottom:8px;">🛡️</div>
-            <div style="font-size:16px;font-weight:700;color:#e91e63;margin-bottom:8px;">评论包含敏感词</div>
-            <div style="font-size:13px;color:#888;margin-bottom:16px;">你的评论中检测到敏感词「<b style="color:#e91e63;">${escapeHtml(word)}</b>」，需要通过人机验证才能继续评论。<br><br>你被禁止评论 <b>2分钟</b>。</div>
-            <div id="banwordTsWidget" style="margin-bottom:12px;"></div>
-            <div id="banwordTsStatus" style="font-size:13px;color:var(--primary);margin-bottom:12px;min-height:20px;"></div>
-            <button class="modal-btn btn-cancel" onclick="document.getElementById('banwordChallengeModal').remove()" style="width:100%;">关闭</button>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
-
-    // 加载Turnstile
-    setTimeout(() => {
-        if (typeof turnstile !== 'undefined') {
-            const container = document.getElementById('banwordTsWidget');
-            if (container) {
-                turnstile.render(container, {
-                    sitekey: TURNSTILE_SITE_KEY,
-                    callback: function(token) {
-                        document.getElementById('banwordTsStatus').textContent = '✅ 验证通过，2分钟后可重新评论';
-                    },
-                    'error-callback': function() {
-                        document.getElementById('banwordTsStatus').textContent = '❌ 验证失败，请重试';
-                    }
-                });
-            }
-        }
-    }, 300);
-}
-
-// ==========================================
-// 🛡️ 屏蔽词管理
-// ==========================================
-
-function openBanwordPanel() {
-    if (!isEditMode) return;
-    document.getElementById('banwordPanel').style.display = 'flex';
-    loadBanwordCollections();
-}
-function closeBanwordPanel() {
-    document.getElementById('banwordPanel').style.display = 'none';
-}
-
-// ── 导入txt文件 ──
-async function importBanwordFile(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    const statusEl = document.getElementById('banwordImportStatus');
-    statusEl.style.display = 'block';
-    statusEl.textContent = '正在读取文件...';
-
-    try {
-        const text = await file.text();
-        const words = text.split('\n').map(w => w.trim()).filter(w => w.length > 0);
-        if (words.length === 0) {
-            statusEl.textContent = '❌ 文件内容为空';
-            return;
-        }
-
-        // 去掉.txt后缀作为合集名
-        const collectionName = file.name.replace(/\.txt$/i, '');
-        const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN') || '';
-
-        statusEl.textContent = `正在导入「${collectionName}」共 ${words.length} 个词...`;
-
-        const res = await fetch(WORKER_BASE + '/api/admin/banwords/import', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-            body: JSON.stringify({ collectionName, words })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-            statusEl.textContent = `✅ ${data.message}`;
-            loadBanwordCollections();
-            setTimeout(() => { statusEl.textContent = ''; statusEl.style.display = 'none'; }, 3000);
-        } else {
-            statusEl.textContent = '❌ ' + (data.error || '导入失败');
-        }
-    } catch (e) {
-        statusEl.textContent = '❌ 导入失败: ' + (e.message || '网络错误');
-    }
-
-    input.value = '';
-}
-
-// ── 加载合集列表 ──
-async function loadBanwordCollections() {
-    const container = document.getElementById('banwordCollectionsList');
-    container.innerHTML = '<div style="text-align:center;color:#aaa;padding:20px;">加载中...</div>';
-
-    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN') || '';
-    try {
-        const res = await fetch(WORKER_BASE + '/api/admin/banwords/list', {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
-        const data = await res.json();
-
-        if (!data.success) {
-            container.innerHTML = '<div style="text-align:center;color:#e91e63;padding:20px;">加载失败: ' + (data.error || '未知错误') + '</div>';
-            return;
-        }
-
-        if (data.collections.length === 0) {
-            container.innerHTML = '<div style="text-align:center;color:#aaa;padding:20px;font-size:13px;">暂无屏蔽词合集，点击上方按钮导入</div>';
-            return;
-        }
-
-        container.innerHTML = data.collections.map(c => `
-            <div style="background:var(--card);border:2px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;box-shadow:4px 4px 0 var(--shadow);">
-                <div>
-                    <div style="font-weight:700;color:var(--text);font-size:15px;">📁 ${escapeHtml(c.name)}</div>
-                    <div style="font-size:12px;color:#888;margin-top:4px;">${c.wordCount} 个屏蔽词</div>
-                </div>
-                <button onclick="deleteBanwordCollection('${c.name.replace(/'/g, "\\'")}')" style="padding:6px 12px;border:none;border-radius:6px;background:#e91e63;color:#fff;font-size:12px;cursor:pointer;font-family:Zpix;">🗑️ 删除</button>
-            </div>
-        `).join('');
-    } catch (e) {
-        container.innerHTML = '<div style="text-align:center;color:#e91e63;padding:20px;">加载失败: ' + (e.message || '网络错误') + '</div>';
-    }
-}
-
-// ── 删除合集 ──
-async function deleteBanwordCollection(name) {
-    if (!confirm('确定删除「' + name + '」屏蔽词合集？')) return;
-
-    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN') || '';
-    try {
-        const res = await fetch(WORKER_BASE + '/api/admin/banwords/delete', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-            body: JSON.stringify({ collectionName: name })
-        });
-        const data = await res.json();
-        if (data.success) {
-            showToast('✅ 已删除「' + name + '」');
-            loadBanwordCollections();
-        } else {
-            showToast('❌ ' + (data.error || '删除失败'));
-        }
-    } catch (e) {
-        showToast('❌ 删除失败');
     }
 }
 
@@ -8893,11 +8707,32 @@ function closeNavPanel() {
     <div class="user-modal-box">
         <div class="user-modal-title">🌸 天笑の窝 - 用户中心</div>
 
-        <!-- 未登录：登录/注册 两个按钮 -->
+        <!-- 未登录：登录/注册 -->
         <div id="userGuestView">
-            <!-- GitHub登录 -->
-            <div style="margin-bottom:20px;">
-                <div style="font-size:13px;color:#888;text-align:center;margin-bottom:12px;">已有账号？直接登录</div>
+
+            <!-- ====== 登录区域 ====== -->
+            <div id="loginFormArea">
+                <div style="font-size:14px;font-weight:700;color:var(--primary);margin-bottom:12px;">🔑 账号登录</div>
+                <div class="user-field">
+                    <label>账号ID</label>
+                    <input type="text" id="loginUserId" placeholder="请输入账号ID" autocomplete="off">
+                </div>
+                <div class="user-field">
+                    <label>密码</label>
+                    <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="off">
+                </div>
+                <!-- 登录人机验证 -->
+                <div style="margin:10px 0;">
+                    <div id="loginTsWidget" style="min-height:65px;display:flex;align-items:center;justify-content:center;"></div>
+                    <div id="loginTsStatus" style="font-size:11px;color:#888;text-align:center;margin-top:4px;"></div>
+                </div>
+                <button class="user-submit-btn" onclick="doLogin()">登录</button>
+
+                <div style="display:flex;align-items:center;gap:8px;margin:16px 0;">
+                    <div style="flex:1;height:1px;background:var(--border);"></div>
+                    <span style="font-size:12px;color:#aaa;">或用 GitHub 登录</span>
+                    <div style="flex:1;height:1px;background:var(--border);"></div>
+                </div>
                 <button class="user-submit-btn" style="background:#24292e;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="doGithubLogin()">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
                     使用 GitHub 登录
@@ -8910,18 +8745,68 @@ function closeNavPanel() {
                 <div style="flex:1;height:1px;background:var(--border);"></div>
             </div>
 
-            <!-- GitHub+邀请码注册 -->
-            <div>
-                <div style="font-size:12px;color:#888;text-align:center;margin-bottom:10px;">注册需要邀请码 + GitHub账号，缺一不可</div>
-                <div class="user-field">
-                    <label>邀请码</label>
-                    <input type="text" id="regInviteCode" placeholder="请输入邀请码" autocomplete="off">
+            <!-- ====== 注册区域 ====== -->
+            <div id="registerFormArea">
+                <div style="font-size:14px;font-weight:700;color:var(--primary);margin-bottom:12px;">📝 注册账号</div>
+                <div style="font-size:11px;color:#e91e63;margin-bottom:10px;">注册需要：用户名 + 密码 + 邀请码 + 人机验证 + GitHub授权（缺一不可）</div>
+
+                <!-- 第一步：填写信息 -->
+                <div id="regStep1">
+                    <div class="user-field">
+                        <label>用户名</label>
+                        <input type="text" id="regUsername" placeholder="3-20字符，中英文/数字/下划线" autocomplete="off" maxlength="20">
+                    </div>
+                    <div class="user-field">
+                        <label>密码</label>
+                        <input type="password" id="regPassword" placeholder="8位以上且包含字母" autocomplete="off">
+                    </div>
+                    <div class="user-field">
+                        <label>确认密码</label>
+                        <input type="password" id="regPassword2" placeholder="再次输入密码" autocomplete="off">
+                    </div>
+                    <div class="user-field">
+                        <label>邀请码</label>
+                        <input type="text" id="regInviteCode" placeholder="请输入邀请码" autocomplete="off">
+                    </div>
                 </div>
-                <button class="user-submit-btn" style="background:#24292e;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="doGithubRegister()">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-                    填写邀请码并用 GitHub 注册
-                </button>
+
+                <!-- 第二步：人机验证 -->
+                <div id="regStep2" style="display:none;">
+                    <div style="font-size:13px;color:#888;margin-bottom:8px;">请先完成人机验证</div>
+                    <div id="regTsWidget" style="min-height:65px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;"></div>
+                    <div id="regTsStatus" style="font-size:11px;color:#888;text-align:center;margin-bottom:10px;"></div>
+                </div>
+
+                <!-- 第三步：GitHub授权 -->
+                <div id="regStep3" style="display:none;">
+                    <div style="font-size:13px;color:#888;margin-bottom:8px;">最后一步：GitHub授权</div>
+                    <div style="background:var(--bg);border:2px dashed var(--border);border-radius:8px;padding:12px;margin-bottom:10px;text-align:center;">
+                        <div style="font-size:12px;color:#888;">点击按钮跳转GitHub授权</div>
+                        <div style="font-size:11px;color:#aaa;margin-top:4px;">授权后会自动返回完成注册</div>
+                    </div>
+                </div>
+
+                <!-- 注册按钮 -->
+                <button id="regActionBtn" class="user-submit-btn" style="background:var(--primary);" onclick="handleRegisterStep()">下一步：人机验证</button>
+
+                <!-- 注册错误/成功提示 -->
+                <div id="regErrorMsg" style="color:#e91e63;font-size:12px;margin-top:8px;display:none;text-align:center;"></div>
+                <div id="regSuccessMsg" style="color:#43a047;font-size:12px;margin-top:8px;display:none;text-align:center;"></div>
             </div>
+
+            <!-- 注册成功页面 -->
+            <div id="userRegSuccess" style="display:none;text-align:center;">
+                <div style="font-size:48px;margin-bottom:8px;">🎉</div>
+                <div style="font-size:16px;font-weight:700;color:var(--primary);margin-bottom:8px;">注册成功！</div>
+                <div style="font-size:13px;color:#888;margin-bottom:12px;">你的账号ID</div>
+                <div class="user-id-box" style="margin:0 auto 12px;max-width:280px;">
+                    <div id="newUserId" style="font-weight:bold;letter-spacing:2px;font-size:18px;"></div>
+                    <span class="user-id-copy" onclick="copyNewUserId()">复制</span>
+                </div>
+                <div class="user-warning">⚠️ 丢失账号ID无法找回，请妥善保管</div>
+                <button class="user-submit-btn" style="margin-top:16px;" onclick="closeUserModal();showToast('🎉 欢迎加入天笑の窝！');">进入软件库</button>
+            </div>
+
         </div>
 
         <!-- 已登录状态 -->
@@ -9015,6 +8900,19 @@ function openUserModal() {
     } else {
         document.getElementById('userGuestView').style.display = 'block';
         document.getElementById('userLoggedIn').style.display = 'none';
+        // 渲染登录表单的Turnstile
+        setTimeout(() => {
+            if (typeof turnstile !== 'undefined') {
+                const container = document.getElementById('loginTsWidget');
+                if (container && container.innerHTML === '') {
+                    turnstile.render('#loginTsWidget', {
+                        sitekey: TURNSTILE_SITE_KEY,
+                        callback: (token) => { _loginTsToken = token; },
+                        'error-callback': () => { _loginTsToken = ''; }
+                    });
+                }
+            }
+        }, 100);
     }
 }
 
@@ -9038,7 +8936,7 @@ function showLoggedInState() {
 let _oauthPopup = null;
 
 function _openGithubPopup(url) {
-    // 📱 Median/WebView兼容：在当前窗口内跳转，避免弹窗被拦截
+    // 📱 Median/WebView兼容：在当前窗口内跳转
     window.location.href = url;
 }
 
@@ -9085,7 +8983,7 @@ async function doGithubLogin() {
         const res = await fetch(`${WORKER_BASE}/api/auth/github/login`);
         const data = await res.json();
         if (data.success) {
-            _openGithubPopup(data.url);
+            window.location.href = data.url;
         } else {
             showToast('❌ ' + (data.error || '跳转失败'));
         }
@@ -9094,20 +8992,110 @@ async function doGithubLogin() {
     }
 }
 
-async function doGithubRegister() {
-    const inviteCode = document.getElementById('regInviteCode')?.value.trim();
-    if (!inviteCode) { showToast('❌ 请先填写邀请码'); return; }
-    try {
-        showToast('⏳ 验证邀请码...');
-        const res = await fetch(`${WORKER_BASE}/api/auth/github?inviteCode=${encodeURIComponent(inviteCode)}`);
-        const data = await res.json();
-        if (data.success) {
-            _openGithubPopup(data.url);
-        } else {
-            showToast('❌ ' + (data.error || '邀请码错误'));
+// ── 注册分步处理 ──
+let _regStep = 1;
+let _regTsToken = '';
+
+async function handleRegisterStep() {
+    const btn = document.getElementById('regActionBtn');
+    const errEl = document.getElementById('regErrorMsg');
+    errEl.style.display = 'none';
+
+    if (_regStep === 1) {
+        // 验证表单
+        const username = document.getElementById('regUsername').value.trim();
+        const password = document.getElementById('regPassword').value;
+        const password2 = document.getElementById('regPassword2').value;
+        const inviteCode = document.getElementById('regInviteCode').value.trim();
+
+        if (!username || !password || !password2 || !inviteCode) {
+            errEl.textContent = '请填写所有字段';
+            errEl.style.display = 'block';
+            return;
         }
-    } catch(e) {
-        showToast('❌ 网络错误: ' + e.message);
+        if (username.length < 3 || username.length > 20) {
+            errEl.textContent = '用户名长度3-20字符';
+            errEl.style.display = 'block';
+            return;
+        }
+        if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]+$/.test(username)) {
+            errEl.textContent = '用户名只能包含中英文、数字、下划线';
+            errEl.style.display = 'block';
+            return;
+        }
+        if (password !== password2) {
+            errEl.textContent = '两次密码不一致';
+            errEl.style.display = 'block';
+            return;
+        }
+        if (password.length < 8 || !/[a-zA-Z]/.test(password)) {
+            errEl.textContent = '密码须8位以上且包含字母';
+            errEl.style.display = 'block';
+            return;
+        }
+
+        // 切换到步骤2：人机验证
+        document.getElementById('regStep1').style.display = 'none';
+        document.getElementById('regStep2').style.display = 'block';
+        btn.textContent = '下一步：GitHub授权';
+        _regStep = 2;
+
+        // 渲染Turnstile
+        setTimeout(() => {
+            if (typeof turnstile !== 'undefined') {
+                turnstile.render('#regTsWidget', {
+                    sitekey: TURNSTILE_SITE_KEY,
+                    callback: (token) => {
+                        _regTsToken = token;
+                        document.getElementById('regTsStatus').textContent = '✅ 验证通过';
+                    },
+                    'error-callback': () => {
+                        document.getElementById('regTsStatus').textContent = '❌ 验证失败，请重试';
+                    }
+                });
+            }
+        }, 100);
+
+    } else if (_regStep === 2) {
+        if (!_regTsToken) {
+            errEl.textContent = '请先完成人机验证';
+            errEl.style.display = 'block';
+            return;
+        }
+
+        // 保存注册信息到sessionStorage（GitHub授权跳转前）
+        const regData = {
+            username: document.getElementById('regUsername').value.trim(),
+            password: document.getElementById('regPassword').value,
+            password2: document.getElementById('regPassword2').value,
+            inviteCode: document.getElementById('regInviteCode').value.trim(),
+            tsToken: _regTsToken,
+            step: 3
+        };
+        sessionStorage.setItem('tx_reg_data', JSON.stringify(regData));
+
+        // 切换到步骤3：GitHub授权
+        document.getElementById('regStep2').style.display = 'none';
+        document.getElementById('regStep3').style.display = 'block';
+        btn.textContent = '跳转GitHub授权';
+        _regStep = 3;
+
+    } else if (_regStep === 3) {
+        // 跳转GitHub授权
+        const inviteCode = document.getElementById('regInviteCode').value.trim();
+        try {
+            const res = await fetch(`${WORKER_BASE}/api/auth/github?inviteCode=${encodeURIComponent(inviteCode)}`);
+            const data = await res.json();
+            if (data.success) {
+                window.location.href = data.url;
+            } else {
+                errEl.textContent = data.error || '获取授权链接失败';
+                errEl.style.display = 'block';
+            }
+        } catch(e) {
+            errEl.textContent = '网络错误';
+            errEl.style.display = 'block';
+        }
     }
 }
 
@@ -9128,26 +9116,40 @@ async function doGithubRegister() {
         return;
     }
     if (authSuccess) {
+        // ── GitHub注册授权成功：获取githubId后提交注册 ──
+        if (authSuccess === 'github_register') {
+            const githubId = params.get('githubId');
+            if (!githubId) { setTimeout(() => showToast('❌ GitHub授权失败'), 500); return; }
+            // 从sessionStorage读取注册信息
+            const regDataRaw = sessionStorage.getItem('tx_reg_data');
+            if (!regDataRaw) { setTimeout(() => showToast('❌ 注册信息已过期，请重新填写'), 500); return; }
+            const regData = JSON.parse(regDataRaw);
+            // 提交注册
+            setTimeout(() => submitGithubRegister(githubId, regData), 500);
+            return;
+        }
+        // ── 正常登录 ──
         const token = params.get('token');
         const userId = params.get('userId');
         const username = decodeURIComponent(params.get('username') || '');
-        const newInvite = params.get('newInvite');
         if (token && userId && username) {
             currentUser = { userId, username, sessionToken: token };
             localStorage.setItem('tx_user', JSON.stringify(currentUser));
             updateUserEntryBtn();
             setTimeout(() => {
-                showToast(authSuccess === 'register' ? `🎉 注册成功！欢迎 ${username}` : `✅ 欢迎回来，${username}！`);
-                if (newInvite) setTimeout(() => showToast(`⚠️ 管理员注意：邀请码已更新为 ${newInvite}`), 2000);
+                showToast(`✅ 欢迎回来，${username}！`);
             }, 300);
         }
     }
 })();
 
+let _loginTsToken = '';
+
 async function doLogin() {
-    const userId = document.getElementById('loginUsername').value.trim();
-    const password = document.getElementById('loginPassword').value;
+    const userId = document.getElementById('loginUserId').value.trim();
+    const password = document.getElementById('loginPassword')?.value;
     if (!userId || !password) { showToast('请填写账号ID和密码'); return; }
+    if (!_loginTsToken) { showToast('请先完成人机验证'); return; }
 
     const btn = document.querySelector('#userLoginForm .user-submit-btn');
     btn.disabled = true; btn.textContent = '登录中...';
@@ -9156,7 +9158,7 @@ async function doLogin() {
         const res = await fetch(`${USER_API}/api/user/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, password })
+            body: JSON.stringify({ userId, password, tsToken: _loginTsToken })
         });
         const data = await res.json();
         if (data.success) {
@@ -9176,57 +9178,38 @@ async function doLogin() {
 }
 
 // ── 注册 ──
-async function doRegister() {
-    const inviteCode = document.getElementById('regInviteCode').value.trim();
-    const username = document.getElementById('regUsername').value.trim();
-    const password = document.getElementById('regPassword').value;
-    const password2 = document.getElementById('regPassword2').value;
-
-    if (!inviteCode || !username || !password) { showToast('请填写完整信息'); return; }
-    if (password !== password2) { showToast('两次密码不一致'); return; }
-    if (password.length < 8 || !/[a-zA-Z]/.test(password)) {
-        showToast('密码须8位以上且包含字母'); return;
-    }
-
-    // 获取Turnstile Token（隐式渲染：不传参获取第一个widget）
-    let tsToken = '';
+// ── GitHub授权后提交注册 ──
+async function submitGithubRegister(githubId, regData) {
+    const { username, password, password2, inviteCode, tsToken } = regData;
     try {
-        tsToken = turnstile.getResponse();
-    } catch(e) {
-        console.log('Turnstile getResponse error:', e);
-    }
-    if (!tsToken) { showToast('请完成人机验证（等待验证框变为绿色）'); return; }
-
-    const btn = document.querySelector('#userRegisterForm .user-submit-btn');
-    btn.disabled = true; btn.textContent = '注册中...';
-
-    try {
+        showToast('⏳ 正在完成注册...');
         const res = await fetch(`${USER_API}/api/user/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, password2, inviteCode, tsToken })
+            body: JSON.stringify({ username, password, password2, inviteCode, tsToken, githubId })
         });
         const data = await res.json();
+        // 清除sessionStorage中的注册信息
+        sessionStorage.removeItem('tx_reg_data');
         if (data.success) {
             currentUser = { userId: data.userId, username: data.username, sessionToken: data.token };
             localStorage.setItem('tx_user', JSON.stringify(currentUser));
             updateUserEntryBtn();
-            // 显示注册成功页
-            document.getElementById('userModalTabs').style.display = 'none';
-            document.getElementById('userRegisterForm').style.display = 'none';
+            // 显示注册成功弹窗
+            showToast(`🎉 注册成功！欢迎 ${data.username}`);
+            // 显示注册成功页面
+            document.getElementById('userGuestView').style.display = 'none';
             document.getElementById('userRegSuccess').style.display = 'block';
             document.getElementById('newUserId').textContent = data.userId;
         } else {
-            const errMsg = data.error || data.message || '注册失败';
-            showToast('❌ ' + errMsg);
-            try { turnstile.reset(); } catch(e) {}
+            showToast('❌ 注册失败：' + (data.error || '未知错误'));
         }
     } catch(e) {
-        showToast('❌ 网络错误: ' + (e.message || '请检查网络'));
-    } finally {
-        btn.disabled = false; btn.textContent = '注册账号';
+        showToast('❌ 注册失败：网络错误');
     }
 }
+
+// [旧的doRegister已删除，新注册流程使用handleRegisterStep+submitGithubRegister]
 
 // ── 退出登录 ──
 async function doLogout() {
@@ -9390,40 +9373,7 @@ async function submitComment(cardId) {
     if (!currentUser) { showToast('请先登录'); openUserModal(); return; }
 
     const btn = document.querySelector('.comment-submit-btn');
-    if (btn) { btn.disabled = true; btn.textContent = '检查中...'; }
-
-    // ── 🛡️ 屏蔽词检查 ──
-    try {
-        const banRes = await fetch(WORKER_BASE + '/api/banwords/check-block');
-        const banData = await banRes.json();
-        if (banData.blocked) {
-            showToast('⏳ 你因触发屏蔽词被禁止评论 ' + banData.remainingSeconds + ' 秒');
-            if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
-            return;
-        }
-    } catch (e) { /* 忽略检查失败 */ }
-
-    // ── 检查文本是否包含屏蔽词 ──
-    try {
-        const checkRes = await fetch(WORKER_BASE + '/api/banwords/collections');
-        const checkData = await checkRes.json();
-        if (checkData.success && checkData.words && checkData.words.length > 0) {
-            const lowerComment = comment.toLowerCase();
-            const foundWord = checkData.words.find(w => lowerComment.includes(w.toLowerCase()));
-            if (foundWord) {
-                // 触发屏蔽词 → 封禁2分钟
-                try {
-                    await fetch(WORKER_BASE + '/api/banwords/block', { method: 'POST' });
-                } catch (e) {}
-                // 显示人机验证弹窗
-                showBanwordChallenge(foundWord);
-                if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
-                return;
-            }
-        }
-    } catch (e) { /* 忽略检查失败 */ }
-
-    if (btn) { btn.textContent = '发送中...'; }
+    if (btn) { btn.disabled = true; btn.textContent = '发送中...'; }
 
     try {
         const body = { cardId, comment, score: currentCommentScore || 0 };
