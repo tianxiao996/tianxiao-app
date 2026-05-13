@@ -8701,64 +8701,36 @@ function closeNavPanel() {
     <div class="user-modal-box">
         <div class="user-modal-title">🌸 天笑の窝 - 用户中心</div>
 
-        <!-- Tab切换：未登录时显示 -->
-        <div class="user-modal-tab" id="userModalTabs">
-            <button class="user-tab-btn active" onclick="switchUserTab('login')">登录</button>
-            <button class="user-tab-btn" onclick="switchUserTab('register')">注册</button>
-        </div>
+        <!-- 未登录：登录/注册 两个按钮 -->
+        <div id="userGuestView">
+            <!-- GitHub登录 -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:13px;color:#888;text-align:center;margin-bottom:12px;">已有账号？直接登录</div>
+                <button class="user-submit-btn" style="background:#24292e;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="doGithubLogin()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                    使用 GitHub 登录
+                </button>
+            </div>
 
-        <!-- 登录表单 -->
-        <div id="userLoginForm">
-            <div class="user-field">
-                <label>账号ID</label>
-                <input type="text" id="loginUsername" placeholder="请输入账号ID" autocomplete="off">
-            </div>
-            <div class="user-field">
-                <label>密码</label>
-                <input type="password" id="loginPassword" placeholder="请输入密码">
-            </div>
-            <button class="user-submit-btn" onclick="doLogin()">登录</button>
-            <div style="display:flex;align-items:center;gap:8px;margin:12px 0;">
+            <div style="display:flex;align-items:center;gap:8px;margin:16px 0;">
                 <div style="flex:1;height:1px;background:var(--border);"></div>
-                <span style="font-size:12px;color:#aaa;">或</span>
+                <span style="font-size:12px;color:#aaa;">没有账号？注册</span>
                 <div style="flex:1;height:1px;background:var(--border);"></div>
             </div>
-            <button class="user-submit-btn" style="background:#24292e;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="doGithubLogin()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-                使用 GitHub 登录
-            </button>
-        </div>
 
-        <!-- 注册表单 -->
-        <div id="userRegisterForm" style="display:none;">
-            <div class="user-field">
-                <label>邀请码</label>
-                <input type="text" id="regInviteCode" placeholder="请输入邀请码" autocomplete="off">
+            <!-- GitHub+邀请码注册 -->
+            <div>
+                <div style="font-size:12px;color:#888;text-align:center;margin-bottom:10px;">注册需要邀请码 + GitHub账号，缺一不可</div>
+                <div class="user-field">
+                    <label>邀请码</label>
+                    <input type="text" id="regInviteCode" placeholder="请输入邀请码" autocomplete="off">
+                </div>
+                <button class="user-submit-btn" style="background:#24292e;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="doGithubRegister()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                    填写邀请码并用 GitHub 注册
+                </button>
             </div>
-            <div class="user-field">
-                <label>用户名（最多7个字或字母）</label>
-                <input type="text" id="regUsername" placeholder="请输入用户名" autocomplete="off" maxlength="7">
-            </div>
-            <div class="user-field">
-                <label>密码（8位以上含字母）</label>
-                <input type="password" id="regPassword" placeholder="请输入密码">
-            </div>
-            <div class="user-field">
-                <label>确认密码</label>
-                <input type="password" id="regPassword2" placeholder="再次输入密码">
-            </div>
-            <!-- Turnstile验证 -->
-            <div class="cf-turnstile" data-sitekey="0x4AAAAAACxkhwPrw1gO9XFQ" data-theme="auto" style="margin:10px 0;"></div>
-            <button class="user-submit-btn" onclick="doRegister()">注册账号</button>
-            <div style="display:flex;align-items:center;gap:8px;margin:12px 0;">
-                <div style="flex:1;height:1px;background:var(--border);"></div>
-                <span style="font-size:12px;color:#aaa;">或使用GitHub注册（需邀请码）</span>
-                <div style="flex:1;height:1px;background:var(--border);"></div>
-            </div>
-            <button class="user-submit-btn" style="background:#24292e;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="doGithubRegister()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-                使用 GitHub + 邀请码 注册
-            </button>
+        </div>
 
         <!-- 已登录状态 -->
         <div id="userLoggedIn" style="display:none;">
@@ -8772,24 +8744,8 @@ function closeNavPanel() {
                 <div id="loggedUserId" style="font-weight:bold;letter-spacing:1px;"></div>
                 <span class="user-id-copy" onclick="copyUserId()">复制</span>
             </div>
-            <div class="user-warning">⚠️ 账号丢失无法找回，3个月未登录将自动注销</div>
+            <div class="user-warning">⚠️ 账号与GitHub绑定，3个月未登录将自动注销</div>
             <button class="user-submit-btn" style="margin-top:14px;background:#aaa;" onclick="doLogout()">退出登录</button>
-        </div>
-
-        <!-- 注册成功提示 -->
-        <div id="userRegSuccess" style="display:none;">
-            <div style="text-align:center;padding:10px 0;">
-                <div style="font-size:40px;margin-bottom:10px;">🎉</div>
-                <div style="font-weight:bold;color:var(--primary);font-size:16px;margin-bottom:8px;">注册成功！</div>
-                <div style="font-size:13px;color:#666;margin-bottom:14px;">请记好你的账号ID，丢失后无法找回</div>
-            </div>
-            <div class="user-id-box">
-                <div style="font-size:11px;color:#aaa;margin-bottom:4px;">你的账号ID</div>
-                <div id="newUserId" style="font-weight:bold;letter-spacing:1px;"></div>
-                <span class="user-id-copy" onclick="copyNewUserId()">复制</span>
-            </div>
-            <div class="user-warning">⚠️ 此ID仅显示一次，请截图保存！</div>
-            <button class="user-submit-btn" style="margin-top:14px;" onclick="closeUserModal()">我已记好，进入网站</button>
         </div>
 
         <span class="user-modal-close" onclick="closeUserModal()">关闭</span>
@@ -8865,7 +8821,8 @@ function openUserModal() {
     if (currentUser) {
         showLoggedInState();
     } else {
-        switchUserTab('login');
+        document.getElementById('userGuestView').style.display = 'block';
+        document.getElementById('userLoggedIn').style.display = 'none';
     }
 }
 
@@ -8874,21 +8831,11 @@ function closeUserModal() {
 }
 
 function switchUserTab(tab) {
-    document.querySelectorAll('.user-tab-btn').forEach((btn, i) => {
-        btn.classList.toggle('active', (tab === 'login' && i === 0) || (tab === 'register' && i === 1));
-    });
-    document.getElementById('userLoginForm').style.display = tab === 'login' ? 'block' : 'none';
-    document.getElementById('userRegisterForm').style.display = tab === 'register' ? 'block' : 'none';
-    document.getElementById('userLoggedIn').style.display = 'none';
-    document.getElementById('userRegSuccess').style.display = 'none';
-    document.getElementById('userModalTabs').style.display = 'flex';
+    // 保留兼容性，新版不再使用tab
 }
 
 function showLoggedInState() {
-    document.getElementById('userModalTabs').style.display = 'none';
-    document.getElementById('userLoginForm').style.display = 'none';
-    document.getElementById('userRegisterForm').style.display = 'none';
-    document.getElementById('userRegSuccess').style.display = 'none';
+    document.getElementById('userGuestView').style.display = 'none';
     document.getElementById('userLoggedIn').style.display = 'block';
     document.getElementById('loggedUsername').textContent = currentUser.username;
     document.getElementById('loggedUserId').textContent = currentUser.userId;
