@@ -2096,6 +2096,190 @@
     margin-top: 8px; text-align: center;
 }
 
+/* ========== 🏠 用户主页 ========== */
+.user-home-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: none; align-items: center;
+    justify-content: center; z-index: 3000;
+    backdrop-filter: blur(4px);
+}
+.user-home-overlay.show { display: flex; }
+.user-home-box {
+    background: var(--pixel-white);
+    width: 92%; max-width: 400px;
+    border-radius: 16px; padding: 20px;
+    box-shadow: 5px 5px 0 rgba(255,130,180,0.3);
+    border: 2px solid var(--primary-light);
+    max-height: 85vh; overflow-y: auto;
+    position: relative;
+}
+[data-theme="dark"] .user-home-box {
+    background: #160a14; color: #f0d0e0;
+    border-color: rgba(255,102,153,0.4);
+}
+.user-home-header {
+    text-align: center; margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1.5px solid var(--pixel-soft);
+}
+.user-home-avatar {
+    font-size: 40px; line-height: 1; margin-bottom: 6px;
+}
+.user-home-name {
+    font-size: 17px; font-weight: bold;
+    color: var(--primary); margin-bottom: 3px;
+}
+.user-home-id {
+    font-size: 11px; color: #aaa;
+    word-break: break-all;
+}
+/* 小鱼干显示 */
+.user-home-fish {
+    display: inline-flex; align-items: center;
+    gap: 4px; background: linear-gradient(135deg, #ffecd2, #fcb69f);
+    border: 2px solid #ff9800; border-radius: 20px;
+    padding: 6px 14px; font-size: 14px;
+    font-weight: bold; color: #e65100; margin-top: 8px;
+}
+[data-theme="dark"] .user-home-fish {
+    background: linear-gradient(135deg, #3a2510, #5a3510);
+    border-color: #ff9800; color: #ffb74d;
+}
+/* 签到区 */
+.user-home-section {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: var(--pixel-soft);
+    border-radius: 12px;
+    border: 1.5px solid var(--primary-light);
+}
+[data-theme="dark"] .user-home-section {
+    background: rgba(255,102,153,0.08);
+    border-color: rgba(255,102,153,0.2);
+}
+.user-section-title {
+    font-size: 13px; font-weight: bold;
+    color: var(--primary); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 4px;
+}
+.user-checkin-row {
+    display: flex; align-items: center; gap: 10px;
+    flex-wrap: wrap;
+}
+.user-checkin-btn {
+    padding: 10px 20px;
+    background: var(--primary); color: #fff;
+    border: none; border-radius: 12px;
+    font-size: 14px; font-weight: bold;
+    cursor: pointer; transition: opacity 0.15s;
+    flex-shrink: 0;
+}
+.user-checkin-btn:active { opacity: 0.8; }
+.user-checkin-btn:disabled {
+    opacity: 0.5; cursor: not-allowed; background: #aaa;
+}
+.user-checkin-btn.done {
+    background: #4caf50; cursor: default; opacity: 1;
+}
+.user-checkin-timer {
+    font-size: 12px; color: #888;
+    flex: 1; min-width: 0;
+}
+/* 兑换区 */
+.user-redeem-row {
+    display: flex; gap: 8px; flex-wrap: wrap;
+}
+.user-redeem-btn {
+    flex: 1; min-width: 130px;
+    padding: 10px 8px;
+    background: #fff; color: var(--primary);
+    border: 2px solid var(--primary-light);
+    border-radius: 10px; font-size: 13px;
+    font-weight: bold; cursor: pointer;
+    transition: all 0.15s; text-align: center;
+}
+.user-redeem-btn:active { opacity: 0.8; }
+.user-redeem-btn:disabled {
+    opacity: 0.4; cursor: not-allowed;
+}
+.user-redeem-btn .redeem-cost {
+    font-size: 11px; color: #888;
+    font-weight: normal; margin-top: 2px;
+}
+[data-theme="dark"] .user-redeem-btn {
+    background: rgba(255,102,153,0.1);
+    border-color: rgba(255,102,153,0.25);
+    color: #ffb3cc;
+}
+/* 收藏列表 */
+.user-fav-list {
+    max-height: 200px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 6px;
+}
+.user-fav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; background: #fff;
+    border-radius: 8px; border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.15s;
+    font-size: 13px;
+}
+.user-fav-item:active { background: var(--pixel-soft); }
+.user-fav-item .fav-thumb {
+    width: 40px; height: 40px; border-radius: 6px;
+    object-fit: cover; flex-shrink: 0;
+    background: var(--pixel-soft);
+}
+.user-fav-item .fav-info {
+    flex: 1; min-width: 0;
+}
+.user-fav-item .fav-name {
+    font-weight: bold; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.user-fav-item .fav-tags {
+    font-size: 11px; color: #aaa;
+    overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.user-fav-item .fav-remove {
+    padding: 4px 8px; background: #ffebee;
+    color: #e53935; border: none;
+    border-radius: 6px; font-size: 11px;
+    cursor: pointer; flex-shrink: 0;
+}
+.user-fav-empty {
+    text-align: center; padding: 20px;
+    font-size: 12px; color: #aaa;
+}
+/* 签到Turnstile容器 */
+#checkinTurnstileBox {
+    margin-top: 10px; width: 100%;
+}
+/* 兑换结果 */
+.user-redeem-result {
+    margin-top: 8px; padding: 8px 10px;
+    background: #e8f5e9; border-radius: 8px;
+    font-size: 12px; color: #2e7d32;
+    word-break: break-all; text-align: center;
+    border: 1px dashed #81c784;
+}
+[data-theme="dark"] .user-redeem-result {
+    background: rgba(76,175,80,0.15);
+    color: #81c784; border-color: rgba(76,175,80,0.3);
+}
+/* 底部操作 */
+.user-home-footer {
+    display: flex; gap: 8px; margin-top: 4px;
+}
+.user-home-footer button {
+    flex: 1; padding: 10px;
+    border-radius: 10px; font-size: 13px;
+    font-weight: bold; cursor: pointer;
+    border: none; transition: opacity 0.15s;
+}
+.user-home-footer button:active { opacity: 0.8; }
 
 
 /* 评论区 */
@@ -2209,7 +2393,8 @@
 }
 </style>
 </head>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script>
 // === 删除图片索引修复：删除第N张后自动回退到前一张，防止黑屏 ===
 function __safeFixDeleteImage(card){
     if (!card || !Array.isArray(card.images)) return;
@@ -5579,9 +5764,9 @@ function toggleFavorite(btn) {
     const card = btn.closest('.card');
     if (!card) return;
     const cardId = card.dataset.cardId;
-    
+
     if (!cardId) return;
-    
+
     const isFaved = favorites.has(cardId);
     if (isFaved) {
         // 取消收藏
@@ -5591,6 +5776,8 @@ function toggleFavorite(btn) {
         // 更新紧凑模式缩略图上的收藏浮层
         const overlay = card.querySelector('.card-thumb-fav');
         if (overlay) overlay.classList.add('hidden');
+        // 同步到云端
+        syncFavoriteToCloud(cardId, 'remove');
     } else {
         // 添加收藏
         favorites.add(cardId);
@@ -5598,11 +5785,13 @@ function toggleFavorite(btn) {
         // 更新紧凑模式缩略图上的收藏浮层
         const overlay = card.querySelector('.card-thumb-fav');
         if (overlay) overlay.classList.remove('hidden');
+        // 同步到云端
+        syncFavoriteToCloud(cardId, 'add');
     }
-    
+
     // 保存收藏数据
     saveFavorites();
-    
+
     // 如果当前在收藏分区，刷新显示
     if (currentCat === '收藏') {
         refreshUI();
@@ -5611,6 +5800,21 @@ function toggleFavorite(btn) {
 
 function saveFavorites() {
     localStorage.setItem(FAV_KEY, JSON.stringify([...favorites]));
+}
+
+// ── 同步收藏到云端（登录用户）──
+async function syncFavoriteToCloud(cardId, action) {
+    if (!currentUser || !currentUser.sessionToken) return;
+    try {
+        await fetch(`${USER_API}/api/user/favorite`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.sessionToken}`
+            },
+            body: JSON.stringify({ cardId, action })
+        });
+    } catch(e) { /* 静默失败，本地已保存 */ }
 }
 
 // 🏷️ 渲染标签胶囊
@@ -7574,8 +7778,8 @@ function copyText(text) {
         <div class="sidebar-subtitle">自由之地 · 资源导航</div>
     </div>
     <div class="sidebar-menu">
-        <div class="sidebar-item" id="sidebarLogin" onclick="openUserModal()">
-            <span class="sidebar-item-icon">👤</span>
+        <div class="sidebar-item" id="sidebarLogin" onclick="onSidebarLoginClick()">
+            <span class="sidebar-item-icon" id="sidebarLoginIcon">👤</span>
             <span id="sidebarLoginText">登录</span>
         </div>
         <div class="sidebar-item active" id="sidebarHome" onclick="sidebarGoHome()">
@@ -8948,6 +9152,64 @@ function closeNavPanel() {
         <span class="user-modal-close" onclick="closeUserModal()">关闭</span>
     </div>
 </div>
+<!-- 🏠 用户主页弹窗 -->
+<div id="userHomeModal" class="user-home-overlay">
+    <div class="user-home-box">
+        <!-- 头部信息 -->
+        <div class="user-home-header">
+            <div class="user-home-avatar">🌸</div>
+            <div class="user-home-name" id="homeUsername">加载中...</div>
+            <div class="user-home-id" id="homeUserId"></div>
+            <div class="user-home-fish">🐟 小鱼干 × <span id="homeFishCoins">0</span></div>
+        </div>
+
+        <!-- 签到区 -->
+        <div class="user-home-section">
+            <div class="user-section-title">📅 每日签到</div>
+            <div class="user-checkin-row">
+                <button class="user-checkin-btn" id="checkinBtn" onclick="doCheckin()">签到领取</button>
+                <span class="user-checkin-timer" id="checkinTimer"></span>
+            </div>
+            <div id="checkinTurnstileBox" style="display:none;">
+                <div style="font-size:11px;color:#888;margin-bottom:6px;">完成人机验证后自动签到</div>
+                <div id="checkinTurnstileWidget"></div>
+            </div>
+        </div>
+
+        <!-- 兑换区 -->
+        <div class="user-home-section">
+            <div class="user-section-title">🎫 邀请码兑换</div>
+            <div class="user-redeem-row">
+                <button class="user-redeem-btn" id="redeemNormalBtn" onclick="redeemCode('normal')">
+                    普通邀请码
+                    <div class="redeem-cost">15 条小鱼干</div>
+                </button>
+                <button class="user-redeem-btn" id="redeemSuperBtn" onclick="redeemCode('super')">
+                    ⭐ 超级邀请码
+                    <div class="redeem-cost">30 条小鱼干</div>
+                </button>
+            </div>
+            <div id="redeemResult" style="display:none;"></div>
+        </div>
+
+        <!-- 收藏区 -->
+        <div class="user-home-section">
+            <div class="user-section-title">💖 我的收藏</div>
+            <div class="user-fav-list" id="homeFavList">
+                <div class="user-fav-empty">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 底部操作 -->
+        <div class="user-home-footer">
+            <button style="background:#aaa;color:#fff;" onclick="closeUserHome()">关闭</button>
+            <button style="background:var(--primary);color:#fff;" onclick="doLogout()">退出登录</button>
+        </div>
+
+        <span class="user-modal-close" onclick="closeUserHome()">关闭</span>
+    </div>
+</div>
+
 <!-- 管理员封号弹窗 -->
 <div id="banModal" class="user-modal-overlay">
     <div class="user-modal-box" style="max-width:320px;">
@@ -9007,8 +9269,20 @@ let currentCommentScore = 0;
 
 function updateUserEntryBtn() {
     const text = document.getElementById('sidebarLoginText');
+    const icon = document.getElementById('sidebarLoginIcon');
     if (!text) return;
     text.textContent = currentUser ? currentUser.username : '登录';
+    if (icon) icon.textContent = currentUser ? '🌸' : '👤';
+}
+
+// ── 侧边栏登录/用户中心点击 ──
+function onSidebarLoginClick() {
+    closeSidebar();
+    if (currentUser) {
+        openUserHome();
+    } else {
+        openUserModal();
+    }
 }
 
 // ── 打开/关闭弹窗 ──
@@ -9024,6 +9298,325 @@ function openUserModal() {
 
 function closeUserModal() {
     document.getElementById('userModal').classList.remove('show');
+}
+
+// ========== 🏠 用户主页 ==========
+let _userHomeData = null;      // 缓存主页数据
+let _checkinWidgetId = null;   // 签到Turnstile widget ID
+let _checkinCardId = null;     // 当前要签到的卡片（跳转用）
+
+function openUserHome() {
+    if (!currentUser) { openUserModal(); return; }
+    document.getElementById('userHomeModal').classList.add('show');
+    document.getElementById('redeemResult').style.display = 'none';
+    // 先显示缓存/加载中，再拉最新数据
+    if (_userHomeData) {
+        renderUserHome(_userHomeData);
+    } else {
+        document.getElementById('homeUsername').textContent = currentUser.username;
+        document.getElementById('homeUserId').textContent = currentUser.userId;
+    }
+    loadUserHomeData();
+}
+
+function closeUserHome() {
+    document.getElementById('userHomeModal').classList.remove('show');
+    // 清理签到Turnstile
+    if (_checkinWidgetId !== null) {
+        try { turnstile.remove(_checkinWidgetId); } catch(e) {}
+        _checkinWidgetId = null;
+    }
+    document.getElementById('checkinTurnstileBox').style.display = 'none';
+}
+
+// ── 加载用户主页数据 ──
+async function loadUserHomeData() {
+    if (!currentUser) return;
+    try {
+        const res = await fetch(`${USER_API}/api/user/home`, {
+            headers: { 'Authorization': `Bearer ${currentUser.sessionToken}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            _userHomeData = data;
+            renderUserHome(data);
+        } else {
+            if (data.error && data.error.includes('登录')) {
+                showToast('登录已过期，请重新登录');
+                doLogout();
+                closeUserHome();
+                openUserModal();
+            }
+        }
+    } catch(e) {
+        console.error('加载主页数据失败', e);
+    }
+}
+
+// ── 渲染用户主页 ──
+function renderUserHome(data) {
+    document.getElementById('homeUsername').textContent = data.username;
+    document.getElementById('homeUserId').textContent = data.userId;
+    document.getElementById('homeFishCoins').textContent = data.fishCoins || 0;
+
+    // 签到按钮状态
+    const checkinBtn = document.getElementById('checkinBtn');
+    const checkinTimer = document.getElementById('checkinTimer');
+    if (data.canCheckin) {
+        checkinBtn.disabled = false;
+        checkinBtn.textContent = '签到领取';
+        checkinBtn.classList.remove('done');
+        checkinTimer.textContent = '';
+    } else {
+        checkinBtn.disabled = true;
+        checkinBtn.textContent = '已签到 ✓';
+        checkinBtn.classList.add('done');
+        const hrs = Math.floor(data.checkinRemaining / 3600);
+        const mins = Math.floor((data.checkinRemaining % 3600) / 60);
+        checkinTimer.textContent = `${hrs}小时${mins}分后可再签到`;
+    }
+
+    // 兑换按钮状态
+    const fish = data.fishCoins || 0;
+    document.getElementById('redeemNormalBtn').disabled = fish < 15;
+    document.getElementById('redeemSuperBtn').disabled = fish < 30;
+
+    // 渲染收藏列表
+    renderUserFavorites(data.favorites || []);
+}
+
+// ── 签到 ──
+async function doCheckin() {
+    if (!currentUser) return;
+    const checkinBtn = document.getElementById('checkinBtn');
+    if (checkinBtn.disabled || checkinBtn.classList.contains('done')) return;
+
+    // 显示Turnstile
+    const tsBox = document.getElementById('checkinTurnstileBox');
+    const tsWidget = document.getElementById('checkinTurnstileWidget');
+    tsBox.style.display = 'block';
+    tsWidget.innerHTML = '';
+    checkinBtn.disabled = true;
+    checkinBtn.textContent = '请完成验证...';
+
+    // 渲染Turnstile，在回调中自动提交
+    try {
+        if (_checkinWidgetId !== null) {
+            try { turnstile.remove(_checkinWidgetId); } catch(e) {}
+        }
+        const sitekeyEl = document.querySelector('[data-sitekey]');
+        const sitekey = sitekeyEl ? sitekeyEl.getAttribute('data-sitekey') : '';
+        _checkinWidgetId = turnstile.render(tsWidget, {
+            sitekey,
+            theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
+            callback: async function(token) {
+                await submitCheckin(token);
+            },
+            'error-callback': function() {
+                checkinBtn.disabled = false;
+                checkinBtn.textContent = '签到领取';
+                showToast('验证失败，请重试');
+            }
+        });
+    } catch(e) {
+        checkinBtn.disabled = false;
+        checkinBtn.textContent = '签到领取';
+        showToast('验证加载失败');
+    }
+}
+
+async function submitCheckin(tsToken) {
+    if (!currentUser) return;
+    const checkinBtn = document.getElementById('checkinBtn');
+    checkinBtn.textContent = '签到中...';
+    try {
+        const res = await fetch(`${USER_API}/api/user/checkin`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.sessionToken}`
+            },
+            body: JSON.stringify({ tsToken })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('🐟 ' + data.message);
+            // 更新显示
+            document.getElementById('homeFishCoins').textContent = data.fishCoins;
+            checkinBtn.textContent = '已签到 ✓';
+            checkinBtn.classList.add('done');
+            document.getElementById('checkinTimer').textContent = '24小时后可再签到';
+            document.getElementById('checkinTurnstileBox').style.display = 'none';
+            if (_checkinWidgetId !== null) {
+                try { turnstile.remove(_checkinWidgetId); } catch(e) {}
+                _checkinWidgetId = null;
+            }
+            // 刷新数据
+            loadUserHomeData();
+        } else {
+            if (data.remainingSeconds) {
+                const hrs = Math.floor(data.remainingSeconds / 3600);
+                const mins = Math.floor((data.remainingSeconds % 3600) / 60);
+                checkinBtn.textContent = '已签到 ✓';
+                checkinBtn.classList.add('done');
+                document.getElementById('checkinTimer').textContent = `${hrs}小时${mins}分后可再签到`;
+                showToast('⏰ ' + data.error);
+            } else {
+                showToast('❌ ' + (data.error || '签到失败'));
+                checkinBtn.disabled = false;
+                checkinBtn.textContent = '签到领取';
+            }
+        }
+    } catch(e) {
+        showToast('❌ 网络错误');
+        checkinBtn.disabled = false;
+        checkinBtn.textContent = '签到领取';
+    }
+}
+
+// ── 兑换邀请码 ──
+async function redeemCode(type) {
+    if (!currentUser) return;
+    const cost = type === 'super' ? 30 : 15;
+    const fish = parseInt(document.getElementById('homeFishCoins').textContent) || 0;
+    if (fish < cost) { showToast(`小鱼干不足，需要${cost}条`); return; }
+
+    const typeName = type === 'super' ? '超级邀请码' : '普通邀请码';
+    if (!confirm(`确定要消耗 ${cost} 条小鱼干兑换${typeName}吗？`)) return;
+
+    const btn = type === 'super' ? document.getElementById('redeemSuperBtn') : document.getElementById('redeemNormalBtn');
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+
+    try {
+        const res = await fetch(`${USER_API}/api/user/redeem`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.sessionToken}`
+            },
+            body: JSON.stringify({ type })
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('homeFishCoins').textContent = data.remainingFish;
+            // 更新兑换按钮状态
+            const newFish = data.remainingFish;
+            document.getElementById('redeemNormalBtn').disabled = newFish < 15;
+            document.getElementById('redeemSuperBtn').disabled = newFish < 30;
+            // 显示结果
+            const resultBox = document.getElementById('redeemResult');
+            resultBox.style.display = 'block';
+            resultBox.className = 'user-redeem-result';
+            resultBox.innerHTML = `✅ ${typeName}：<b style="font-size:14px;letter-spacing:1px;">${escapeHtml(data.code)}</b><br><span style="font-size:11px;color:#888;">剩余 ${data.remainingFish} 条小鱼干 · 请截图保存</span>`;
+            showToast(`🎫 兑换成功！获得${typeName}`);
+        } else {
+            showToast('❌ ' + (data.error || '兑换失败'));
+        }
+    } catch(e) {
+        showToast('❌ 网络错误');
+    } finally {
+        btn.disabled = false;
+        btn.style.opacity = '';
+    }
+}
+
+// ── 渲染用户收藏列表 ──
+function renderUserFavorites(favCardIds) {
+    const listEl = document.getElementById('homeFavList');
+    if (!favCardIds || favCardIds.length === 0) {
+        listEl.innerHTML = '<div class="user-fav-empty">暂无收藏，去首页收藏喜欢的游戏吧~</div>';
+        return;
+    }
+
+    // 从DOM中查找卡片数据
+    const allCards = Array.from(document.querySelectorAll('#box .card'));
+    let html = '';
+    let foundCount = 0;
+
+    favCardIds.forEach(cardId => {
+        const card = allCards.find(c => c.dataset.cardId === cardId);
+        if (card) {
+            foundCount++;
+            const name = card.dataset.name || '未知游戏';
+            const tags = card.dataset.tags || '';
+            const imgEl = card.querySelector('.card-img');
+            const thumb = imgEl ? imgEl.src : '';
+            html += `
+                <div class="user-fav-item" onclick="openCardDetailById('${escapeHtml(cardId)}')">
+                    ${thumb ? `<img class="fav-thumb" src="${thumb}" alt="" onerror="this.style.display='none'">` : '<div class="fav-thumb" style="display:flex;align-items:center;justify-content:center;font-size:18px;">🎮</div>'}
+                    <div class="fav-info">
+                        <div class="fav-name">${escapeHtml(name)}</div>
+                        <div class="fav-tags">${escapeHtml(tags)}</div>
+                    </div>
+                    <button class="fav-remove" onclick="event.stopPropagation();removeHomeFav('${escapeHtml(cardId)}')">移除</button>
+                </div>
+            `;
+        }
+    });
+
+    if (foundCount === 0) {
+        listEl.innerHTML = '<div class="user-fav-empty">收藏的游戏不在当前列表中，可能已被删除</div>';
+    } else {
+        listEl.innerHTML = html;
+    }
+}
+
+// ── 从用户主页移除收藏 ──
+async function removeHomeFav(cardId) {
+    if (!currentUser) return;
+    try {
+        const res = await fetch(`${USER_API}/api/user/favorite`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.sessionToken}`
+            },
+            body: JSON.stringify({ cardId, action: 'remove' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            // 同时更新本地收藏
+            if (favorites.has(cardId)) {
+                favorites.delete(cardId);
+                localStorage.setItem(FAV_KEY, JSON.stringify([...favorites]));
+            }
+            // 更新卡片上的收藏状态
+            updateCardFavState(cardId, false);
+            // 刷新主页显示
+            if (_userHomeData) {
+                _userHomeData.favorites = data.favorites || [];
+                renderUserFavorites(_userHomeData.favorites);
+            }
+            showToast('已取消收藏');
+        }
+    } catch(e) {
+        showToast('❌ 网络错误');
+    }
+}
+
+// ── 通过cardId打开详情页 ──
+function openCardDetailById(cardId) {
+    const card = document.querySelector(`.card[data-card-id="${CSS.escape(cardId)}"]`);
+    if (card) {
+        closeUserHome();
+        openCardDetail(card);
+    } else {
+        showToast('该卡片不在当前页面，请切换分类后重试');
+    }
+}
+
+// 更新卡片上的收藏心形状态
+function updateCardFavState(cardId, isFaved) {
+    document.querySelectorAll('.card').forEach(card => {
+        if (card.dataset.cardId === cardId) {
+            const heart = card.querySelector('.card-fav-heart');
+            if (heart) {
+                heart.textContent = isFaved ? '💖' : '🤍';
+                heart.classList.toggle('fav-active', isFaved);
+            }
+        }
+    });
 }
 
 function switchUserTab(tab) {
@@ -9202,8 +9795,10 @@ async function doLogout() {
     } catch(e) {}
     currentUser = null;
     localStorage.removeItem('tx_user');
+    _userHomeData = null; // 清除主页缓存
     updateUserEntryBtn();
     closeUserModal();
+    closeUserHome();
     showToast('已退出登录');
     // 刷新评论区
     if (currentCommentCardId) loadComments(currentCommentCardId);
@@ -9573,6 +10168,9 @@ function formatTime(ts) {
 // ── 关闭弹窗点击背景 ──
 document.getElementById('userModal').addEventListener('click', function(e) {
     if (e.target === this) closeUserModal();
+});
+document.getElementById('userHomeModal').addEventListener('click', function(e) {
+    if (e.target === this) closeUserHome();
 });
 </script>
 </body></html>
