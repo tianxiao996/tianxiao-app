@@ -1506,7 +1506,7 @@
         #globalLoadingOverlay {
             position: fixed;
             inset: 0;
-            z-index: 2000;
+            z-index: 2100; /* 必须高于 gateKeeper (2000) */
             background: var(--bg);
             display: none;
             flex-direction: column;
@@ -3367,6 +3367,12 @@ async function loadFromGrave() {
             refreshUI();
         }
     }
+    // 🐛 Bug修复：兜底——确保无论代码路径如何，_cloudLoadDone 总是被设置
+    if (!_cloudLoadDone) {
+        _cloudLoadDone = true;
+        const gOverlay = document.getElementById('globalLoadingOverlay');
+        if (gOverlay) gOverlay.classList.remove('show');
+    }
 }
 
 // 保存到云端（通过Worker，需要 Token 验证）
@@ -4728,6 +4734,12 @@ function exitAdmin() {
     const sp = document.getElementById("shortlinkPanel"); if(sp) sp.classList.remove("show");
     // 隐藏分类管理面板
     const cp = document.getElementById("catPanel"); if(cp) cp.classList.remove("show");
+    // 🐛 Bug修复：隐藏邀请码面板
+    const ip = document.getElementById("inviteCodePanel"); if(ip) ip.style.display = "none";
+    // 🐛 Bug修复：隐藏用户查询面板
+    const uqp = document.getElementById("userQueryPanel"); if(uqp) uqp.style.display = "none";
+    // 🐛 Bug修复：隐藏屏蔽词面板
+    const wp = document.getElementById("wordlistPanel"); if(wp) wp.style.display = "none";
     updateSidebarAdminUI();
     
     // 🔒 清除 Token
@@ -6997,23 +7009,22 @@ function randomGame() {
     setTimeout(() => {
         const target = document.querySelector(`#box .card[data-card-id="${pickId}"]`);
         if (!target) return;
-        // 确保卡片处于 active-render 状态
+        // 确保卡片处于 active-render 状态（可见）
         if (!target.classList.contains('active-render')) {
             target.classList.add('active-render');
         }
-        target.classList.add('card-expanded');
-        // 初始化 slider 并等渲染完再滚动
-        const sb = target.querySelector('.slider-box');
-        if (sb) {
-            initSliderTrack(sb);
-            requestAnimationFrame(() => requestAnimationFrame(() => updateSliderTrack(sb)));
-        }
+        // 🐛 Bug修复：不再展开卡片，只滚动到视野 + 绿色边框渐变
         setTimeout(() => {
             target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            target.style.transition = 'box-shadow 0.3s';
-            target.style.boxShadow = '0 0 0 3px var(--primary)';
-            setTimeout(() => { target.style.boxShadow = ''; }, 1200);
-        }, 150);
+            // 绿色边框渐变效果
+            target.style.transition = 'box-shadow 0.3s, outline 0.3s';
+            target.style.boxShadow = '0 0 0 4px #4caf50';
+            target.style.outline = 'none';
+            setTimeout(() => {
+                target.style.boxShadow = '';
+                target.style.transition = '';
+            }, 1500);
+        }, 100);
     }, 200);
 }
 
