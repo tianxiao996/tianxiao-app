@@ -2342,16 +2342,12 @@ function __safeFixDeleteImage(card){
         </div>
         <div id="userQueryResult" style="display:none; flex-direction:column; gap:8px;"></div>
     </div>
-    </div>
-
     <!-- 🚫 屏蔽词管理面板（管理员） -->
     <div id="wordlistPanel" style="display:none; background:#e8f5e9; border:1px dashed #388e3c; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:560px;">
         <div style="font-size:13px; font-weight:bold; color:#1b5e20; margin-bottom:10px;">🚫 评论屏蔽词管理</div>
-
-        <!-- 导入区域 -->
         <div style="background:#fff; border-radius:10px; padding:12px; margin-bottom:10px; border:1px solid #a5d6a7;">
-            <div style="font-size:12px; font-weight:bold; color:#2e7d32; margin-bottom:8px;">📥 导入 TXT 屏蔽词文件（每行一个词，文件名即合集名）</div>
-            <label id="wordlistFileLabel" style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1.5px dashed #81c784; border-radius:8px; cursor:pointer; font-size:13px; color:#555; background:#f9fbe7; transition:background 0.15s;">
+            <div style="font-size:12px; font-weight:bold; color:#2e7d32; margin-bottom:8px;">📥 导入 TXT 文件（每行一个词，文件名即合集名）屏蔽词同时作用于评论和用户名注册</div>
+            <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1.5px dashed #81c784; border-radius:8px; cursor:pointer; font-size:13px; color:#555; background:#f9fbe7;">
                 <span style="font-size:18px;">📂</span>
                 <span id="wordlistFileName">点击选择 .txt 文件</span>
                 <input type="file" id="wordlistFileInput" accept=".txt" style="display:none;" onchange="onWordlistFileSelect(this)">
@@ -2361,8 +2357,6 @@ function __safeFixDeleteImage(card){
             </div>
             <button onclick="uploadWordlist()" style="margin-top:10px; width:100%; background:#388e3c; color:#fff; border:none; border-radius:8px; padding:9px; font-size:13px; font-weight:bold; cursor:pointer;">⬆️ 导入合集</button>
         </div>
-
-        <!-- 已有合集列表 -->
         <div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #a5d6a7;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
                 <div style="font-size:12px; font-weight:bold; color:#2e7d32;">📋 已有合集</div>
@@ -4620,7 +4614,26 @@ async function genOnetimeInvites() {
         const data = await res.json();
         if (data.success) {
             showToast('✅ ' + data.message);
-            loadOnetimeInvites();
+            // 直接用响应里的 codes 更新 UI，避免 KV 最终一致性导致 list 读不到新 key
+            const listEl = document.getElementById('onetimeInviteList');
+            if (listEl && data.codes && data.codes.length > 0) {
+                // 移除"暂无"占位
+                const placeholder = listEl.querySelector('span[style*="color:#aaa"]');
+                if (placeholder && placeholder.textContent.includes('暂无')) placeholder.remove();
+                data.codes.forEach(c => {
+                    const tag = document.createElement('span');
+                    tag.style.cssText = 'background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:3px 8px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-family:monospace;';
+                    tag.dataset.code = c;
+                    tag.innerHTML = `${c}
+                        <span onclick="copyText('${c}')" style="cursor:pointer;color:#388e3c;font-size:11px;">📋</span>
+                        <span onclick="deleteOnetimeInvite('${c}',this)" style="cursor:pointer;color:#e91e63;font-weight:bold;font-size:14px;line-height:1;">×</span>`;
+                    listEl.appendChild(tag);
+                });
+                // 更新计数（读现有 span 数量）
+                const total = listEl.querySelectorAll('span[data-code]').length;
+                const countEl2 = document.getElementById('onetimeInviteCount');
+                if (countEl2) countEl2.textContent = `共 ${total} 个`;
+            }
         } else {
             showToast('❌ ' + data.error);
         }
@@ -4643,7 +4656,7 @@ async function loadOnetimeInvites() {
             listEl.innerHTML = '<span style="font-size:12px;color:#aaa;">暂无一次性邀请码</span>';
         } else {
             listEl.innerHTML = data.codes.map(c => `
-                <span style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:3px 8px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-family:monospace;">
+                <span style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:3px 8px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-family:monospace;" data-code="${c}">
                     ${c}
                     <span onclick="copyText('${c}')" style="cursor:pointer;color:#388e3c;font-size:11px;">📋</span>
                     <span onclick="deleteOnetimeInvite('${c}',this)" style="cursor:pointer;color:#e91e63;font-weight:bold;font-size:14px;line-height:1;">×</span>
@@ -4665,8 +4678,21 @@ async function deleteOnetimeInvite(code, el) {
         });
         const data = await res.json();
         if (data.success) {
-            el?.closest('span')?.remove();
+            // el 是 × 按钮本身（span），parentElement 才是整个码的容器 span
+            el?.parentElement?.remove();
+            // 更新计数
+            const listEl = document.getElementById('onetimeInviteList');
+            const countEl = document.getElementById('onetimeInviteCount');
+            if (listEl && countEl) {
+                const remaining = listEl.querySelectorAll('span[data-code]').length;
+                countEl.textContent = `共 ${remaining} 个`;
+                if (remaining === 0) {
+                    listEl.innerHTML = '<span style="font-size:12px;color:#aaa;">暂无一次性邀请码</span>';
+                }
+            }
             showToast('✅ 已删除：' + code);
+        } else {
+            showToast('❌ ' + (data.error || '删除失败'));
         }
     } catch(e) { showToast('❌ 网络错误'); }
 }
@@ -8868,8 +8894,8 @@ function closeNavPanel() {
                 <input type="text" id="regInviteCode" placeholder="请输入邀请码" autocomplete="off">
             </div>
             <div class="user-field">
-                <label>用户名（3-7个字或字母）</label>
-                <input type="text" id="regUsername" placeholder="请输入用户名" autocomplete="off" maxlength="7">
+                <label>用户名（1-8个字符，中英文数字下划线）</label>
+                <input type="text" id="regUsername" placeholder="请输入用户名" autocomplete="off" maxlength="8">
             </div>
             <div class="user-field">
                 <label>密码（8位以上含字母）</label>
@@ -9089,6 +9115,22 @@ async function doRegister() {
         if (data.success && data.githubUrl) {
             showToast('✅ 验证通过！正在跳转GitHub授权...');
             setTimeout(() => { window.location.href = data.githubUrl; }, 800);
+        } else if (data.code === 'username_muted') {
+            // 用户名触发屏蔽词 → 冻结倒计时 + Turnstile 重置
+            let remaining = data.remaining || 180;
+            showToast('🚫 ' + (data.error || '用户名含违禁词，注册已冻结'));
+            btn.disabled = true;
+            btn.textContent = `注册冻结中（${remaining}s）`;
+            const regMuteTimer = setInterval(() => {
+                remaining--;
+                btn.textContent = `注册冻结中（${remaining}s）`;
+                if (remaining <= 0) {
+                    clearInterval(regMuteTimer);
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg> 验证通过后跳转 GitHub 完成注册';
+                }
+            }, 1000);
+            try { turnstile.reset(document.getElementById('regTurnstile')); } catch(e) {}
         } else {
             showToast('❌ ' + (data.error || '注册失败'));
             try { turnstile.reset(document.getElementById('regTurnstile')); } catch(e) {}
@@ -9363,10 +9405,8 @@ async function submitComment(cardId) {
             showToast('✅ 评论成功！');
             loadComments(cardId);
         } else if (data.code === 'muted') {
-            // ── 触发屏蔽词：禁言提示 + Turnstile 重新验证 ──
             showToast('🚫 ' + (data.error || '评论含有违禁词，已被禁言'));
             if (btn) { btn.disabled = true; btn.textContent = `禁言中（${data.remaining || 120}s）`; }
-            // 启动倒计时更新按钮
             let remaining = data.remaining || 120;
             const muteTimer = setInterval(() => {
                 remaining--;
@@ -9374,9 +9414,10 @@ async function submitComment(cardId) {
                 if (remaining <= 0) {
                     clearInterval(muteTimer);
                     if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
+                    const tsBox = document.getElementById('commentTurnstileBox');
+                    if (tsBox) tsBox.remove();
                 }
             }, 1000);
-            // 触发 Turnstile 重新验证（评论区内嵌验证框）
             _showCommentTurnstile(cardId);
         } else {
             const errMsg = data.error || data.message || '评论失败';
@@ -9394,8 +9435,6 @@ let _commentTurnstileWidgetId = null;
 function _showCommentTurnstile(cardId) {
     const inputArea = document.getElementById('commentInputArea');
     if (!inputArea) return;
-
-    // 在输入框上方插入验证框
     let tsBox = document.getElementById('commentTurnstileBox');
     if (!tsBox) {
         tsBox = document.createElement('div');
@@ -9404,59 +9443,37 @@ function _showCommentTurnstile(cardId) {
         inputArea.parentNode.insertBefore(tsBox, inputArea);
     }
     tsBox.innerHTML = `
-        <div style="font-size:12px; color:#e05; margin-bottom:8px; font-weight:bold;">⚠️ 触发屏蔽词，请完成人机验证后继续</div>
+        <div style="font-size:12px; color:#e05; margin-bottom:8px; font-weight:bold;">⚠️ 触发屏蔽词，请完成人机验证</div>
         <div id="commentTurnstileWidget"></div>
     `;
-
-    // 渲染 Turnstile widget
     if (_commentTurnstileWidgetId !== null) {
         try { turnstile.remove(_commentTurnstileWidgetId); } catch(e) {}
         _commentTurnstileWidgetId = null;
     }
     try {
+        const sitekeyEl = document.querySelector('[data-sitekey]');
+        const sitekey = sitekeyEl ? sitekeyEl.getAttribute('data-sitekey') : '';
         _commentTurnstileWidgetId = turnstile.render('#commentTurnstileWidget', {
-            sitekey: _getTurnstileSitekey(),
+            sitekey,
             theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
-            callback: function(token) {
-                // 验证通过后清除验证框，恢复输入
-                const box = document.getElementById('commentTurnstileBox');
-                if (box) box.remove();
-                _commentTurnstileWidgetId = null;
+            callback: function() {
                 showToast('✅ 验证通过，禁言结束后即可继续评论');
             }
         });
-    } catch(e) {
-        console.warn('Turnstile render failed:', e);
-    }
-}
-
-// 获取当前页面 Turnstile sitekey（从已渲染的 widget 中读取）
-function _getTurnstileSitekey() {
-    // 从注册表单的 Turnstile widget 中提取 sitekey
-    const el = document.querySelector('[data-sitekey]');
-    if (el) return el.getAttribute('data-sitekey');
-    // fallback：从 Turnstile 内部 iframe 猜测
-    const iframe = document.querySelector('iframe[src*="challenges.cloudflare.com"]');
-    if (iframe) {
-        const m = iframe.src.match(/sitekey=([^&]+)/);
-        if (m) return decodeURIComponent(m[1]);
-    }
-    return '';
+    } catch(e) { console.warn('Turnstile render failed:', e); }
 }
 
 // ============================================================
 // 屏蔽词管理（管理员）
 // ============================================================
-let _wordlistParsed = null; // { name, words }
+let _wordlistParsed = null;
 
 function openWordlistPanel() {
     const panel = document.getElementById('wordlistPanel');
     if (!panel) return;
     const isVisible = panel.style.display !== 'none';
-    // 关闭其他面板
     ['inviteCodePanel','userQueryPanel'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
+        const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
     panel.style.display = isVisible ? 'none' : 'block';
     if (!isVisible) loadWordlistCollections();
@@ -9467,11 +9484,9 @@ function onWordlistFileSelect(input) {
     if (!file) return;
     const name = file.name.replace(/\.txt$/i, '').trim();
     document.getElementById('wordlistFileName').textContent = file.name;
-
     const reader = new FileReader();
     reader.onload = function(e) {
-        const text = e.target.result;
-        const words = text.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+        const words = e.target.result.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
         _wordlistParsed = { name, words };
         document.getElementById('wordlistPreviewName').textContent = name;
         document.getElementById('wordlistPreviewCount').textContent = words.length + ' 个词';
@@ -9481,33 +9496,24 @@ function onWordlistFileSelect(input) {
 }
 
 async function uploadWordlist() {
-    if (!_wordlistParsed || _wordlistParsed.words.length === 0) {
-        showToast('❌ 请先选择 .txt 文件'); return;
-    }
+    if (!_wordlistParsed || _wordlistParsed.words.length === 0) { showToast('❌ 请先选择 .txt 文件'); return; }
     const { name, words } = _wordlistParsed;
     try {
         const res = await fetch(`${WORKER_BASE}/api/admin/wordlist`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${adminToken}`
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
             body: JSON.stringify({ name, words })
         });
         const data = await res.json();
         if (data.success) {
-            showToast(`✅ ${data.message}`);
+            showToast('✅ ' + data.message);
             _wordlistParsed = null;
             document.getElementById('wordlistFileName').textContent = '点击选择 .txt 文件';
             document.getElementById('wordlistPreview').style.display = 'none';
             document.getElementById('wordlistFileInput').value = '';
             loadWordlistCollections();
-        } else {
-            showToast('❌ ' + (data.error || '导入失败'));
-        }
-    } catch(e) {
-        showToast('❌ 网络错误: ' + e.message);
-    }
+        } else { showToast('❌ ' + (data.error || '导入失败')); }
+    } catch(e) { showToast('❌ 网络错误: ' + e.message); }
 }
 
 async function loadWordlistCollections() {
@@ -9521,23 +9527,18 @@ async function loadWordlistCollections() {
         const data = await res.json();
         if (!data.success) { listEl.innerHTML = `<div style="font-size:12px;color:#e05;text-align:center;padding:10px;">${data.error}</div>`; return; }
         const cols = data.collections || [];
-        if (cols.length === 0) {
-            listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:10px;">暂无屏蔽词合集</div>';
-            return;
-        }
+        if (cols.length === 0) { listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:10px;">暂无屏蔽词合集</div>'; return; }
         listEl.innerHTML = cols.map(c => `
-            <div style="display:flex; align-items:center; gap:8px; padding:8px 10px; background:#f9fbe7; border-radius:8px; border:1px solid #c8e6c9;">
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f9fbe7;border-radius:8px;border:1px solid #c8e6c9;">
                 <span style="font-size:18px;">📄</span>
-                <div style="flex:1; min-width:0;">
-                    <div style="font-size:13px; font-weight:bold; color:#1b5e20; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(c.name)}</div>
-                    <div style="font-size:11px; color:#888;">${c.count} 个词 · ${new Date(c.createdAt).toLocaleDateString()}</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:bold;color:#1b5e20;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.name)}</div>
+                    <div style="font-size:11px;color:#888;">${c.count} 个词 · ${new Date(c.createdAt).toLocaleDateString()}</div>
                 </div>
-                <button onclick="deleteWordlistCollection('${escapeHtml(c.name)}')" style="background:#e53935; color:#fff; border:none; border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; flex-shrink:0;">🗑️ 删除</button>
+                <button onclick="deleteWordlistCollection('${escapeHtml(c.name)}')" style="background:#e53935;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;flex-shrink:0;">🗑️ 删除</button>
             </div>
         `).join('');
-    } catch(e) {
-        listEl.innerHTML = `<div style="font-size:12px;color:#e05;text-align:center;padding:10px;">加载失败: ${e.message}</div>`;
-    }
+    } catch(e) { listEl.innerHTML = `<div style="font-size:12px;color:#e05;text-align:center;padding:10px;">加载失败</div>`; }
 }
 
 async function deleteWordlistCollection(name) {
@@ -9545,22 +9546,13 @@ async function deleteWordlistCollection(name) {
     try {
         const res = await fetch(`${WORKER_BASE}/api/admin/wordlist`, {
             method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${adminToken}`
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
             body: JSON.stringify({ name })
         });
         const data = await res.json();
-        if (data.success) {
-            showToast(`✅ ${data.message}`);
-            loadWordlistCollections();
-        } else {
-            showToast('❌ ' + (data.error || '删除失败'));
-        }
-    } catch(e) {
-        showToast('❌ 网络错误: ' + e.message);
-    }
+        if (data.success) { showToast('✅ ' + data.message); loadWordlistCollections(); }
+        else { showToast('❌ ' + (data.error || '删除失败')); }
+    } catch(e) { showToast('❌ 网络错误: ' + e.message); }
 }
 
 // 工具函数
