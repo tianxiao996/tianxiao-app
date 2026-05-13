@@ -2297,6 +2297,7 @@ function __safeFixDeleteImage(card){
         <button onclick="migrateAllLinksToKV()" style="background:#c62828!important;">🔒 迁移链接</button>
         <button onclick="debugCardStructure()" style="background:#333!important;">🐛 调试</button>
         <button onclick="setInviteCode()" style="background:#673ab7!important;">🎫 邀请码</button>
+        <button onclick="openBanwordPanel()" style="background:#d32f2f!important;">🛡️ 屏蔽词</button>
         <button onclick="openUserQueryPanel()" style="background:#2196f3!important;">🔍 查用户</button>
         <button id="adminAuditBtn" onclick="toggleAdminAuditMode()" style="background:#ff5722!important;">💬 审核评论</button>
         <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button>
@@ -2458,6 +2459,32 @@ function __safeFixDeleteImage(card){
             <div class="gallery-edit-hint" id="galleryEditHint"></div>
             <button class="gallery-save-btn" onclick="saveGalleryContent()">💾 保存内容</button>
             <button class="gallery-insert-img-btn" id="galleryInsertImgBtn" onclick="insertGalleryImage()">🖼️ 插入图片</button>
+        </div>
+    </div>
+</div>
+
+<!-- 🛡️ 屏蔽词管理面板 -->
+<div id="banwordPanel" class="fullpage-panel" style="display:none;">
+    <div class="fullpage-header">
+        <div class="fullpage-back-btn" onclick="closeBanwordPanel()">←</div>
+        <div class="fullpage-header-title">🛡️ 屏蔽词管理</div>
+        <div style="width:40px;"></div>
+    </div>
+    <div class="fullpage-body">
+        <div style="max-width:500px;margin:0 auto;padding:20px;">
+            <!-- 导入区域 -->
+            <div style="background:var(--card);border:3px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:4px 4px 0 var(--shadow);">
+                <div style="font-size:16px;font-weight:700;color:var(--primary);margin-bottom:12px;">📥 导入屏蔽词合集</div>
+                <div style="font-size:12px;color:#888;margin-bottom:10px;">选择txt文件，每行一个词，文件名作为合集名称</div>
+                <input type="file" id="banwordFileInput" accept=".txt" style="display:none;" onchange="importBanwordFile(this)">
+                <button class="user-btn" onclick="document.getElementById('banwordFileInput').click()">📁 选择txt文件导入</button>
+                <div id="banwordImportStatus" style="margin-top:8px;font-size:13px;color:var(--primary);display:none;"></div>
+            </div>
+            <!-- 合集列表 -->
+            <div style="font-size:16px;font-weight:700;color:var(--primary);margin-bottom:12px;">📂 屏蔽词合集列表</div>
+            <div id="banwordCollectionsList">
+                <div style="text-align:center;color:#aaa;padding:20px;font-size:13px;">加载中...</div>
+            </div>
         </div>
     </div>
 </div>
@@ -4538,6 +4565,165 @@ async function setInviteCode() {
         } catch(e) {
             showToast('❌ 网络错误: ' + e.message);
         }
+    }
+}
+
+
+// ── 显示屏蔽词挑战弹窗（人机验证）──
+function showBanwordChallenge(word) {
+    // 关闭已有的弹窗
+    const existing = document.getElementById('banwordChallengeModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'banwordChallengeModal';
+    modal.className = 'modal-overlay';
+    modal.style.cssText = 'display:flex;z-index:2600;';
+    modal.innerHTML = `
+        <div class="modal-box" style="max-width:400px;text-align:center;">
+            <div style="font-size:48px;margin-bottom:8px;">🛡️</div>
+            <div style="font-size:16px;font-weight:700;color:#e91e63;margin-bottom:8px;">评论包含敏感词</div>
+            <div style="font-size:13px;color:#888;margin-bottom:16px;">你的评论中检测到敏感词「<b style="color:#e91e63;">${escapeHtml(word)}</b>」，需要通过人机验证才能继续评论。<br><br>你被禁止评论 <b>2分钟</b>。</div>
+            <div id="banwordTsWidget" style="margin-bottom:12px;"></div>
+            <div id="banwordTsStatus" style="font-size:13px;color:var(--primary);margin-bottom:12px;min-height:20px;"></div>
+            <button class="modal-btn btn-cancel" onclick="document.getElementById('banwordChallengeModal').remove()" style="width:100%;">关闭</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+
+    // 加载Turnstile
+    setTimeout(() => {
+        if (typeof turnstile !== 'undefined') {
+            const container = document.getElementById('banwordTsWidget');
+            if (container) {
+                turnstile.render(container, {
+                    sitekey: TURNSTILE_SITE_KEY,
+                    callback: function(token) {
+                        document.getElementById('banwordTsStatus').textContent = '✅ 验证通过，2分钟后可重新评论';
+                    },
+                    'error-callback': function() {
+                        document.getElementById('banwordTsStatus').textContent = '❌ 验证失败，请重试';
+                    }
+                });
+            }
+        }
+    }, 300);
+}
+
+// ==========================================
+// 🛡️ 屏蔽词管理
+// ==========================================
+
+function openBanwordPanel() {
+    if (!isEditMode) return;
+    document.getElementById('banwordPanel').style.display = 'flex';
+    loadBanwordCollections();
+}
+function closeBanwordPanel() {
+    document.getElementById('banwordPanel').style.display = 'none';
+}
+
+// ── 导入txt文件 ──
+async function importBanwordFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById('banwordImportStatus');
+    statusEl.style.display = 'block';
+    statusEl.textContent = '正在读取文件...';
+
+    try {
+        const text = await file.text();
+        const words = text.split('\n').map(w => w.trim()).filter(w => w.length > 0);
+        if (words.length === 0) {
+            statusEl.textContent = '❌ 文件内容为空';
+            return;
+        }
+
+        // 去掉.txt后缀作为合集名
+        const collectionName = file.name.replace(/\.txt$/i, '');
+        const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN') || '';
+
+        statusEl.textContent = `正在导入「${collectionName}」共 ${words.length} 个词...`;
+
+        const res = await fetch(WORKER_BASE + '/api/admin/banwords/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ collectionName, words })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            statusEl.textContent = `✅ ${data.message}`;
+            loadBanwordCollections();
+            setTimeout(() => { statusEl.textContent = ''; statusEl.style.display = 'none'; }, 3000);
+        } else {
+            statusEl.textContent = '❌ ' + (data.error || '导入失败');
+        }
+    } catch (e) {
+        statusEl.textContent = '❌ 导入失败: ' + (e.message || '网络错误');
+    }
+
+    input.value = '';
+}
+
+// ── 加载合集列表 ──
+async function loadBanwordCollections() {
+    const container = document.getElementById('banwordCollectionsList');
+    container.innerHTML = '<div style="text-align:center;color:#aaa;padding:20px;">加载中...</div>';
+
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN') || '';
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/banwords/list', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+            container.innerHTML = '<div style="text-align:center;color:#e91e63;padding:20px;">加载失败: ' + (data.error || '未知错误') + '</div>';
+            return;
+        }
+
+        if (data.collections.length === 0) {
+            container.innerHTML = '<div style="text-align:center;color:#aaa;padding:20px;font-size:13px;">暂无屏蔽词合集，点击上方按钮导入</div>';
+            return;
+        }
+
+        container.innerHTML = data.collections.map(c => `
+            <div style="background:var(--card);border:2px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;box-shadow:4px 4px 0 var(--shadow);">
+                <div>
+                    <div style="font-weight:700;color:var(--text);font-size:15px;">📁 ${escapeHtml(c.name)}</div>
+                    <div style="font-size:12px;color:#888;margin-top:4px;">${c.wordCount} 个屏蔽词</div>
+                </div>
+                <button onclick="deleteBanwordCollection('${c.name.replace(/'/g, "\\'")}')" style="padding:6px 12px;border:none;border-radius:6px;background:#e91e63;color:#fff;font-size:12px;cursor:pointer;font-family:Zpix;">🗑️ 删除</button>
+            </div>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = '<div style="text-align:center;color:#e91e63;padding:20px;">加载失败: ' + (e.message || '网络错误') + '</div>';
+    }
+}
+
+// ── 删除合集 ──
+async function deleteBanwordCollection(name) {
+    if (!confirm('确定删除「' + name + '」屏蔽词合集？')) return;
+
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN') || '';
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/banwords/delete', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ collectionName: name })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ 已删除「' + name + '」');
+            loadBanwordCollections();
+        } else {
+            showToast('❌ ' + (data.error || '删除失败'));
+        }
+    } catch (e) {
+        showToast('❌ 删除失败');
     }
 }
 
@@ -8852,13 +9038,8 @@ function showLoggedInState() {
 let _oauthPopup = null;
 
 function _openGithubPopup(url) {
-    if (_oauthPopup && !_oauthPopup.closed) _oauthPopup.close();
-    _oauthPopup = window.open(url, 'github_oauth', 'width=480,height=640,scrollbars=yes,resizable=yes');
-    if (!_oauthPopup) {
-        showToast('❌ 弹窗被拦截，请允许弹窗后重试');
-        return;
-    }
-    showToast('⏳ 请在弹出窗口完成GitHub授权...');
+    // 📱 Median/WebView兼容：在当前窗口内跳转，避免弹窗被拦截
+    window.location.href = url;
 }
 
 // 监听GitHub回调的postMessage
@@ -9209,7 +9390,40 @@ async function submitComment(cardId) {
     if (!currentUser) { showToast('请先登录'); openUserModal(); return; }
 
     const btn = document.querySelector('.comment-submit-btn');
-    if (btn) { btn.disabled = true; btn.textContent = '发送中...'; }
+    if (btn) { btn.disabled = true; btn.textContent = '检查中...'; }
+
+    // ── 🛡️ 屏蔽词检查 ──
+    try {
+        const banRes = await fetch(WORKER_BASE + '/api/banwords/check-block');
+        const banData = await banRes.json();
+        if (banData.blocked) {
+            showToast('⏳ 你因触发屏蔽词被禁止评论 ' + banData.remainingSeconds + ' 秒');
+            if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
+            return;
+        }
+    } catch (e) { /* 忽略检查失败 */ }
+
+    // ── 检查文本是否包含屏蔽词 ──
+    try {
+        const checkRes = await fetch(WORKER_BASE + '/api/banwords/collections');
+        const checkData = await checkRes.json();
+        if (checkData.success && checkData.words && checkData.words.length > 0) {
+            const lowerComment = comment.toLowerCase();
+            const foundWord = checkData.words.find(w => lowerComment.includes(w.toLowerCase()));
+            if (foundWord) {
+                // 触发屏蔽词 → 封禁2分钟
+                try {
+                    await fetch(WORKER_BASE + '/api/banwords/block', { method: 'POST' });
+                } catch (e) {}
+                // 显示人机验证弹窗
+                showBanwordChallenge(foundWord);
+                if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
+                return;
+            }
+        }
+    } catch (e) { /* 忽略检查失败 */ }
+
+    if (btn) { btn.textContent = '发送中...'; }
 
     try {
         const body = { cardId, comment, score: currentCommentScore || 0 };
