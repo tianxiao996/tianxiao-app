@@ -8847,15 +8847,64 @@ function showLoggedInState() {
     document.getElementById('loggedUserId').textContent = currentUser.userId;
 }
 
-// ── 登录 ──
-// ── GitHub OAuth ──
+
+// ── GitHub OAuth（弹窗方式，兼容WebView套壳APK）──
+let _oauthPopup = null;
+
+function _openGithubPopup(url) {
+    if (_oauthPopup && !_oauthPopup.closed) _oauthPopup.close();
+    _oauthPopup = window.open(url, 'github_oauth', 'width=480,height=640,scrollbars=yes,resizable=yes');
+    if (!_oauthPopup) {
+        showToast('❌ 弹窗被拦截，请允许弹窗后重试');
+        return;
+    }
+    showToast('⏳ 请在弹出窗口完成GitHub授权...');
+}
+
+// 监听GitHub回调的postMessage
+window.addEventListener('message', function(e) {
+    if (!e.data || e.data.type !== 'github_oauth') return;
+    if (_oauthPopup && !_oauthPopup.closed) _oauthPopup.close();
+    _oauthPopup = null;
+
+    const d = e.data;
+    if (d.auth_error) {
+        const errorMap = {
+            'missing_params': '授权参数缺失',
+            'invalid_state': '授权状态无效，请重试',
+            'invite_expired': '邀请码已失效，请联系管理员',
+            'github_token_failed': 'GitHub授权失败，请重试',
+            'github_user_failed': '获取GitHub用户信息失败',
+            'user_not_found': '账号数据异常，请联系管理员',
+            'banned': '账号已被封禁',
+        };
+        showToast('❌ ' + (errorMap[d.auth_error] || d.auth_error));
+        return;
+    }
+
+    if (d.auth_success && d.token && d.userId && d.username) {
+        const uname = decodeURIComponent(d.username);
+        currentUser = { userId: d.userId, username: uname, sessionToken: d.token };
+        localStorage.setItem('tx_user', JSON.stringify(currentUser));
+        updateUserEntryBtn();
+        showLoggedInState();
+        if (d.auth_success === 'register') {
+            showToast(`🎉 注册成功！欢迎 ${uname}`);
+            if (d.newInvite) setTimeout(() => showToast(`⚠️ 管理员注意：邀请码已更新为 ${d.newInvite}`), 2000);
+        } else {
+            showToast(`✅ 欢迎回来，${uname}！`);
+            closeUserModal();
+        }
+    }
+});
+
 async function doGithubLogin() {
     try {
-        showToast('⏳ 跳转 GitHub 授权...');
+        showToast('⏳ 获取授权链接...');
         const res = await fetch(`${WORKER_BASE}/api/auth/github/login`);
         const data = await res.json();
         if (data.success) {
-            window.location.href = data.url;
+            _openGithubPopup(data.url);
         } else {
             showToast('❌ ' + (data.error || '跳转失败'));
         }
@@ -8872,8 +8921,7 @@ async function doGithubRegister() {
         const res = await fetch(`${WORKER_BASE}/api/auth/github?inviteCode=${encodeURIComponent(inviteCode)}`);
         const data = await res.json();
         if (data.success) {
-            showToast('✅ 邀请码有效，跳转 GitHub 授权...');
-            setTimeout(() => { window.location.href = data.url; }, 800);
+            _openGithubPopup(data.url);
         } else {
             showToast('❌ ' + (data.error || '邀请码错误'));
         }
@@ -8882,58 +8930,36 @@ async function doGithubRegister() {
     }
 }
 
-// ── 处理GitHub OAuth回调参数 ──
+// ── 兼容直接跳转模式（非弹窗环境）──
 (function handleGithubCallback() {
     const params = new URLSearchParams(window.location.search);
     const authSuccess = params.get('auth_success');
     const authError = params.get('auth_error');
-
+    if (!authSuccess && !authError) return;
+    window.history.replaceState({}, '', window.location.pathname);
     if (authError) {
         const errorMap = {
-            'missing_params': '授权参数缺失',
-            'invalid_state': '授权状态无效，请重试',
-            'invite_expired': '邀请码已失效，请联系管理员',
-            'github_token_failed': 'GitHub授权失败，请重试',
-            'github_user_failed': '获取GitHub用户信息失败',
-            'user_not_found': '账号数据异常，请联系管理员',
-            'banned': '账号已被封禁',
+            'missing_params': '授权参数缺失', 'invalid_state': '授权状态无效',
+            'invite_expired': '邀请码已失效', 'github_token_failed': 'GitHub授权失败',
+            'github_user_failed': '获取用户信息失败', 'user_not_found': '账号数据异常', 'banned': '账号已被封禁',
         };
         setTimeout(() => showToast('❌ ' + (errorMap[authError] || authError)), 500);
-        // 清理URL参数
-        window.history.replaceState({}, '', window.location.pathname);
         return;
     }
-
     if (authSuccess) {
         const token = params.get('token');
         const userId = params.get('userId');
         const username = decodeURIComponent(params.get('username') || '');
         const newInvite = params.get('newInvite');
-
         if (token && userId && username) {
             currentUser = { userId, username, sessionToken: token };
             localStorage.setItem('tx_user', JSON.stringify(currentUser));
             updateUserEntryBtn();
-
-            if (authSuccess === 'register') {
-                setTimeout(() => {
-                    showToast(`🎉 注册成功！欢迎 ${username}`);
-                    if (newInvite) {
-                        setTimeout(() => {
-                            showToast(`⚠️ 管理员注意：邀请码已更新为 ${newInvite}`);
-                        }, 2000);
-                    }
-                    openUserModal();
-                    showLoggedInState();
-                }, 300);
-            } else {
-                setTimeout(() => {
-                    showToast(`✅ 欢迎回来，${username}！`);
-                }, 300);
-            }
+            setTimeout(() => {
+                showToast(authSuccess === 'register' ? `🎉 注册成功！欢迎 ${username}` : `✅ 欢迎回来，${username}！`);
+                if (newInvite) setTimeout(() => showToast(`⚠️ 管理员注意：邀请码已更新为 ${newInvite}`), 2000);
+            }, 300);
         }
-        // 清理URL参数
-        window.history.replaceState({}, '', window.location.pathname);
     }
 })();
 
