@@ -8709,6 +8709,10 @@ function closeNavPanel() {
 
         <!-- 未登录：登录/注册 -->
         <div id="userGuestView">
+            <div class="user-modal-tab" style="margin-bottom:18px;">
+                <button class="user-tab-btn active" id="tabLoginBtn" onclick="switchUserTab('login')">🔑 登录</button>
+                <button class="user-tab-btn" id="tabRegisterBtn" onclick="switchUserTab('register')">📝 注册</button>
+            </div>
 
             <!-- ====== 登录区域 ====== -->
             <div id="loginFormArea">
@@ -8746,7 +8750,7 @@ function closeNavPanel() {
             </div>
 
             <!-- ====== 注册区域 ====== -->
-            <div id="registerFormArea">
+            <div id="registerFormArea" style="display:none;">
                 <div style="font-size:14px;font-weight:700;color:var(--primary);margin-bottom:12px;">📝 注册账号</div>
                 <div style="font-size:11px;color:#e91e63;margin-bottom:10px;">注册需要：用户名 + 密码 + 邀请码 + 人机验证 + GitHub授权（缺一不可）</div>
 
@@ -8754,7 +8758,7 @@ function closeNavPanel() {
                 <div id="regStep1">
                     <div class="user-field">
                         <label>用户名</label>
-                        <input type="text" id="regUsername" placeholder="3-20字符，中英文/数字/下划线" autocomplete="off" maxlength="20">
+                        <input type="text" id="regUsername" placeholder="最多8个字或字母" autocomplete="off" maxlength="8">
                     </div>
                     <div class="user-field">
                         <label>密码</label>
@@ -8900,6 +8904,22 @@ function openUserModal() {
     } else {
         document.getElementById('userGuestView').style.display = 'block';
         document.getElementById('userLoggedIn').style.display = 'none';
+        document.getElementById('userRegSuccess').style.display = 'none';
+        // 默认切换到登录标签
+        switchUserTab('login');
+        // 重置注册步骤
+        _regStep = 1;
+        _regTsToken = '';
+        const regStep1 = document.getElementById('regStep1');
+        const regStep2 = document.getElementById('regStep2');
+        const regStep3 = document.getElementById('regStep3');
+        const regBtn = document.getElementById('regActionBtn');
+        const regErr = document.getElementById('regErrorMsg');
+        if (regStep1) regStep1.style.display = 'block';
+        if (regStep2) regStep2.style.display = 'none';
+        if (regStep3) regStep3.style.display = 'none';
+        if (regBtn) { regBtn.style.display = 'block'; regBtn.textContent = '下一步：人机验证'; }
+        if (regErr) regErr.style.display = 'none';
         // 渲染登录表单的Turnstile
         setTimeout(() => {
             if (typeof turnstile !== 'undefined') {
@@ -8921,7 +8941,39 @@ function closeUserModal() {
 }
 
 function switchUserTab(tab) {
-    // 保留兼容性，新版不再使用tab
+    const loginBtn = document.getElementById('tabLoginBtn');
+    const regBtn = document.getElementById('tabRegisterBtn');
+    const loginArea = document.getElementById('loginFormArea');
+    const regArea = document.getElementById('registerFormArea');
+    const regErr = document.getElementById('regErrorMsg');
+
+    if (tab === 'login') {
+        loginBtn.classList.add('active');
+        regBtn.classList.remove('active');
+        loginArea.style.display = 'block';
+        regArea.style.display = 'none';
+    } else {
+        loginBtn.classList.remove('active');
+        regBtn.classList.add('active');
+        loginArea.style.display = 'none';
+        regArea.style.display = 'block';
+    }
+    if (regErr) regErr.style.display = 'none';
+
+    // 渲染对应区域的Turnstile
+    setTimeout(() => {
+        if (typeof turnstile === 'undefined') return;
+        if (tab === 'login') {
+            const container = document.getElementById('loginTsWidget');
+            if (container && container.innerHTML === '') {
+                turnstile.render('#loginTsWidget', {
+                    sitekey: TURNSTILE_SITE_KEY,
+                    callback: (token) => { _loginTsToken = token; },
+                    'error-callback': () => { _loginTsToken = ''; }
+                });
+            }
+        }
+    }, 100);
 }
 
 function showLoggedInState() {
@@ -8956,6 +9008,8 @@ window.addEventListener('message', function(e) {
             'github_user_failed': '获取GitHub用户信息失败',
             'user_not_found': '账号数据异常，请联系管理员',
             'banned': '账号已被封禁',
+            'already_registered': '该GitHub账号已注册，请直接登录',
+            'not_registered': '该GitHub账号未注册，请先注册',
         };
         showToast('❌ ' + (errorMap[d.auth_error] || d.auth_error));
         return;
@@ -8983,7 +9037,8 @@ async function doGithubLogin() {
         const res = await fetch(`${WORKER_BASE}/api/auth/github/login`);
         const data = await res.json();
         if (data.success) {
-            window.location.href = data.url;
+            // 📱 WebView/APK兼容：强制当前窗口跳转，防止新开浏览器标签
+            window.location.assign(data.url);
         } else {
             showToast('❌ ' + (data.error || '跳转失败'));
         }
@@ -9087,7 +9142,8 @@ async function handleRegisterStep() {
             const res = await fetch(`${WORKER_BASE}/api/auth/github?inviteCode=${encodeURIComponent(inviteCode)}`);
             const data = await res.json();
             if (data.success) {
-                window.location.href = data.url;
+                // 📱 WebView/APK兼容：强制当前窗口跳转
+                window.location.assign(data.url);
             } else {
                 errEl.textContent = data.error || '获取授权链接失败';
                 errEl.style.display = 'block';
@@ -9100,6 +9156,54 @@ async function handleRegisterStep() {
 }
 
 // ── 兼容直接跳转模式（非弹窗环境）──
+
+// ── GitHub注册回调后提交注册 ──
+async function submitGithubRegister(githubId, regData) {
+    try {
+        const res = await fetch(`${USER_API}/api/user/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: regData.username,
+                password: regData.password,
+                password2: regData.password2,
+                inviteCode: regData.inviteCode,
+                tsToken: regData.tsToken,
+                githubId: githubId
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            // 注册成功，显示成功页面（不自动登录）
+            document.getElementById('userGuestView').style.display = 'none';
+            document.getElementById('userLoggedIn').style.display = 'none';
+            document.getElementById('userRegSuccess').style.display = 'block';
+            document.getElementById('newUserId').textContent = data.userId;
+            showToast('🎉 注册成功！请妥善保管账号ID');
+        } else {
+            // 注册失败：显示错误，回到注册标签
+            document.getElementById('regErrorMsg').textContent = data.error || '注册失败';
+            document.getElementById('regErrorMsg').style.display = 'block';
+            // 如果已注册，提示去登录（不自动登录）
+            if (data.error && (data.error.includes('已被注册') || data.error.includes('already_registered') || data.error.includes('already'))) {
+                showToast('⚠️ 该账号已注册，请直接登录');
+                setTimeout(() => switchUserTab('login'), 1500);
+            } else {
+                // 重置注册步骤到第一步
+                document.getElementById('regStep1').style.display = 'block';
+                document.getElementById('regStep2').style.display = 'none';
+                document.getElementById('regStep3').style.display = 'none';
+                document.getElementById('regActionBtn').textContent = '下一步：人机验证';
+                document.getElementById('regActionBtn').style.display = 'block';
+                _regStep = 1;
+            }
+        }
+    } catch(e) {
+        document.getElementById('regErrorMsg').textContent = '网络错误：' + e.message;
+        document.getElementById('regErrorMsg').style.display = 'block';
+    }
+}
+
 (function handleGithubCallback() {
     const params = new URLSearchParams(window.location.search);
     const authSuccess = params.get('auth_success');
