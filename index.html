@@ -2303,6 +2303,35 @@ function __safeFixDeleteImage(card){
         </div>
     </div>
     <!-- 🏷️ 分类管理面板 -->
+    <!-- 🎫 邀请码管理面板 -->
+    <div id="inviteCodePanel" style="display:none; background:#f3e5f5; border:1px dashed #9c27b0; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:600px;">
+        <div style="font-size:13px; font-weight:bold; color:#6a1b9a; margin-bottom:10px;">🎫 邀请码管理</div>
+
+        <!-- 永久邀请码 -->
+        <div style="background:#fff; border-radius:10px; padding:12px; margin-bottom:10px; border:1px solid #ce93d8;">
+            <div style="font-size:12px; font-weight:bold; color:#6a1b9a; margin-bottom:6px;">🔑 永久邀请码（可重复使用，手动更换才失效）</div>
+            <div style="font-size:13px; margin-bottom:8px;">当前：<b id="permanentInviteDisplay" style="font-family:monospace;color:#6a1b9a;">加载中...</b></div>
+            <div style="display:flex; gap:8px;">
+                <input type="text" id="permanentInviteInput" placeholder="输入新的永久邀请码" style="flex:1;border:1px solid #ce93d8;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;min-width:0;">
+                <button onclick="setPermanentInvite()" style="background:#9c27b0;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;flex-shrink:0;">更新</button>
+            </div>
+        </div>
+
+        <!-- 一次性邀请码 -->
+        <div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #ce93d8;">
+            <div style="font-size:12px; font-weight:bold; color:#6a1b9a; margin-bottom:6px;">🎟️ 一次性邀请码（用完即失效）<span id="onetimeInviteCount" style="font-weight:normal;color:#aaa;margin-left:6px;">共 0 个</span></div>
+            <div style="display:flex; gap:8px; margin-bottom:10px; align-items:center;">
+                <span style="font-size:12px;color:#666;flex-shrink:0;">生成数量：</span>
+                <input type="number" id="onetimeCount" value="1" min="1" max="20" style="width:60px;border:1px solid #ce93d8;border-radius:8px;padding:6px 8px;font-size:13px;outline:none;">
+                <button onclick="genOnetimeInvites()" style="background:#9c27b0;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;">生成</button>
+                <button onclick="loadOnetimeInvites()" style="background:#7b1fa2;color:#fff;border:none;border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;">🔄</button>
+            </div>
+            <div id="onetimeInviteList" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;">
+                <span style="font-size:12px;color:#aaa;">点击刷新查看列表</span>
+            </div>
+        </div>
+    </div>
+
     <!-- 🔍 用户查询面板（管理员） -->
     <div id="userQueryPanel" style="display:none; background:#e3f2fd; border:1px dashed #2196f3; border-radius:12px; padding:12px; margin:0 auto 12px auto; max-width:550px;">
         <div style="font-size:13px; font-weight:bold; color:#1565c0; margin-bottom:10px;">🔍 用户查询</div>
@@ -4496,50 +4525,123 @@ function exitAdmin() {
 }
 
 
-// 🎫 管理员设置邀请码
-async function setInviteCode() {
+// 🎫 管理员设置邀请码（打开面板）
+function setInviteCode() {
+    const panel = document.getElementById('inviteCodePanel');
+    if (!panel) return;
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) loadInvitePanel();
+}
+
+async function loadInvitePanel() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) return;
+    // 加载永久邀请码
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/invite', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        const el = document.getElementById('permanentInviteDisplay');
+        if (el) el.textContent = data.inviteCode || '未设置';
+    } catch(e) {}
+    // 加载一次性邀请码列表
+    loadOnetimeInvites();
+}
+
+async function setPermanentInvite() {
     const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
     if (!token) { showToast('❌ 请先登录管理员'); return; }
-
-    const action = confirm('点击「确定」设置新邀请码，点击「取消」查看当前邀请码。');
-
-    if (action) {
-        const code = prompt('请输入新的邀请码（至少1位字符）:');
-        if (code === null) return;
-        if (!code.trim()) { showToast('❌ 邀请码不能为空'); return; }
-
-        try {
-            const res = await fetch(WORKER_BASE + '/api/admin/invite', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                body: JSON.stringify({ inviteCode: code.trim() })
-            });
-            const data = await res.json();
-            if (data.success) {
-                showToast('✅ 邀请码已更新: ' + code.trim());
-            } else {
-                showToast('❌ ' + (data.error || '更新失败'));
-            }
-        } catch(e) {
-            showToast('❌ 网络错误: ' + e.message);
+    const input = document.getElementById('permanentInviteInput');
+    const code = input?.value.trim();
+    if (!code) { showToast('❌ 请输入永久邀请码'); return; }
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/invite', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ action: 'set_permanent', inviteCode: code })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ 永久邀请码已更新：' + code);
+            document.getElementById('permanentInviteDisplay').textContent = code;
+            input.value = '';
+        } else {
+            showToast('❌ ' + data.error);
         }
-    } else {
-        // 查看当前邀请码
-        try {
-            const res = await fetch(WORKER_BASE + '/api/admin/invite', {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            const data = await res.json();
-            if (data.success) {
-                alert('当前邀请码: ' + (data.inviteCode || '未设置'));
-            } else {
-                showToast('❌ ' + (data.error || '获取失败'));
-            }
-        } catch(e) {
-            showToast('❌ 网络错误: ' + e.message);
-        }
-    }
+    } catch(e) { showToast('❌ 网络错误'); }
 }
+
+async function genOnetimeInvites() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('❌ 请先登录管理员'); return; }
+    const countEl = document.getElementById('onetimeCount');
+    const count = parseInt(countEl?.value) || 1;
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/invite', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ action: 'gen_onetime', count })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ ' + data.message);
+            loadOnetimeInvites();
+        } else {
+            showToast('❌ ' + data.error);
+        }
+    } catch(e) { showToast('❌ 网络错误'); }
+}
+
+async function loadOnetimeInvites() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) return;
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/invite', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ action: 'list_onetime' })
+        });
+        const data = await res.json();
+        const listEl = document.getElementById('onetimeInviteList');
+        if (!listEl) return;
+        if (!data.codes || data.codes.length === 0) {
+            listEl.innerHTML = '<span style="font-size:12px;color:#aaa;">暂无一次性邀请码</span>';
+        } else {
+            listEl.innerHTML = data.codes.map(c => `
+                <span style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:3px 8px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-family:monospace;">
+                    ${c}
+                    <span onclick="copyText('${c}')" style="cursor:pointer;color:#388e3c;font-size:11px;">📋</span>
+                    <span onclick="deleteOnetimeInvite('${c}',this)" style="cursor:pointer;color:#e91e63;font-weight:bold;font-size:14px;line-height:1;">×</span>
+                </span>
+            `).join('');
+        }
+        document.getElementById('onetimeInviteCount').textContent = `共 ${data.total || 0} 个`;
+    } catch(e) {}
+}
+
+async function deleteOnetimeInvite(code, el) {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) return;
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/invite', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ action: 'delete_onetime', inviteCode: code })
+        });
+        const data = await res.json();
+        if (data.success) {
+            el?.closest('span')?.remove();
+            showToast('✅ 已删除：' + code);
+        }
+    } catch(e) { showToast('❌ 网络错误'); }
+}
+
+function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => showToast('✅ 已复制：' + text));
+}
+
 
 
 function togglePin(btn) {
