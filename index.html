@@ -7211,6 +7211,12 @@ async function queryUser() {
 }
 
 function openBanModal(userId, username) {
+    // 🔒 权限检查：只有管理员才能封号
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) {
+        showToast('⛔ 无权限操作');
+        return;
+    }
     _banTargetUserId = userId;
     const modal = document.getElementById('banModal');
     document.getElementById('banTargetInfo').innerHTML = `目标：<b>${escapeHtml(username)}</b>（${escapeHtml(userId)}）`;
