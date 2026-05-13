@@ -2298,6 +2298,7 @@ function __safeFixDeleteImage(card){
         <button onclick="debugCardStructure()" style="background:#333!important;">🐛 调试</button>
         <button onclick="setInviteCode()" style="background:#673ab7!important;">🎫 邀请码</button>
         <button onclick="openUserQueryPanel()" style="background:#2196f3!important;">🔍 查用户</button>
+        <button onclick="openWordlistPanel()" style="background:#00796b!important;">🚫 屏蔽词</button>
         <button id="adminAuditBtn" onclick="toggleAdminAuditMode()" style="background:#ff5722!important;">💬 审核评论</button>
         <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button>
         </div>
@@ -2341,6 +2342,38 @@ function __safeFixDeleteImage(card){
         </div>
         <div id="userQueryResult" style="display:none; flex-direction:column; gap:8px;"></div>
     </div>
+    </div>
+
+    <!-- 🚫 屏蔽词管理面板（管理员） -->
+    <div id="wordlistPanel" style="display:none; background:#e8f5e9; border:1px dashed #388e3c; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:560px;">
+        <div style="font-size:13px; font-weight:bold; color:#1b5e20; margin-bottom:10px;">🚫 评论屏蔽词管理</div>
+
+        <!-- 导入区域 -->
+        <div style="background:#fff; border-radius:10px; padding:12px; margin-bottom:10px; border:1px solid #a5d6a7;">
+            <div style="font-size:12px; font-weight:bold; color:#2e7d32; margin-bottom:8px;">📥 导入 TXT 屏蔽词文件（每行一个词，文件名即合集名）</div>
+            <label id="wordlistFileLabel" style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1.5px dashed #81c784; border-radius:8px; cursor:pointer; font-size:13px; color:#555; background:#f9fbe7; transition:background 0.15s;">
+                <span style="font-size:18px;">📂</span>
+                <span id="wordlistFileName">点击选择 .txt 文件</span>
+                <input type="file" id="wordlistFileInput" accept=".txt" style="display:none;" onchange="onWordlistFileSelect(this)">
+            </label>
+            <div id="wordlistPreview" style="display:none; margin-top:8px; font-size:12px; color:#555; background:#f1f8e9; border-radius:8px; padding:8px 10px;">
+                合集名：<b id="wordlistPreviewName" style="color:#2e7d32;"></b> &nbsp;·&nbsp; 词数：<b id="wordlistPreviewCount" style="color:#2e7d32;"></b>
+            </div>
+            <button onclick="uploadWordlist()" style="margin-top:10px; width:100%; background:#388e3c; color:#fff; border:none; border-radius:8px; padding:9px; font-size:13px; font-weight:bold; cursor:pointer;">⬆️ 导入合集</button>
+        </div>
+
+        <!-- 已有合集列表 -->
+        <div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #a5d6a7;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <div style="font-size:12px; font-weight:bold; color:#2e7d32;">📋 已有合集</div>
+                <button onclick="loadWordlistCollections()" style="background:#66bb6a; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer;">🔄 刷新</button>
+            </div>
+            <div id="wordlistCollectionList" style="display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto;">
+                <div style="font-size:12px; color:#aaa; text-align:center; padding:10px;">点击刷新查看</div>
+            </div>
+        </div>
+    </div>
+
     <div id="catPanel">
         <div class="cat-panel-title">🏷️ 分类管理（新增 / 排序 / 删除）</div>
         <div class="cat-add-row">
@@ -9303,6 +9336,230 @@ async function submitComment(cardId) {
     } catch(e) {
         showToast('❌ 网络错误: ' + (e.message || '请检查网络'));
         if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
+    }
+}
+
+async function submitComment(cardId) {
+    const comment = document.getElementById('commentText')?.value.trim();
+    if (!comment) { showToast('请填写评论内容'); return; }
+    if (!currentUser) { showToast('请先登录'); openUserModal(); return; }
+
+    const btn = document.querySelector('.comment-submit-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '发送中...'; }
+
+    try {
+        const body = { cardId, comment, score: currentCommentScore || 0 };
+
+        const res = await fetch(`${USER_API}/api/comment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.sessionToken}`
+            },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ 评论成功！');
+            loadComments(cardId);
+        } else if (data.code === 'muted') {
+            // ── 触发屏蔽词：禁言提示 + Turnstile 重新验证 ──
+            showToast('🚫 ' + (data.error || '评论含有违禁词，已被禁言'));
+            if (btn) { btn.disabled = true; btn.textContent = `禁言中（${data.remaining || 120}s）`; }
+            // 启动倒计时更新按钮
+            let remaining = data.remaining || 120;
+            const muteTimer = setInterval(() => {
+                remaining--;
+                if (btn) btn.textContent = `禁言中（${remaining}s）`;
+                if (remaining <= 0) {
+                    clearInterval(muteTimer);
+                    if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
+                }
+            }, 1000);
+            // 触发 Turnstile 重新验证（评论区内嵌验证框）
+            _showCommentTurnstile(cardId);
+        } else {
+            const errMsg = data.error || data.message || '评论失败';
+            showToast('❌ ' + errMsg);
+            if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
+        }
+    } catch(e) {
+        showToast('❌ 网络错误: ' + (e.message || '请检查网络'));
+        if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
+    }
+}
+
+// ── 评论区内嵌 Turnstile 验证框（禁言触发后显示）──
+let _commentTurnstileWidgetId = null;
+function _showCommentTurnstile(cardId) {
+    const inputArea = document.getElementById('commentInputArea');
+    if (!inputArea) return;
+
+    // 在输入框上方插入验证框
+    let tsBox = document.getElementById('commentTurnstileBox');
+    if (!tsBox) {
+        tsBox = document.createElement('div');
+        tsBox.id = 'commentTurnstileBox';
+        tsBox.style.cssText = 'padding:10px 14px; border-bottom:1px solid var(--border); text-align:center;';
+        inputArea.parentNode.insertBefore(tsBox, inputArea);
+    }
+    tsBox.innerHTML = `
+        <div style="font-size:12px; color:#e05; margin-bottom:8px; font-weight:bold;">⚠️ 触发屏蔽词，请完成人机验证后继续</div>
+        <div id="commentTurnstileWidget"></div>
+    `;
+
+    // 渲染 Turnstile widget
+    if (_commentTurnstileWidgetId !== null) {
+        try { turnstile.remove(_commentTurnstileWidgetId); } catch(e) {}
+        _commentTurnstileWidgetId = null;
+    }
+    try {
+        _commentTurnstileWidgetId = turnstile.render('#commentTurnstileWidget', {
+            sitekey: _getTurnstileSitekey(),
+            theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
+            callback: function(token) {
+                // 验证通过后清除验证框，恢复输入
+                const box = document.getElementById('commentTurnstileBox');
+                if (box) box.remove();
+                _commentTurnstileWidgetId = null;
+                showToast('✅ 验证通过，禁言结束后即可继续评论');
+            }
+        });
+    } catch(e) {
+        console.warn('Turnstile render failed:', e);
+    }
+}
+
+// 获取当前页面 Turnstile sitekey（从已渲染的 widget 中读取）
+function _getTurnstileSitekey() {
+    // 从注册表单的 Turnstile widget 中提取 sitekey
+    const el = document.querySelector('[data-sitekey]');
+    if (el) return el.getAttribute('data-sitekey');
+    // fallback：从 Turnstile 内部 iframe 猜测
+    const iframe = document.querySelector('iframe[src*="challenges.cloudflare.com"]');
+    if (iframe) {
+        const m = iframe.src.match(/sitekey=([^&]+)/);
+        if (m) return decodeURIComponent(m[1]);
+    }
+    return '';
+}
+
+// ============================================================
+// 屏蔽词管理（管理员）
+// ============================================================
+let _wordlistParsed = null; // { name, words }
+
+function openWordlistPanel() {
+    const panel = document.getElementById('wordlistPanel');
+    if (!panel) return;
+    const isVisible = panel.style.display !== 'none';
+    // 关闭其他面板
+    ['inviteCodePanel','userQueryPanel'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    panel.style.display = isVisible ? 'none' : 'block';
+    if (!isVisible) loadWordlistCollections();
+}
+
+function onWordlistFileSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const name = file.name.replace(/\.txt$/i, '').trim();
+    document.getElementById('wordlistFileName').textContent = file.name;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const words = text.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+        _wordlistParsed = { name, words };
+        document.getElementById('wordlistPreviewName').textContent = name;
+        document.getElementById('wordlistPreviewCount').textContent = words.length + ' 个词';
+        document.getElementById('wordlistPreview').style.display = 'block';
+    };
+    reader.readAsText(file, 'UTF-8');
+}
+
+async function uploadWordlist() {
+    if (!_wordlistParsed || _wordlistParsed.words.length === 0) {
+        showToast('❌ 请先选择 .txt 文件'); return;
+    }
+    const { name, words } = _wordlistParsed;
+    try {
+        const res = await fetch(`${WORKER_BASE}/api/admin/wordlist`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({ name, words })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ ${data.message}`);
+            _wordlistParsed = null;
+            document.getElementById('wordlistFileName').textContent = '点击选择 .txt 文件';
+            document.getElementById('wordlistPreview').style.display = 'none';
+            document.getElementById('wordlistFileInput').value = '';
+            loadWordlistCollections();
+        } else {
+            showToast('❌ ' + (data.error || '导入失败'));
+        }
+    } catch(e) {
+        showToast('❌ 网络错误: ' + e.message);
+    }
+}
+
+async function loadWordlistCollections() {
+    const listEl = document.getElementById('wordlistCollectionList');
+    if (!listEl) return;
+    listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:10px;">加载中...</div>';
+    try {
+        const res = await fetch(`${WORKER_BASE}/api/admin/wordlist`, {
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        const data = await res.json();
+        if (!data.success) { listEl.innerHTML = `<div style="font-size:12px;color:#e05;text-align:center;padding:10px;">${data.error}</div>`; return; }
+        const cols = data.collections || [];
+        if (cols.length === 0) {
+            listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:10px;">暂无屏蔽词合集</div>';
+            return;
+        }
+        listEl.innerHTML = cols.map(c => `
+            <div style="display:flex; align-items:center; gap:8px; padding:8px 10px; background:#f9fbe7; border-radius:8px; border:1px solid #c8e6c9;">
+                <span style="font-size:18px;">📄</span>
+                <div style="flex:1; min-width:0;">
+                    <div style="font-size:13px; font-weight:bold; color:#1b5e20; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(c.name)}</div>
+                    <div style="font-size:11px; color:#888;">${c.count} 个词 · ${new Date(c.createdAt).toLocaleDateString()}</div>
+                </div>
+                <button onclick="deleteWordlistCollection('${escapeHtml(c.name)}')" style="background:#e53935; color:#fff; border:none; border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; flex-shrink:0;">🗑️ 删除</button>
+            </div>
+        `).join('');
+    } catch(e) {
+        listEl.innerHTML = `<div style="font-size:12px;color:#e05;text-align:center;padding:10px;">加载失败: ${e.message}</div>`;
+    }
+}
+
+async function deleteWordlistCollection(name) {
+    if (!confirm(`确定要删除合集「${name}」吗？`)) return;
+    try {
+        const res = await fetch(`${WORKER_BASE}/api/admin/wordlist`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({ name })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ ${data.message}`);
+            loadWordlistCollections();
+        } else {
+            showToast('❌ ' + (data.error || '删除失败'));
+        }
+    } catch(e) {
+        showToast('❌ 网络错误: ' + e.message);
     }
 }
 
