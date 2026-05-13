@@ -8718,6 +8718,15 @@ function closeNavPanel() {
                 <input type="password" id="loginPassword" placeholder="请输入密码">
             </div>
             <button class="user-submit-btn" onclick="doLogin()">登录</button>
+            <div style="display:flex;align-items:center;gap:8px;margin:12px 0;">
+                <div style="flex:1;height:1px;background:var(--border);"></div>
+                <span style="font-size:12px;color:#aaa;">或</span>
+                <div style="flex:1;height:1px;background:var(--border);"></div>
+            </div>
+            <button class="user-submit-btn" style="background:#24292e;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="doGithubLogin()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                使用 GitHub 登录
+            </button>
         </div>
 
         <!-- 注册表单 -->
@@ -8741,7 +8750,15 @@ function closeNavPanel() {
             <!-- Turnstile验证 -->
             <div class="cf-turnstile" data-sitekey="0x4AAAAAACxkhwPrw1gO9XFQ" data-theme="auto" style="margin:10px 0;"></div>
             <button class="user-submit-btn" onclick="doRegister()">注册账号</button>
-        </div>
+            <div style="display:flex;align-items:center;gap:8px;margin:12px 0;">
+                <div style="flex:1;height:1px;background:var(--border);"></div>
+                <span style="font-size:12px;color:#aaa;">或使用GitHub注册（需邀请码）</span>
+                <div style="flex:1;height:1px;background:var(--border);"></div>
+            </div>
+            <button class="user-submit-btn" style="background:#24292e;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="doGithubRegister()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                使用 GitHub + 邀请码 注册
+            </button>
 
         <!-- 已登录状态 -->
         <div id="userLoggedIn" style="display:none;">
@@ -8878,6 +8895,95 @@ function showLoggedInState() {
 }
 
 // ── 登录 ──
+// ── GitHub OAuth ──
+async function doGithubLogin() {
+    try {
+        showToast('⏳ 跳转 GitHub 授权...');
+        const res = await fetch(`${WORKER_BASE}/api/auth/github/login`);
+        const data = await res.json();
+        if (data.success) {
+            window.location.href = data.url;
+        } else {
+            showToast('❌ ' + (data.error || '跳转失败'));
+        }
+    } catch(e) {
+        showToast('❌ 网络错误: ' + e.message);
+    }
+}
+
+async function doGithubRegister() {
+    const inviteCode = document.getElementById('regInviteCode')?.value.trim();
+    if (!inviteCode) { showToast('❌ 请先填写邀请码'); return; }
+    try {
+        showToast('⏳ 验证邀请码...');
+        const res = await fetch(`${WORKER_BASE}/api/auth/github?inviteCode=${encodeURIComponent(inviteCode)}`);
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ 邀请码有效，跳转 GitHub 授权...');
+            setTimeout(() => { window.location.href = data.url; }, 800);
+        } else {
+            showToast('❌ ' + (data.error || '邀请码错误'));
+        }
+    } catch(e) {
+        showToast('❌ 网络错误: ' + e.message);
+    }
+}
+
+// ── 处理GitHub OAuth回调参数 ──
+(function handleGithubCallback() {
+    const params = new URLSearchParams(window.location.search);
+    const authSuccess = params.get('auth_success');
+    const authError = params.get('auth_error');
+
+    if (authError) {
+        const errorMap = {
+            'missing_params': '授权参数缺失',
+            'invalid_state': '授权状态无效，请重试',
+            'invite_expired': '邀请码已失效，请联系管理员',
+            'github_token_failed': 'GitHub授权失败，请重试',
+            'github_user_failed': '获取GitHub用户信息失败',
+            'user_not_found': '账号数据异常，请联系管理员',
+            'banned': '账号已被封禁',
+        };
+        setTimeout(() => showToast('❌ ' + (errorMap[authError] || authError)), 500);
+        // 清理URL参数
+        window.history.replaceState({}, '', window.location.pathname);
+        return;
+    }
+
+    if (authSuccess) {
+        const token = params.get('token');
+        const userId = params.get('userId');
+        const username = decodeURIComponent(params.get('username') || '');
+        const newInvite = params.get('newInvite');
+
+        if (token && userId && username) {
+            currentUser = { userId, username, sessionToken: token };
+            localStorage.setItem('tx_user', JSON.stringify(currentUser));
+            updateUserEntryBtn();
+
+            if (authSuccess === 'register') {
+                setTimeout(() => {
+                    showToast(`🎉 注册成功！欢迎 ${username}`);
+                    if (newInvite) {
+                        setTimeout(() => {
+                            showToast(`⚠️ 管理员注意：邀请码已更新为 ${newInvite}`);
+                        }, 2000);
+                    }
+                    openUserModal();
+                    showLoggedInState();
+                }, 300);
+            } else {
+                setTimeout(() => {
+                    showToast(`✅ 欢迎回来，${username}！`);
+                }, 300);
+            }
+        }
+        // 清理URL参数
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+})();
+
 async function doLogin() {
     const userId = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
