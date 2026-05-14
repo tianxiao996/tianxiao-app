@@ -10021,67 +10021,49 @@ async function doRegister() {
     }
 }
 
-// ── 在外部浏览器中打开URL（支持Median / Android Intent / iOS / 普通浏览器）──
+// ── 在外部浏览器中打开URL（支持Median / Android Intent / 普通浏览器）──
 var _pendingGithubUrl = null;
 
 function openExternalBrowser(url) {
     _pendingGithubUrl = url;
     var isAndroid = /Android/i.test(navigator.userAgent);
 
-    // 所有方案并行尝试，不return阻塞后续方案
-
-    // 1. Median JS Bridge
+    // 1. 优先尝试 Median JS Bridge（最稳定）
     try {
-        if (window.median && window.median.url && window.median.url.openExternal) {
-            window.median.url.openExternal(url);
-        } else if (window.median && window.median.url && window.median.url.open) {
-            window.median.url.open(url);
-        } else if (window.median && typeof window.median.openUrl === 'function') {
-            window.median.openUrl(url);
+        if (window.median) {
+            if (window.median.url && window.median.url.openExternal) {
+                window.median.url.openExternal(url);
+                return;
+            }
+            if (window.median.url && window.median.url.open) {
+                window.median.url.open(url);
+                return;
+            }
+            if (typeof window.median.openUrl === 'function') {
+                window.median.openUrl(url);
+                return;
+            }
         }
     } catch(e) {}
 
-    // 2. Median/GoNative URL Scheme（iframe方式，不return）
-    ['median://externalBrowser/open?url=', 'gonative://externalBrowser/open?url='].forEach(function(prefix) {
-        try {
-            var iframe = document.createElement('iframe');
-            iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1;';
-            iframe.src = prefix + encodeURIComponent(url);
-            document.body.appendChild(iframe);
-            setTimeout(function() { if (iframe.parentNode) document.body.removeChild(iframe); }, 800);
-        } catch(e) {}
-    });
-
-    // 3. Android Intent scheme via iframe（能弹出浏览器选择器的关键方案）
+    // 2. Android: 直接用window.location跳转intent scheme，触发系统浏览器选择器
     if (isAndroid) {
         try {
             var cleanUrl = url.replace(/^https?:\/\//, '');
-            var iframe = document.createElement('iframe');
-            iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1;';
-            iframe.src = 'intent://' + cleanUrl + '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end';
-            document.body.appendChild(iframe);
-            setTimeout(function() { if (iframe.parentNode) document.body.removeChild(iframe); }, 2000);
+            var intentUrl = 'intent://' + cleanUrl + '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end';
+            window.location.href = intentUrl;
+            return;
         } catch(e) {}
     }
 
-    // 4. window.open 多种模式
-    try { window.open(url, '_blank'); } catch(e) {}
-    try { window.open(url, '_system'); } catch(e) {}
-
-    // 5. 创建并点击真实的 <a> 标签（比JS直接调用更可能被WebView拦截为外部打开）
+    // 3. 降级：window.open
     try {
-        var a = document.createElement('a');
-        a.href = url;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
-        document.body.appendChild(a);
-        // 创建真实的鼠标事件
-        var ev = document.createEvent('MouseEvents');
-        ev.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-        a.dispatchEvent(ev);
-        setTimeout(function() { if (a.parentNode) document.body.removeChild(a); }, 100);
+        var w = window.open(url, '_blank');
+        if (w) return;
     } catch(e) {}
+
+    // 4. 最后降级：当前页面跳转
+    window.location.href = url;
 }
 
 // ── 显示"等待GitHub授权完成"UI ──
@@ -10180,12 +10162,25 @@ async function checkGithubAuth() {
             localStorage.setItem('tx_user', JSON.stringify(currentUser));
             updateUserEntryBtn();
             showToast('🎉 授权成功！');
-            // 显示注册成功界面
             document.getElementById('userModalTabs').style.display = 'none';
             document.getElementById('userLoginForm').style.display = 'none';
             document.getElementById('userRegisterForm').style.display = 'none';
             document.getElementById('userRegSuccess').style.display = 'block';
             document.getElementById('newUserId').textContent = data.userId;
+        } else if (data.code === 'github_already_bound') {
+            // GitHub已绑定其他账号——清理状态，引导用户重新注册
+            if (_githubCheckTimer) { clearInterval(_githubCheckTimer); _githubCheckTimer = null; }
+            _githubState = null;
+            hideGithubPendingUI();
+            showToast('❌ 该GitHub账号已绑定其他用户，请换一个GitHub账号注册');
+            // 重新显示注册表单
+            switchUserTab('register');
+        } else if (data.code === 'username_taken') {
+            if (_githubCheckTimer) { clearInterval(_githubCheckTimer); _githubCheckTimer = null; }
+            _githubState = null;
+            hideGithubPendingUI();
+            showToast('❌ 用户名已被抢注，请重新注册并换一个用户名');
+            switchUserTab('register');
         } else {
             if (msg) msg.textContent = data.error || '授权尚未完成，请在外部浏览器中完成授权后再试';
             if (btn) { btn.disabled = false; btn.textContent = '我已完成授权，刷新状态'; }
