@@ -10046,11 +10046,17 @@ function openExternalBrowser(url) {
         }
     } catch(e) {}
 
-    // 2. Android: 直接用window.location跳转intent scheme，触发系统浏览器选择器
+    // 2. Android: intent scheme 触发系统浏览器选择器
     if (isAndroid) {
         try {
             var cleanUrl = url.replace(/^https?:\/\//, '');
-            var intentUrl = 'intent://' + cleanUrl + '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end';
+            // 加上 FLAG_ACTIVITY_NEW_TASK 更容易弹出选择器
+            var intentUrl = 'intent://' + cleanUrl +
+                '#Intent;scheme=https;' +
+                'action=android.intent.action.VIEW;' +
+                'category=android.intent.category.BROWSABLE;' +
+                'S.browser_fallback_url=' + encodeURIComponent(url) + ';' +
+                'end';
             window.location.href = intentUrl;
             return;
         } catch(e) {}
@@ -10100,10 +10106,13 @@ function showGithubPendingUI(state) {
                 已在外部浏览器打开 GitHub 授权页面<br>
                 <span style="font-size:11px;color:#999;">请在浏览器中完成授权，然后返回App点击按钮</span>
             </div>
-            <a id="regOpenAuthLink" href="${_pendingGithubUrl || 'https://github.com'}" target="_blank" onclick="openExternalBrowser(_pendingGithubUrl || 'https://github.com')" style="display:block;background:var(--primary);color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:bold;cursor:pointer;width:100%;text-decoration:none;box-sizing:border-box;margin-bottom:10px;text-align:center;" rel="noopener noreferrer">
+            <a id="regOpenAuthLink" href="${_pendingGithubUrl || 'https://github.com'}" target="_blank" onclick="openExternalBrowser(_pendingGithubUrl || 'https://github.com')" style="display:block;background:var(--primary);color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:bold;cursor:pointer;width:100%;text-decoration:none;box-sizing:border-box;margin-bottom:8px;text-align:center;" rel="noopener noreferrer">
                 点击打开授权页面
             </a>
-            <div style="font-size:11px;color:#999;margin-bottom:10px;">如果浏览器没有自动弹出，请点击上方按钮手动打开</div>
+            <button onclick="copyGithubUrl()" style="display:block;width:100%;background:#f5f5f5;border:1.5px solid #ddd;border-radius:12px;padding:10px 24px;font-size:13px;font-weight:bold;cursor:pointer;margin-bottom:4px;color:#333;box-sizing:border-box;">
+                📋 复制链接（粘贴到任意浏览器打开）
+            </button>
+            <div style="font-size:11px;color:#aaa;margin-bottom:12px;text-align:center;">也可以长按上方按钮复制链接，用Chrome/UC等浏览器打开</div>
             <button id="regCheckAuthBtn" onclick="checkGithubAuth()" style="background:#ff9800;color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:bold;cursor:pointer;width:100%;margin-bottom:8px;">
                 我已完成授权，刷新状态
             </button>
@@ -10121,6 +10130,37 @@ function showGithubPendingUI(state) {
         }
     }
     checkBox.style.display = 'block';
+}
+
+// ── 复制GitHub授权链接到剪贴板 ──
+function copyGithubUrl() {
+    const url = _pendingGithubUrl;
+    if (!url) { showToast('❌ 链接已失效，请返回重新注册'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+            showToast('✅ 链接已复制！请粘贴到 Chrome / UC / 其他浏览器中打开');
+        }).catch(() => {
+            _fallbackCopy(url);
+        });
+    } else {
+        _fallbackCopy(url);
+    }
+}
+
+function _fallbackCopy(text) {
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('✅ 链接已复制！请粘贴到浏览器中打开');
+    } catch(e) {
+        showToast('❌ 复制失败，请长按链接手动复制');
+    }
 }
 
 // ── 重置注册表单（用户点击"返回重新注册"时）──
