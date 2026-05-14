@@ -9280,8 +9280,14 @@ function closeNavPanel() {
         <div class="user-home-header">
             <div class="user-home-avatar">🌸</div>
             <div class="user-home-name" id="homeUsername">加载中...</div>
-            <div class="user-home-id" id="homeUserId"></div>
-            <div style="margin-top:6px;">
+            <!-- 封号状态（默认隐藏） -->
+            <div id="homeBanStatus" style="display:none;margin:8px 0;background:#ffebee;border:2px solid #ef5350;border-radius:12px;padding:10px 14px;text-align:center;">
+                <div style="font-size:13px;color:#c62828;font-weight:bold;">🚫 你已被封号</div>
+                <div id="homeBanReason" style="font-size:11px;color:#e53935;margin-top:3px;"></div>
+                <div id="homeBanCountdown" style="font-size:14px;color:#d32f2f;font-weight:bold;margin-top:5px;background:#fff;border-radius:8px;padding:6px 0;"></div>
+                <div style="font-size:11px;color:#999;margin-top:4px;">请遵守法律法规</div>
+            </div>
+            <div style="margin-top:6px;" id="homeRenameRow">
                 <button onclick="toggleRenameBox()" style="background:none;border:1px solid var(--primary-light);color:var(--primary);border-radius:10px;padding:3px 10px;font-size:11px;cursor:pointer;">✏️ 改名（2🐟）</button>
             </div>
             <!-- 改名输入框（默认隐藏） -->
@@ -9293,7 +9299,7 @@ function closeNavPanel() {
                     <button onclick="toggleRenameBox()" style="padding:8px 12px;background:#aaa;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;">取消</button>
                 </div>
             </div>
-            <div class="user-home-fish">🐟 小鱼干 × <span id="homeFishCoins">0</span></div>
+            <div class="user-home-fish" id="homeFishRow">🐟 小鱼干 × <span id="homeFishCoins">0</span></div>
         </div>
 
         <!-- 签到区 -->
@@ -9437,6 +9443,8 @@ function closeUserModal() {
 let _userHomeData = null;      // 缓存主页数据
 let _checkinWidgetId = null;   // 签到Turnstile widget ID
 let _checkinCardId = null;     // 当前要签到的卡片（跳转用）
+let _isUserBanned = false;     // 用户是否被封号（用于评论等区域显示）
+let _banInfo = null;           // 封号信息 {bannedUntil, reason, daysLeft}
 
 function openUserHome() {
     if (!currentUser) { openUserModal(); return; }
@@ -9473,6 +9481,10 @@ async function loadUserHomeData() {
         if (data.success) {
             _userHomeData = data;
             renderUserHome(data);
+        } else if (data.banned) {
+            // 🚫 被封号：显示封号信息，不退出登录
+            _userHomeData = data;
+            renderUserHome(data);
         } else {
             if (data.error && data.error.includes('登录')) {
                 showToast('登录已过期，请重新登录');
@@ -9488,8 +9500,40 @@ async function loadUserHomeData() {
 
 // ── 渲染用户主页 ──
 function renderUserHome(data) {
-    document.getElementById('homeUsername').textContent = data.username;
-    document.getElementById('homeUserId').textContent = data.userId;
+    document.getElementById('homeUsername').textContent = data.username || currentUser?.username || '未知';
+
+    // 🚫 封号状态显示
+    const banBox = document.getElementById('homeBanStatus');
+    const renameRow = document.getElementById('homeRenameRow');
+    const fishRow = document.getElementById('homeFishRow');
+    if (data.banned) {
+        // 显示封号面板
+        if (banBox) banBox.style.display = 'block';
+        const banReason = document.getElementById('homeBanReason');
+        if (banReason) banReason.textContent = data.reason || '';
+        const banCountdown = document.getElementById('homeBanCountdown');
+        if (banCountdown) {
+            const days = data.daysLeft || Math.ceil((data.bannedUntil - Date.now()) / (24 * 60 * 60 * 1000));
+            banCountdown.textContent = `封号倒计时：${days} 天`;
+        }
+        // 隐藏功能区域
+        if (renameRow) renameRow.style.display = 'none';
+        if (fishRow) fishRow.style.display = 'none';
+        document.querySelectorAll('.user-home-section').forEach(s => s.style.display = 'none');
+        // 设置全局封号标志
+        _isUserBanned = true;
+        _banInfo = { bannedUntil: data.bannedUntil, reason: data.reason, daysLeft: data.daysLeft };
+        return;
+    } else {
+        // 正常状态：隐藏封号面板，显示功能区域
+        if (banBox) banBox.style.display = 'none';
+        if (renameRow) renameRow.style.display = 'block';
+        if (fishRow) fishRow.style.display = 'block';
+        document.querySelectorAll('.user-home-section').forEach(s => s.style.display = '');
+        _isUserBanned = false;
+        _banInfo = null;
+    }
+
     document.getElementById('homeFishCoins').textContent = data.fishCoins || 0;
 
     // 签到按钮状态
@@ -9804,7 +9848,11 @@ function switchUserTab(tab) {
     document.getElementById('userLoggedIn').style.display = 'none';
     document.getElementById('userRegSuccess').style.display = 'none';
     document.getElementById('userModalTabs').style.display = 'flex';
-    if (tab === 'register') onRegInviteInput();
+    if (tab === 'register') {
+        // 切换到注册页时重置表单（如果之前处于GitHub等待状态）
+        resetRegisterForm();
+        onRegInviteInput();
+    }
 }
 
 // ── 注册邀请码输入变化：检测超级邀请码并更新提示 ──
@@ -9935,8 +9983,16 @@ async function doRegister() {
             document.getElementById('userRegSuccess').style.display = 'block';
             document.getElementById('newUserId').textContent = data.userId;
         } else if (data.success && data.githubUrl) {
-            showToast('✅ 验证通过！正在跳转GitHub授权...');
-            setTimeout(() => { window.location.href = data.githubUrl; }, 800);
+            // 🌐 在外部浏览器中打开GitHub授权
+            const ghUrl = data.githubUrl;
+            const stateMatch = ghUrl.match(/[?&]state=([^&]+)/);
+            const state = stateMatch ? stateMatch[1] : null;
+            showToast('🌐 正在打开外部浏览器...');
+            openExternalBrowser(ghUrl);
+            // 显示等待授权完成的UI
+            if (state) {
+                setTimeout(() => showGithubPendingUI(state), 500);
+            }
         } else if (data.code === 'username_muted') {
             // 用户名触发屏蔽词 → 冻结倒计时 + Turnstile 重置
             let remaining = data.remaining || 180;
@@ -9962,6 +10018,143 @@ async function doRegister() {
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg> 验证通过后跳转 GitHub 完成注册';
+    }
+}
+
+// ── 在外部浏览器中打开URL（支持Median / Android Intent / iOS / 普通浏览器）──
+function openExternalBrowser(url) {
+    // 1. Median WebView JS Bridge
+    if (window.median && window.median.url && typeof window.median.url.openExternal === 'function') {
+        try { window.median.url.openExternal(url); return; } catch(e) {}
+    }
+    if (window.median && window.median.url && typeof window.median.url.open === 'function') {
+        try { window.median.url.open(url); return; } catch(e) {}
+    }
+    if (window.median && typeof window.median.openUrl === 'function') {
+        try { window.median.openUrl(url); return; } catch(e) {}
+    }
+    // 2. Android intent scheme（弹出浏览器选择器）
+    var isAndroid = /Android/i.test(navigator.userAgent);
+    if (isAndroid) {
+        try {
+            var intentUrl = 'intent://' + url.replace(/^https?:\/\//, '') + '#Intent;scheme=https;action=android.intent.action.VIEW;end';
+            window.location.href = intentUrl;
+            return;
+        } catch(e) {}
+    }
+    // 3. 通用方案：window.open _blank（某些WebView会触发外部浏览器）
+    try {
+        var w = window.open(url, '_blank');
+        if (w && w.focus) { w.focus(); return; }
+    } catch(e) {}
+    // 4. 最后手段：_system
+    try {
+        var w2 = window.open(url, '_system');
+        if (w2) return;
+    } catch(e) {}
+    // 5. 最终回退：当前页面跳转
+    window.location.href = url;
+}
+
+// ── 显示"等待GitHub授权完成"UI ──
+let _githubCheckTimer = null;
+let _githubState = null;
+
+function showGithubPendingUI(state) {
+    _githubState = state;
+    const form = document.getElementById('userRegisterForm');
+    if (!form) return;
+    // 隐藏原表单内容
+    form.querySelectorAll('.user-field, .cf-turnstile').forEach(el => {
+        if (el.id !== 'regCheckAuthBox') el.style.display = 'none';
+    });
+    const submitBtn = document.getElementById('regSubmitBtn');
+    if (submitBtn) submitBtn.style.display = 'none';
+    const note = document.getElementById('regGithubNote');
+    if (note) note.style.display = 'none';
+    const hint = document.getElementById('regHint');
+    if (hint) {
+        hint.textContent = '🌐 请在浏览器中完成 GitHub 授权';
+        hint.style.background = '#e8f5e9';
+        hint.style.color = '#2e7d32';
+    }
+    // 显示检查区域
+    let checkBox = document.getElementById('regCheckAuthBox');
+    if (!checkBox) {
+        checkBox = document.createElement('div');
+        checkBox.id = 'regCheckAuthBox';
+        checkBox.style.cssText = 'text-align:center;padding:16px 0;';
+        checkBox.innerHTML = `
+            <div style="font-size:13px;color:#666;margin-bottom:12px;">
+                <div style="font-size:28px;margin-bottom:8px;">🌐</div>
+                已在外部浏览器打开 GitHub 授权页面<br>
+                <span style="font-size:11px;color:#999;">请在浏览器中完成授权，然后返回App点击按钮</span>
+            </div>
+            <button id="regCheckAuthBtn" onclick="checkGithubAuth()" style="background:var(--primary);color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:bold;cursor:pointer;width:100%;">
+                我已完成授权，刷新状态
+            </button>
+            <div id="regCheckAuthMsg" style="font-size:12px;color:#888;margin-top:10px;min-height:20px;"></div>
+            <button onclick="resetRegisterForm()" style="background:none;border:none;color:#aaa;font-size:12px;margin-top:10px;cursor:pointer;text-decoration:underline;">
+                返回重新注册
+            </button>
+        `;
+        form.appendChild(checkBox);
+    }
+    checkBox.style.display = 'block';
+}
+
+// ── 重置注册表单（用户点击"返回重新注册"时）──
+function resetRegisterForm() {
+    const form = document.getElementById('userRegisterForm');
+    if (!form) return;
+    // 恢复显示原表单内容
+    form.querySelectorAll('.user-field, .cf-turnstile').forEach(el => {
+        if (el.id !== 'regCheckAuthBox') el.style.display = '';
+    });
+    const submitBtn = document.getElementById('regSubmitBtn');
+    if (submitBtn) submitBtn.style.display = '';
+    const note = document.getElementById('regGithubNote');
+    if (note) note.style.display = 'block';
+    // 重新应用邀请码UI状态
+    onRegInviteInput();
+    // 隐藏检查区域
+    const checkBox = document.getElementById('regCheckAuthBox');
+    if (checkBox) checkBox.style.display = 'none';
+    // 清理timer
+    if (_githubCheckTimer) { clearInterval(_githubCheckTimer); _githubCheckTimer = null; }
+    _githubState = null;
+}
+
+// ── 轮询检查GitHub授权结果 ──
+async function checkGithubAuth() {
+    if (!_githubState) { showToast('授权会话已过期'); return; }
+    const btn = document.getElementById('regCheckAuthBtn');
+    const msg = document.getElementById('regCheckAuthMsg');
+    if (btn) { btn.disabled = true; btn.textContent = '检查中...'; }
+    if (msg) msg.textContent = '';
+    try {
+        const res = await fetch(`${USER_API}/api/user/check_auth?state=${_githubState}`);
+        const data = await res.json();
+        if (data.success && data.token) {
+            // 授权成功！
+            if (_githubCheckTimer) { clearInterval(_githubCheckTimer); _githubCheckTimer = null; }
+            currentUser = { userId: data.userId, username: data.username, sessionToken: data.token };
+            localStorage.setItem('tx_user', JSON.stringify(currentUser));
+            updateUserEntryBtn();
+            showToast('🎉 授权成功！');
+            // 显示注册成功界面
+            document.getElementById('userModalTabs').style.display = 'none';
+            document.getElementById('userLoginForm').style.display = 'none';
+            document.getElementById('userRegisterForm').style.display = 'none';
+            document.getElementById('userRegSuccess').style.display = 'block';
+            document.getElementById('newUserId').textContent = data.userId;
+        } else {
+            if (msg) msg.textContent = data.error || '授权尚未完成，请在外部浏览器中完成授权后再试';
+            if (btn) { btn.disabled = false; btn.textContent = '我已完成授权，刷新状态'; }
+        }
+    } catch(e) {
+        if (msg) msg.textContent = '网络错误，请重试';
+        if (btn) { btn.disabled = false; btn.textContent = '我已完成授权，刷新状态'; }
     }
 }
 
@@ -10025,6 +10218,8 @@ async function doLogout() {
     currentUser = null;
     localStorage.removeItem('tx_user');
     _userHomeData = null; // 清除主页缓存
+    _isUserBanned = false; // 清除封号状态
+    _banInfo = null;
     updateUserEntryBtn();
     closeUserModal();
     closeUserHome();
@@ -10128,6 +10323,17 @@ function renderCommentInput(cardId, hasCommented) {
         inputArea.innerHTML = `
             <div class="comment-login-hint">
                 <span onclick="openUserModal()">登录</span> 后才能发表评论和打分
+            </div>
+        `;
+        return;
+    }
+
+    // 🚫 被封号：显示封号提示
+    if (_isUserBanned) {
+        const days = _banInfo?.daysLeft || '';
+        inputArea.innerHTML = `
+            <div class="comment-login-hint" style="background:#ffebee;border-color:#ef5350;color:#c62828;">
+                🚫 你已被封号，请遵守法律法规${days ? `（剩余 ${days} 天）` : ''}
             </div>
         `;
         return;
