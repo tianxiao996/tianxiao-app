@@ -10022,75 +10022,66 @@ async function doRegister() {
 }
 
 // ── 在外部浏览器中打开URL（支持Median / Android Intent / iOS / 普通浏览器）──
-function openExternalBrowser(url) {
-    // 检测环境
-    var isAndroid = /Android/i.test(navigator.userAgent);
-    var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+var _pendingGithubUrl = null;
 
-    // 1. Median JS Bridge (新版 API)
-    if (window.median && window.median.url && typeof window.median.url.openExternal === 'function') {
-        try { window.median.url.openExternal(url); return; } catch(e) {}
-    }
-    // 2. Median JS Bridge (旧版/替代 API)
-    if (window.median && window.median.url && typeof window.median.url.openInNewTab === 'function') {
-        try { window.median.url.openInNewTab(url); return; } catch(e) {}
-    }
-    // 3. Median GoNative URL Scheme
+function openExternalBrowser(url) {
+    _pendingGithubUrl = url;
+    var isAndroid = /Android/i.test(navigator.userAgent);
+
+    // 所有方案并行尝试，不return阻塞后续方案
+
+    // 1. Median JS Bridge
     try {
-        var gonativeUrl = 'median://externalBrowser/open?url=' + encodeURIComponent(url);
-        window.location.href = gonativeUrl;
-        return;
+        if (window.median && window.median.url && window.median.url.openExternal) {
+            window.median.url.openExternal(url);
+        } else if (window.median && window.median.url && window.median.url.open) {
+            window.median.url.open(url);
+        } else if (window.median && typeof window.median.openUrl === 'function') {
+            window.median.openUrl(url);
+        }
     } catch(e) {}
-    // 4. GoNative 旧版 URL Scheme
-    try {
-        var gonativeOld = 'gonative://externalBrowser/open?url=' + encodeURIComponent(url);
-        window.location.href = gonativeOld;
-        return;
-    } catch(e) {}
-    // 5. Android intent scheme（必须包含 category=BROWSABLE + package 为空才能弹出选择器）
+
+    // 2. Median/GoNative URL Scheme（iframe方式，不return）
+    ['median://externalBrowser/open?url=', 'gonative://externalBrowser/open?url='].forEach(function(prefix) {
+        try {
+            var iframe = document.createElement('iframe');
+            iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1;';
+            iframe.src = prefix + encodeURIComponent(url);
+            document.body.appendChild(iframe);
+            setTimeout(function() { if (iframe.parentNode) document.body.removeChild(iframe); }, 800);
+        } catch(e) {}
+    });
+
+    // 3. Android Intent scheme via iframe（能弹出浏览器选择器的关键方案）
     if (isAndroid) {
         try {
             var cleanUrl = url.replace(/^https?:\/\//, '');
-            var intentUrl = 'intent://' + cleanUrl +
-                '#Intent;' +
-                'scheme=https;' +
-                'action=android.intent.action.VIEW;' +
-                'category=android.intent.category.BROWSABLE;' +
-                'end';
             var iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = intentUrl;
+            iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1;';
+            iframe.src = 'intent://' + cleanUrl + '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end';
             document.body.appendChild(iframe);
-            setTimeout(function() { document.body.removeChild(iframe); }, 2000);
-            return;
+            setTimeout(function() { if (iframe.parentNode) document.body.removeChild(iframe); }, 2000);
         } catch(e) {}
     }
-    // 6. iOS 使用 window.open Safari 兼容模式
-    if (isIOS) {
-        try {
-            window.open(url, '_blank');
-            return;
-        } catch(e) {}
-    }
-    // 7. 模拟点击 <a target="_blank">（在很多WebView中会触发外部浏览器或弹出选择）
+
+    // 4. window.open 多种模式
+    try { window.open(url, '_blank'); } catch(e) {}
+    try { window.open(url, '_system'); } catch(e) {}
+
+    // 5. 创建并点击真实的 <a> 标签（比JS直接调用更可能被WebView拦截为外部打开）
     try {
         var a = document.createElement('a');
         a.href = url;
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
-        a.style.display = 'none';
+        a.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
         document.body.appendChild(a);
-        a.click();
-        setTimeout(function() { document.body.removeChild(a); }, 100);
-        return;
+        // 创建真实的鼠标事件
+        var ev = document.createEvent('MouseEvents');
+        ev.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+        a.dispatchEvent(ev);
+        setTimeout(function() { if (a.parentNode) document.body.removeChild(a); }, 100);
     } catch(e) {}
-    // 8. window.open _system
-    try {
-        var w = window.open(url, '_system');
-        if (w) return;
-    } catch(e) {}
-    // 9. 最终回退
-    window.location.href = url;
 }
 
 // ── 显示"等待GitHub授权完成"UI ──
@@ -10127,7 +10118,11 @@ function showGithubPendingUI(state) {
                 已在外部浏览器打开 GitHub 授权页面<br>
                 <span style="font-size:11px;color:#999;">请在浏览器中完成授权，然后返回App点击按钮</span>
             </div>
-            <button id="regCheckAuthBtn" onclick="checkGithubAuth()" style="background:var(--primary);color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:bold;cursor:pointer;width:100%;">
+            <a id="regOpenAuthLink" href="${_pendingGithubUrl || 'https://github.com'}" target="_blank" onclick="openExternalBrowser(_pendingGithubUrl || 'https://github.com')" style="display:block;background:var(--primary);color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:bold;cursor:pointer;width:100%;text-decoration:none;box-sizing:border-box;margin-bottom:10px;text-align:center;" rel="noopener noreferrer">
+                点击打开授权页面
+            </a>
+            <div style="font-size:11px;color:#999;margin-bottom:10px;">如果浏览器没有自动弹出，请点击上方按钮手动打开</div>
+            <button id="regCheckAuthBtn" onclick="checkGithubAuth()" style="background:#ff9800;color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:bold;cursor:pointer;width:100%;margin-bottom:8px;">
                 我已完成授权，刷新状态
             </button>
             <div id="regCheckAuthMsg" style="font-size:12px;color:#888;margin-top:10px;min-height:20px;"></div>
@@ -10136,6 +10131,12 @@ function showGithubPendingUI(state) {
             </button>
         `;
         form.appendChild(checkBox);
+    } else {
+        // 更新已有checkBox中的链接
+        const link = document.getElementById('regOpenAuthLink');
+        if (link && _pendingGithubUrl) {
+            link.href = _pendingGithubUrl;
+        }
     }
     checkBox.style.display = 'block';
 }
