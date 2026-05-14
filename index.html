@@ -2253,6 +2253,58 @@
     text-align: center; padding: 20px;
     font-size: 12px; color: #aaa;
 }
+/* 头像商店 */
+.user-avatar-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.user-avatar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    background: #fff;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+}
+.user-avatar-item:active { transform: scale(0.95); }
+.user-avatar-item .avatar-img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-light);
+    background: var(--pixel-soft);
+}
+.user-avatar-item .avatar-name {
+    font-size: 10px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+.user-avatar-item .avatar-price {
+    font-size: 10px;
+    color: #ff9800;
+    font-weight: bold;
+}
+.user-avatar-item .avatar-owned {
+    font-size: 10px;
+    color: #4caf50;
+    font-weight: bold;
+}
+.user-avatar-item .avatar-current {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary-light);
+}
+
 /* 签到Turnstile容器 */
 #checkinTurnstileBox {
     margin-top: 10px; width: 100%;
@@ -2361,15 +2413,36 @@
 .comment-item {
     padding: 10px 14px;
     border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
 }
 .comment-item:last-child { border-bottom: none; }
+.comment-reply {
+    padding-left: 50px;
+    background: var(--pixel-soft);
+}
+.comment-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1.5px solid var(--primary-light);
+    background: var(--pixel-soft);
+}
+.comment-body { flex: 1; min-width: 0; }
 .comment-item-header {
     display: flex; align-items: center;
     gap: 6px; margin-bottom: 5px;
+    flex-wrap: wrap;
 }
 .comment-username {
     font-size: 12px; font-weight: bold;
     color: var(--primary);
+}
+.comment-level {
+    font-size: 10px; font-weight: bold;
+    padding: 1px 5px; border-radius: 4px;
+    line-height: 1;
 }
 .comment-score-display {
     font-size: 11px; color: #f5a623;
@@ -2382,6 +2455,22 @@
     font-size: 13px; color: var(--text);
     line-height: 1.5; word-break: break-word;
 }
+.comment-reply-to {
+    color: var(--primary);
+    font-weight: bold;
+}
+.comment-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+}
+.comment-action-btn {
+    font-size: 11px;
+    color: #aaa;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+.comment-action-btn:hover { color: var(--primary); }
 .comment-empty {
     padding: 20px; text-align: center;
     font-size: 13px; color: #bbb;
@@ -2452,6 +2541,10 @@ function __safeFixDeleteImage(card){
         <div style="display:flex;align-items:center;gap:5px;position:relative;z-index:1;">
             <div class="header-icon-btn" onclick="randomGame()" title="随机抽游戏" style="font-size:18px;">🎲</div>
             <div id="darkModeBtn" class="header-icon-btn" onclick="toggleDarkMode()" title="夜间模式" style="font-size:18px;">🌙</div>
+            <div class="header-icon-btn" onclick="openMailPanel()" title="邮件" style="font-size:18px;position:relative;">
+                📧
+                <span id="mailBadge" style="display:none;position:absolute;top:-2px;right:-2px;background:#ff4444;color:#fff;font-size:9px;font-weight:bold;border-radius:50%;width:14px;height:14px;line-height:14px;text-align:center;">0</span>
+            </div>
             <div id="entryBtn" class="login-icon" onclick="openLogin()" style="visibility: visible;">🔒</div>
         </div>
     </div>
@@ -2484,6 +2577,8 @@ function __safeFixDeleteImage(card){
         <button onclick="setInviteCode()" style="background:#673ab7!important;">🎫 邀请码</button>
         <button onclick="openUserQueryPanel()" style="background:#2196f3!important;">🔍 查用户</button>
         <button onclick="openWordlistPanel()" style="background:#00796b!important;">🚫 屏蔽词</button>
+        <button onclick="openAvatarManagePanel()" style="background:#e91e63!important;">🎨 头像</button>
+        <button onclick="openMailManagePanel()" style="background:#ff5722!important;">📧 发邮件</button>
         <button id="adminAuditBtn" onclick="toggleAdminAuditMode()" style="background:#ff5722!important;">💬 审核评论</button>
         <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button>
         </div>
@@ -2579,6 +2674,43 @@ function __safeFixDeleteImage(card){
         </div>
         <div class="cat-list" id="catList"></div>
         <button class="cat-save-btn" onclick="saveCategoryOrder()">✅ 保存并更新导航</button>
+    </div>
+
+    <!-- 🎨 头像管理面板（管理员） -->
+    <div id="avatarManagePanel" style="display:none; background:#fce4ec; border:1px dashed #e91e63; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:600px;">
+        <div style="font-size:13px; font-weight:bold; color:#c2185b; margin-bottom:10px;">🎨 头像管理</div>
+        <div style="background:#fff; border-radius:10px; padding:12px; margin-bottom:10px; border:1px solid #f48fb1;">
+            <div style="font-size:12px; font-weight:bold; color:#ad1457; margin-bottom:8px;">➕ 新增头像</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                <input type="text" id="avatarNameInput" placeholder="头像名称" style="border:1px solid #f48fb1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
+                <input type="text" id="avatarUrlInput" placeholder="图床图片URL" style="border:1px solid #f48fb1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
+                <input type="number" id="avatarPriceInput" placeholder="小鱼干价格" min="0" value="5" style="border:1px solid #f48fb1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
+                <button onclick="createAdminAvatar()" style="background:#e91e63;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;">➕ 添加头像</button>
+            </div>
+        </div>
+        <div style="font-size:12px; font-weight:bold; color:#ad1457; margin-bottom:8px;">📋 已上架头像</div>
+        <div id="adminAvatarList" style="display:flex;flex-wrap:wrap;gap:8px;max-height:200px;overflow-y:auto;">
+            <span style="font-size:12px;color:#aaa;">点击刷新查看列表</span>
+        </div>
+    </div>
+
+    <!-- 📧 邮件管理面板（管理员） -->
+    <div id="mailManagePanel" style="display:none; background:#fff3e0; border:1px dashed #ff9800; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:600px;">
+        <div style="font-size:13px; font-weight:bold; color:#e65100; margin-bottom:10px;">📧 发送邮件</div>
+        <div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #ffb74d;">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                <input type="text" id="mailTitleInput" placeholder="邮件标题" style="border:1px solid #ffb74d;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
+                <textarea id="mailContentInput" placeholder="邮件内容" rows="4" style="border:1px solid #ffb74d;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;resize:vertical;"></textarea>
+                <div style="display:flex; gap:8px;">
+                    <input type="number" id="mailExpireInput" placeholder="有效期(天)，0=永久" min="0" value="7" style="flex:1;border:1px solid #ffb74d;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
+                    <input type="number" id="mailFishInput" placeholder="小鱼干奖励" min="0" value="0" style="flex:1;border:1px solid #ffb74d;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
+                </div>
+                <input type="text" id="mailAvatarInput" placeholder="限定头像ID（可选）" style="border:1px solid #ffb74d;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
+                <button onclick="sendAdminMail()" style="background:#ff9800;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;">📧 发送给所有用户</button>
+            </div>
+        </div>
+        <div style="font-size:12px; font-weight:bold; color:#e65100; margin:10px 0 8px;">📋 已发送邮件</div>
+        <div id="adminMailList" style="max-height:200px;overflow-y:auto;"></div>
     </div>
 
 </header>
@@ -4740,6 +4872,10 @@ function exitAdmin() {
     const uqp = document.getElementById("userQueryPanel"); if(uqp) uqp.style.display = "none";
     // 🐛 Bug修复：隐藏屏蔽词面板
     const wp = document.getElementById("wordlistPanel"); if(wp) wp.style.display = "none";
+    // 隐藏头像管理面板
+    const ap = document.getElementById("avatarManagePanel"); if(ap) ap.style.display = "none";
+    // 隐藏邮件管理面板
+    const mp = document.getElementById("mailManagePanel"); if(mp) mp.style.display = "none";
     updateSidebarAdminUI();
     
     // 🔒 清除 Token
@@ -4974,6 +5110,139 @@ async function loadSuperInvites() {
                     <span onclick="copyText('${c}')" style="cursor:pointer;color:#e65100;font-size:11px;">📋</span>
                     <span onclick="deleteSuperInvite('${c}',this)" style="cursor:pointer;color:#e91e63;font-weight:bold;font-size:14px;line-height:1;">×</span>
                 </span>
+            `).join('');
+        }
+    } catch(e) {}
+}
+
+// ── 打开头像管理面板 ──
+function openAvatarManagePanel() {
+    const panel = document.getElementById('avatarManagePanel');
+    const mailPanel = document.getElementById('mailManagePanel');
+    if (mailPanel) mailPanel.style.display = 'none';
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if (panel.style.display === 'block') loadAdminAvatars();
+}
+
+// ── 加载管理员头像列表 ──
+async function loadAdminAvatars() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) return;
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/avatars', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        const listEl = document.getElementById('adminAvatarList');
+        if (!listEl) return;
+        if (!data.avatars || data.avatars.length === 0) {
+            listEl.innerHTML = '<span style="font-size:12px;color:#aaa;">暂无头像</span>';
+        } else {
+            listEl.innerHTML = data.avatars.map(a => `
+                <div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:8px;padding:6px 10px;border:1px solid #f48fb1;flex:1;min-width:200px;">
+                    <img src="${escapeHtml(a.url)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:12px;font-weight:bold;">${escapeHtml(a.name)}</div>
+                        <div style="font-size:11px;color:#888;">🐟 ${a.price} · ID: ${a.id}</div>
+                    </div>
+                    <button onclick="deleteAdminAvatar('${a.id}')" style="background:#ffebee;color:#e53935;border:none;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;">删除</button>
+                </div>
+            `).join('');
+        }
+    } catch(e) {}
+}
+
+// ── 创建头像 ──
+async function createAdminAvatar() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('请先登录管理员'); return; }
+    const name = document.getElementById('avatarNameInput')?.value?.trim();
+    const url = document.getElementById('avatarUrlInput')?.value?.trim();
+    const price = parseInt(document.getElementById('avatarPriceInput')?.value) || 0;
+    if (!name || !url) { showToast('请填写完整信息'); return; }
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/avatar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ action: 'create', url, name, price })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ ' + data.message);
+            document.getElementById('avatarNameInput').value = '';
+            document.getElementById('avatarUrlInput').value = '';
+            loadAdminAvatars();
+        } else { showToast('❌ ' + data.error); }
+    } catch(e) { showToast('❌ 网络错误'); }
+}
+
+// ── 删除头像 ──
+async function deleteAdminAvatar(avatarId) {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) return;
+    if (!confirm('确定删除该头像吗？')) return;
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/avatar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ action: 'delete', avatarId })
+        });
+        const data = await res.json();
+        if (data.success) { showToast('✅ 已删除'); loadAdminAvatars(); }
+    } catch(e) {}
+}
+
+// ── 打开邮件管理面板 ──
+function openMailManagePanel() {
+    const panel = document.getElementById('mailManagePanel');
+    const avatarPanel = document.getElementById('avatarManagePanel');
+    if (avatarPanel) avatarPanel.style.display = 'none';
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if (panel.style.display === 'block') loadAdminMails();
+}
+
+// ── 发送邮件 ──
+async function sendAdminMail() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('请先登录管理员'); return; }
+    const title = document.getElementById('mailTitleInput')?.value?.trim();
+    const content = document.getElementById('mailContentInput')?.value?.trim();
+    const expireDays = parseInt(document.getElementById('mailExpireInput')?.value) || 0;
+    const fishReward = parseInt(document.getElementById('mailFishInput')?.value) || 0;
+    const avatarRewardId = document.getElementById('mailAvatarInput')?.value?.trim() || null;
+    if (!title || !content) { showToast('标题和内容不能为空'); return; }
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/mail', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ title, content, expireDays, fishReward, avatarRewardId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ ' + data.message);
+            document.getElementById('mailTitleInput').value = '';
+            document.getElementById('mailContentInput').value = '';
+            loadAdminMails();
+        } else { showToast('❌ ' + data.error); }
+    } catch(e) { showToast('❌ 网络错误'); }
+}
+
+// ── 加载管理员邮件列表 ──
+async function loadAdminMails() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) return;
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/mails', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        const listEl = document.getElementById('adminMailList');
+        if (!listEl) return;
+        if (!data.mails || data.mails.length === 0) {
+            listEl.innerHTML = '<span style="font-size:12px;color:#aaa;">暂无邮件</span>';
+        } else {
+            listEl.innerHTML = data.mails.map(m => `
+                <div style="background:#fff;border-radius:8px;padding:8px 10px;border:1px solid #ffb74d;margin-bottom:6px;">
+                    <div style="font-size:12px;font-weight:bold;">${escapeHtml(m.title)}</div>
+                    <div style="font-size:11px;color:#888;">${escapeHtml(m.content.substring(0,50))}${m.content.length>50?'...':''}</div>
+                    <div style="font-size:11px;color:#aaa;margin-top:2px;">${formatTime(m.createdAt)} ${m.fishReward?`· 🐟${m.fishReward}`:''} ${m.expireAt?'· 有期限':''}</div>
+                </div>
             `).join('');
         }
     } catch(e) {}
@@ -7919,6 +8188,10 @@ function copyText(text) {
             <span class="sidebar-item-icon">💖</span>
             <span>我的收藏</span>
         </div>
+        <div class="sidebar-item" id="sidebarAdmin" onclick="openAdminFromSidebar()" style="display:none;">
+            <span class="sidebar-item-icon">🔒</span>
+            <span>管理员模式</span>
+        </div>
         <div class="sidebar-item" onclick="closeSidebar(); clearCacheAndReload();">
             <span class="sidebar-item-icon">🔄</span>
             <span>清理缓存</span>
@@ -8205,7 +8478,29 @@ function editCommentUrl() {
 function updateSidebarAdminUI() {
     const editBtn = document.getElementById('sidebarCommentEdit');
     if (editBtn) editBtn.style.display = isEditMode ? 'inline-block' : 'none';
+    // 管理员按钮显示控制
+    const adminItem = document.getElementById('sidebarAdmin');
+    if (adminItem) {
+        const hasToken = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+        adminItem.style.display = hasToken ? 'flex' : 'none';
+    }
 }
+
+// ── 从侧边栏打开管理员模式 ──
+function openAdminFromSidebar() {
+    closeSidebar();
+    if (!adminToken && !sessionStorage.getItem('ADMIN_TOKEN')) {
+        openLogin();
+        return;
+    }
+    isEditMode = true;
+    document.body.classList.add('admin-mode');
+    document.getElementById('adminBar').style.display = 'flex';
+    document.getElementById('entryBtn').style.visibility = 'hidden';
+    updateSidebarAdminUI();
+    showToast('🔒 管理员模式已开启');
+}
+
 function openSidebar() {
     document.getElementById('sidebar').classList.add('show');
     document.getElementById('sidebarOverlay').classList.add('show');
@@ -9366,6 +9661,19 @@ function closeNavPanel() {
             <div id="redeemResult" style="display:none;"></div>
         </div>
 
+        <!-- 🎨 头像商店 -->
+        <div class="user-home-section">
+            <div class="user-section-title">🎨 头像商店</div>
+            <div style="font-size:11px;color:#888;margin-bottom:8px;">点击头像预览，购买后即可使用</div>
+            <div class="user-avatar-grid" id="homeAvatarGrid">
+                <div class="user-fav-empty">加载中...</div>
+            </div>
+            <div id="homeMyAvatars" style="display:none;margin-top:10px;">
+                <div style="font-size:12px;font-weight:bold;color:var(--primary);margin-bottom:6px;">📦 已拥有</div>
+                <div class="user-avatar-grid" id="homeMyAvatarGrid"></div>
+            </div>
+        </div>
+
         <!-- 收藏区 -->
         <div class="user-home-section">
             <div class="user-section-title">💖 我的收藏</div>
@@ -9381,6 +9689,24 @@ function closeNavPanel() {
         </div>
 
         <span class="user-modal-close" onclick="closeUserHome()">关闭</span>
+    </div>
+</div>
+
+<!-- 📧 邮件弹窗 -->
+<div id="mailPanel" class="user-home-overlay">
+    <div class="user-home-box" style="max-width:420px;">
+        <div class="user-home-header" style="margin-bottom:12px;">
+            <div style="font-size:20px;">📧</div>
+            <div class="user-home-name">我的邮件</div>
+            <div class="user-home-id" id="mailCount">加载中...</div>
+        </div>
+        <div id="mailList" style="max-height:400px;overflow-y:auto;">
+            <div class="user-fav-empty">加载中...</div>
+        </div>
+        <div class="user-home-footer">
+            <button style="background:#aaa;color:#fff;" onclick="closeMailPanel()">关闭</button>
+        </div>
+        <span class="user-modal-close" onclick="closeMailPanel()">关闭</span>
     </div>
 </div>
 
@@ -9433,6 +9759,8 @@ let currentCommentScore = 0;
                         currentUser.sessionToken = currentUser.token;
                         localStorage.setItem('tx_user', JSON.stringify(currentUser));
                     }
+                    // 检查未读邮件
+                    checkUnreadMails();
                 }
             }).catch(() => {});
         } catch(e) {
@@ -9490,9 +9818,9 @@ function openUserHome() {
         renderUserHome(_userHomeData);
     } else {
         document.getElementById('homeUsername').textContent = currentUser.username;
-        document.getElementById('homeUserId').textContent = currentUser.userId;
     }
     loadUserHomeData();
+    loadAvatarShop();
 }
 
 function closeUserHome() {
@@ -9597,6 +9925,118 @@ function renderUserHome(data) {
     renderUserFavorites(data.favorites || []);
 }
 
+// ── 邮件系统 ──
+let _mailTimer = null;
+
+function openMailPanel() {
+    if (!currentUser) { showToast('请先登录'); openUserModal(); return; }
+    document.getElementById('mailPanel').classList.add('show');
+    loadMails();
+}
+
+function closeMailPanel() {
+    document.getElementById('mailPanel').classList.remove('show');
+}
+
+async function loadMails() {
+    if (!currentUser) return;
+    try {
+        const res = await fetch(`${USER_API}/api/user/mails`, {
+            headers: { 'Authorization': `Bearer ${currentUser.sessionToken}` }
+        });
+        const data = await res.json();
+        const listEl = document.getElementById('mailList');
+        if (!listEl) return;
+        if (!data.mails || data.mails.length === 0) {
+            listEl.innerHTML = '<div class="user-fav-empty">暂无邮件</div>';
+        } else {
+            listEl.innerHTML = data.mails.map(m => `
+                <div style="background:${m.read ? 'var(--pixel-soft)' : '#fff'};border-radius:10px;padding:10px 12px;border:1.5px solid ${m.read ? 'var(--border)' : 'var(--primary-light)'};margin-bottom:8px;cursor:pointer;transition:all 0.15s;" onclick="readMail('${escapeHtml(m.id)}', this)">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                        <span style="font-size:12px;font-weight:bold;color:var(--text);${m.read ? '' : 'font-weight:bold;'}">${m.read ? '📭' : '🔴'} ${escapeHtml(m.title)}</span>
+                        <span style="font-size:10px;color:#aaa;margin-left:auto;">${formatTime(m.createdAt)}</span>
+                    </div>
+                    <div class="mail-content" style="font-size:12px;color:#888;line-height:1.5;display:none;margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);">
+                        ${escapeHtml(m.content)}<br>
+                        ${m.fishReward ? `<span style="color:#ff9800;font-weight:bold;">🐟 +${m.fishReward} 小鱼干</span><br>` : ''}
+                        ${m.expireAt ? `<span style="font-size:11px;color:#aaa;">有效期至 ${formatTime(m.expireAt)}</span>` : ''}
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:6px;">
+                        <button onclick="event.stopPropagation();readMail('${escapeHtml(m.id)}', this.parentElement.parentElement)" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">${m.read ? '查看' : '领取'}</button>
+                        <button onclick="event.stopPropagation();deleteMail('${escapeHtml(m.id)}')" style="background:#eee;color:#999;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">删除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        document.getElementById('mailCount').textContent = `共 ${data.total || 0} 封邮件`;
+    } catch(e) {
+        document.getElementById('mailList').innerHTML = '<div class="user-fav-empty">加载失败</div>';
+    }
+}
+
+async function readMail(mailId, el) {
+    if (!currentUser) return;
+    try {
+        const res = await fetch(`${USER_API}/api/user/mail/read`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.sessionToken}`
+            },
+            body: JSON.stringify({ mailId })
+        });
+        const data = await res.json();
+        // 切换内容显示
+        const contentEl = el.querySelector('.mail-content');
+        if (contentEl) contentEl.style.display = contentEl.style.display === 'none' ? 'block' : 'none';
+        if (data.success && data.message) showToast('✅ ' + data.message);
+        // 刷新未读数量
+        checkUnreadMails();
+        // 重新加载邮件列表（更新已读状态）
+        loadMails();
+    } catch(e) {}
+}
+
+async function deleteMail(mailId) {
+    if (!currentUser) return;
+    if (!confirm('确定删除该邮件吗？')) return;
+    try {
+        const res = await fetch(`${USER_API}/api/user/mail/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.sessionToken}`
+            },
+            body: JSON.stringify({ mailId })
+        });
+        const data = await res.json();
+        if (data.success) { loadMails(); checkUnreadMails(); }
+    } catch(e) {}
+}
+
+async function checkUnreadMails() {
+    if (!currentUser) {
+        const badge = document.getElementById('mailBadge');
+        if (badge) badge.style.display = 'none';
+        return;
+    }
+    try {
+        const res = await fetch(`${USER_API}/api/user/unread-count`, {
+            headers: { 'Authorization': `Bearer ${currentUser.sessionToken}` }
+        });
+        const data = await res.json();
+        const badge = document.getElementById('mailBadge');
+        if (badge) {
+            if (data.count > 0) {
+                badge.style.display = 'inline-block';
+                badge.textContent = data.count > 99 ? '99+' : data.count;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    } catch(e) {}
+}
+
 // ── 改名切换 ──
 function toggleRenameBox() {
     const box = document.getElementById('renameBox');
@@ -9697,7 +10137,8 @@ async function submitCheckin(tsToken) {
         if (data.success) {
             showToast('🐟 ' + data.message);
             // 更新显示
-            document.getElementById('homeFishCoins').textContent = data.fishCoins;
+            const fishCoins = data.fishCoins || 0;
+            document.getElementById('homeFishCoins').textContent = fishCoins;
             checkinBtn.textContent = '已签到 ✓';
             checkinBtn.classList.add('done');
             document.getElementById('checkinTimer').textContent = '24小时后可再签到';
@@ -9706,8 +10147,13 @@ async function submitCheckin(tsToken) {
                 try { turnstile.remove(_checkinWidgetId); } catch(e) {}
                 _checkinWidgetId = null;
             }
-            // 刷新数据
-            loadUserHomeData();
+            // 同步更新缓存中的小鱼干数量，避免被 renderUserHome 覆盖
+            if (_userHomeData) {
+                _userHomeData.fishCoins = fishCoins;
+                _userHomeData.canCheckin = false;
+            }
+            // 刷新头像商店（不调用 loadUserHomeData 避免覆盖小鱼干显示）
+            loadAvatarShop();
         } else {
             if (data.remainingSeconds) {
                 const hrs = Math.floor(data.remainingSeconds / 3600);
@@ -9774,6 +10220,101 @@ async function redeemCode(type) {
         btn.disabled = false;
         btn.style.opacity = '';
     }
+}
+
+// ── 加载头像商店 ──
+async function loadAvatarShop() {
+    const grid = document.getElementById('homeAvatarGrid');
+    const myGrid = document.getElementById('homeMyAvatarGrid');
+    const myBox = document.getElementById('homeMyAvatars');
+    if (!grid) return;
+    try {
+        const headers = currentUser ? { 'Authorization': `Bearer ${currentUser.sessionToken}` } : {};
+        const res = await fetch(`${USER_API}/api/user/avatars`, { headers });
+        const data = await res.json();
+        if (data.success && data.avatars && data.avatars.length > 0) {
+            const owned = data.avatars.filter(a => a.owned);
+            const notOwned = data.avatars.filter(a => !a.owned);
+
+            // 未拥有的头像
+            if (notOwned.length > 0) {
+                grid.innerHTML = notOwned.map(a => `
+                    <div class="user-avatar-item" onclick="buyAvatar('${a.id}', ${a.price}, '${escapeHtml(a.name)}')">
+                        <img class="avatar-img" src="${escapeHtml(a.url)}" alt="" onerror="this.src='./avatar.png'">
+                        <div class="avatar-name">${escapeHtml(a.name)}</div>
+                        <div class="avatar-price">🐟 ${a.price}</div>
+                    </div>
+                `).join('');
+            } else {
+                grid.innerHTML = '<div class="user-fav-empty">暂无新头像</div>';
+            }
+
+            // 已拥有的头像
+            if (owned.length > 0) {
+                myBox.style.display = 'block';
+                myGrid.innerHTML = owned.map(a => `
+                    <div class="user-avatar-item ${a.url === _userHomeData?.avatar ? 'avatar-current' : ''}" onclick="setCurrentAvatar('${a.id}', '${escapeHtml(a.url)}')">
+                        <img class="avatar-img" src="${escapeHtml(a.url)}" alt="" onerror="this.src='./avatar.png'">
+                        <div class="avatar-name">${escapeHtml(a.name)}</div>
+                        <div class="avatar-owned">已拥有</div>
+                    </div>
+                `).join('');
+            } else {
+                myBox.style.display = 'none';
+            }
+        } else {
+            grid.innerHTML = '<div class="user-fav-empty">暂无头像，请等待管理员上架</div>';
+        }
+    } catch(e) {
+        grid.innerHTML = '<div class="user-fav-empty">加载失败</div>';
+    }
+}
+
+// ── 购买头像 ──
+async function buyAvatar(avatarId, price, name) {
+    if (!currentUser) { showToast('请先登录'); return; }
+    if (!confirm(`确定花费 ${price} 条小鱼干购买头像「${name}」吗？`)) return;
+    try {
+        const res = await fetch(`${USER_API}/api/user/buy-avatar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.sessionToken}`
+            },
+            body: JSON.stringify({ avatarId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ ' + data.message);
+            document.getElementById('homeFishCoins').textContent = data.fishCoins;
+            loadAvatarShop();
+        } else {
+            showToast('❌ ' + (data.error || '购买失败'));
+        }
+    } catch(e) { showToast('❌ 网络错误'); }
+}
+
+// ── 设置当前头像 ──
+async function setCurrentAvatar(avatarId, url) {
+    if (!currentUser) return;
+    try {
+        const res = await fetch(`${USER_API}/api/user/set-avatar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.sessionToken}`
+            },
+            body: JSON.stringify({ avatarId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ 头像设置成功！');
+            _userHomeData.avatar = data.avatar;
+            loadAvatarShop();
+        } else {
+            showToast('❌ ' + (data.error || '设置失败'));
+        }
+    } catch(e) { showToast('❌ 网络错误'); }
 }
 
 // ── 渲染用户收藏列表 ──
@@ -10365,20 +10906,42 @@ async function loadComments(cardId) {
         // 渲染评论列表
         const listEl = document.getElementById('commentList');
         if (!listEl) return;
+
+        // 存储当前用户信息
+        if (data.currentUser) _currentCommentUser = data.currentUser;
+
         if (data.comments.length === 0) {
             listEl.innerHTML = '<div class="comment-empty">还没有评论，来第一个评论吧！</div>';
         } else {
-            listEl.innerHTML = data.comments.map(c => `
-                <div class="comment-item" data-comment-user="${escapeHtml(c.userId)}">
-                    <div class="comment-item-header">
-                        <span class="comment-username" onclick="openBanModal('${escapeHtml(c.userId)}', '${escapeHtml(c.username)}')" style="cursor:pointer; text-decoration:underline; text-decoration-color:var(--primary);">${escapeHtml(c.username)}</span>
-                        ${c.score ? `<span class="comment-score-display">${'⭐'.repeat(Math.round(c.score))} ${c.score}分</span>` : ''}
-                        <span class="comment-time">${formatTime(c.createdAt)}</span>
-                        ${isEditMode ? `<span style="margin-left:auto; font-size:12px; color:#ff4466; cursor:pointer; padding:2px 6px;" onclick="deleteComment('${escapeHtml(currentCommentCardId)}', '${escapeHtml(c.userId)}')">🗑️</span>` : ''}
+            // 分离父评论和回复
+            const parents = data.comments.filter(c => !c.replyTo);
+            const replies = data.comments.filter(c => c.replyTo);
+
+            listEl.innerHTML = data.comments.map(c => {
+                const isReply = !!c.replyTo;
+                const avatar = c.avatar || './avatar.png';
+                const lvCfg = LEVEL_CONFIG[(c.level || 1) - 1] || LEVEL_CONFIG[0];
+                return `
+                <div class="comment-item ${isReply ? 'comment-reply' : ''}" data-comment-id="${escapeHtml(c.id || '')}" data-comment-user="${escapeHtml(c.userId)}">
+                    <img class="comment-avatar" src="${escapeHtml(avatar)}" alt="" onerror="this.src='./avatar.png'">
+                    <div class="comment-body">
+                        <div class="comment-item-header">
+                            <span class="comment-username" onclick="openBanModal('${escapeHtml(c.userId)}', '${escapeHtml(c.username)}')" style="cursor:pointer; text-decoration:underline; text-decoration-color:var(--primary);">${escapeHtml(c.username)}</span>
+                            <span class="comment-level" style="color:${lvCfg.color};background:${lvCfg.bg};">${lvCfg.name}</span>
+                            ${c.score ? `<span class="comment-score-display">${'⭐'.repeat(Math.round(c.score))} ${c.score}分</span>` : ''}
+                            <span class="comment-time">${formatTime(c.createdAt)}</span>
+                            ${isEditMode ? `<span style="margin-left:auto; font-size:12px; color:#ff4466; cursor:pointer; padding:2px 6px;" onclick="deleteComment('${escapeHtml(currentCommentCardId)}', '${escapeHtml(c.userId)}')">🗑️</span>` : ''}
+                        </div>
+                        <div class="comment-content">
+                            ${c.replyToUser ? `<span class="comment-reply-to">@${escapeHtml(c.replyToUser)}</span> ` : ''}
+                            ${escapeHtml(c.comment)}
+                        </div>
+                        <div class="comment-actions">
+                            <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(c.id || '')}', '${escapeHtml(c.username)}')">回复</span>
+                        </div>
                     </div>
-                    <div class="comment-content">${escapeHtml(c.comment)}</div>
                 </div>
-            `).join('');
+            `}).join('');
         }
     } catch(e) {
         console.error('加载评论失败', e);
@@ -10421,6 +10984,9 @@ function renderCommentInput(cardId, hasCommented) {
 
     inputArea.innerHTML = `
         <div class="comment-input-area">
+            <div id="replyTargetBox" style="display:none;margin-bottom:6px;font-size:12px;color:var(--primary);background:var(--pixel-soft);border-radius:8px;padding:6px 10px;">
+                回复 <b id="replyTargetName"></b> <span style="color:#aaa;cursor:pointer;" onclick="cancelReply()">取消</span>
+            </div>
             <textarea class="comment-textarea" id="commentText" placeholder="分享你的游戏体验..." maxlength="500"></textarea>
             <div class="comment-score-row">
                 <span class="comment-score-label">打分：</span>
@@ -10432,7 +10998,8 @@ function renderCommentInput(cardId, hasCommented) {
                 <span id="scoreValue" style="font-size:12px;color:#aaa;margin-left:4px;"></span>
             </div>
             <div class="comment-submit-row">
-                <button class="comment-submit-btn" onclick="submitComment('${cardId}')">发表评论</button>
+                <span id="commentWaitHint" style="font-size:11px;color:#aaa;margin-right:8px;display:none;"></span>
+                <button class="comment-submit-btn" id="commentSubmitBtn" onclick="submitComment('${cardId}')">发表评论</button>
             </div>
         </div>
     `;
@@ -10449,17 +11016,41 @@ function setScore(score) {
     if (scoreVal) scoreVal.textContent = `${score}分`;
 }
 
+// ── 回复评论 ──
+let _replyToId = null;
+let _replyToUser = null;
+let _currentCommentUser = null;
+
+function replyToComment(commentId, username) {
+    _replyToId = commentId;
+    _replyToUser = username;
+    const box = document.getElementById('replyTargetBox');
+    const nameEl = document.getElementById('replyTargetName');
+    if (box && nameEl) {
+        box.style.display = 'block';
+        nameEl.textContent = username;
+    }
+    document.getElementById('commentText')?.focus();
+}
+
+function cancelReply() {
+    _replyToId = null;
+    _replyToUser = null;
+    const box = document.getElementById('replyTargetBox');
+    if (box) box.style.display = 'none';
+}
+
 // 提交评论
 async function submitComment(cardId) {
     const comment = document.getElementById('commentText')?.value.trim();
     if (!comment) { showToast('请填写评论内容'); return; }
     if (!currentUser) { showToast('请先登录'); openUserModal(); return; }
 
-    const btn = document.querySelector('.comment-submit-btn');
+    const btn = document.getElementById('commentSubmitBtn');
     if (btn) { btn.disabled = true; btn.textContent = '发送中...'; }
 
     try {
-        const body = { cardId, comment, score: currentCommentScore || 0 };
+        const body = { cardId, comment, score: _replyToId ? 0 : (currentCommentScore || 0), replyTo: _replyToId, replyToUser: _replyToUser };
 
         const res = await fetch(`${USER_API}/api/comment`, {
             method: 'POST',
@@ -10471,42 +11062,22 @@ async function submitComment(cardId) {
         });
         const data = await res.json();
         if (data.success) {
-            showToast('✅ 评论成功！');
+            showToast('✅ 评论成功！' + (data.expAdded ? ` +${data.expAdded}经验` : ''));
+            cancelReply();
+            document.getElementById('commentText').value = '';
             loadComments(cardId);
-        } else {
-            const errMsg = data.error || data.message || '评论失败';
-            showToast('❌ ' + errMsg);
-            if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
-        }
-    } catch(e) {
-        showToast('❌ 网络错误: ' + (e.message || '请检查网络'));
-        if (btn) { btn.disabled = false; btn.textContent = '发表评论'; }
-    }
-}
-
-async function submitComment(cardId) {
-    const comment = document.getElementById('commentText')?.value.trim();
-    if (!comment) { showToast('请填写评论内容'); return; }
-    if (!currentUser) { showToast('请先登录'); openUserModal(); return; }
-
-    const btn = document.querySelector('.comment-submit-btn');
-    if (btn) { btn.disabled = true; btn.textContent = '发送中...'; }
-
-    try {
-        const body = { cardId, comment, score: currentCommentScore || 0 };
-
-        const res = await fetch(`${USER_API}/api/comment`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${currentUser.sessionToken}`
-            },
-            body: JSON.stringify(body)
-        });
-        const data = await res.json();
-        if (data.success) {
-            showToast('✅ 评论成功！');
-            loadComments(cardId);
+        } else if (data.code === 'rate_limited') {
+            showToast('⏰ ' + (data.error || '评论太频繁'));
+            // 显示等待倒计时
+            if (btn) {
+                let wait = data.waitSeconds || 60;
+                btn.textContent = `等待 ${wait}s`;
+                const timer = setInterval(() => {
+                    wait--;
+                    if (btn) btn.textContent = `等待 ${wait}s`;
+                    if (wait <= 0) { clearInterval(timer); if (btn) { btn.disabled = false; btn.textContent = '发表评论'; } }
+                }, 1000);
+            }
         } else if (data.code === 'muted') {
             showToast('🚫 ' + (data.error || '评论含有违禁词，已被禁言'));
             if (btn) { btn.disabled = true; btn.textContent = `禁言中（${data.remaining || 120}s）`; }
@@ -10663,6 +11234,16 @@ function escapeHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// 等级配置（前端同步）
+const LEVEL_CONFIG = [
+  { level: 1, color: '#ffffff', bg: 'rgba(255,255,255,0.15)', name: 'LV1' },
+  { level: 2, color: '#4caf50', bg: 'rgba(76,175,80,0.15)', name: 'LV2' },
+  { level: 3, color: '#2196f3', bg: 'rgba(33,150,243,0.15)', name: 'LV3' },
+  { level: 4, color: '#ff9800', bg: 'rgba(255,152,0,0.15)', name: 'LV4' },
+  { level: 5, color: '#ff69b4', bg: 'rgba(255,105,180,0.15)', name: 'LV5' },
+  { level: 6, color: '#f44336', bg: 'rgba(244,67,54,0.15)', name: 'LV6' },
+];
+
 function formatTime(ts) {
     const d = new Date(ts);
     const now = Date.now();
@@ -10670,7 +11251,12 @@ function formatTime(ts) {
     if (diff < 60000) return '刚刚';
     if (diff < 3600000) return `${Math.floor(diff/60000)}分钟前`;
     if (diff < 86400000) return `${Math.floor(diff/3600000)}小时前`;
-    return `${d.getMonth()+1}/${d.getDate()}`;
+    const year = d.getFullYear();
+    const month = d.getMonth()+1;
+    const date = d.getDate();
+    const currentYear = new Date().getFullYear();
+    if (year === currentYear) return `${month}月${date}日`;
+    return `${year}年${month}月${date}日`;
 }
 
 // ── 关闭弹窗点击背景 ──
@@ -10680,5 +11266,13 @@ document.getElementById('userModal').addEventListener('click', function(e) {
 document.getElementById('userHomeModal').addEventListener('click', function(e) {
     if (e.target === this) closeUserHome();
 });
+document.getElementById('mailPanel').addEventListener('click', function(e) {
+    if (e.target === this) closeMailPanel();
+});
+
+// ── 定期刷新未读邮件数量 ──
+setInterval(function() {
+    if (currentUser) checkUnreadMails();
+}, 60 * 1000);
 </script>
 </body></html>
