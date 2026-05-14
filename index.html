@@ -10023,36 +10023,73 @@ async function doRegister() {
 
 // ── 在外部浏览器中打开URL（支持Median / Android Intent / iOS / 普通浏览器）──
 function openExternalBrowser(url) {
-    // 1. Median WebView JS Bridge
+    // 检测环境
+    var isAndroid = /Android/i.test(navigator.userAgent);
+    var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    // 1. Median JS Bridge (新版 API)
     if (window.median && window.median.url && typeof window.median.url.openExternal === 'function') {
         try { window.median.url.openExternal(url); return; } catch(e) {}
     }
-    if (window.median && window.median.url && typeof window.median.url.open === 'function') {
-        try { window.median.url.open(url); return; } catch(e) {}
+    // 2. Median JS Bridge (旧版/替代 API)
+    if (window.median && window.median.url && typeof window.median.url.openInNewTab === 'function') {
+        try { window.median.url.openInNewTab(url); return; } catch(e) {}
     }
-    if (window.median && typeof window.median.openUrl === 'function') {
-        try { window.median.openUrl(url); return; } catch(e) {}
-    }
-    // 2. Android intent scheme（弹出浏览器选择器）
-    var isAndroid = /Android/i.test(navigator.userAgent);
+    // 3. Median GoNative URL Scheme
+    try {
+        var gonativeUrl = 'median://externalBrowser/open?url=' + encodeURIComponent(url);
+        window.location.href = gonativeUrl;
+        return;
+    } catch(e) {}
+    // 4. GoNative 旧版 URL Scheme
+    try {
+        var gonativeOld = 'gonative://externalBrowser/open?url=' + encodeURIComponent(url);
+        window.location.href = gonativeOld;
+        return;
+    } catch(e) {}
+    // 5. Android intent scheme（必须包含 category=BROWSABLE + package 为空才能弹出选择器）
     if (isAndroid) {
         try {
-            var intentUrl = 'intent://' + url.replace(/^https?:\/\//, '') + '#Intent;scheme=https;action=android.intent.action.VIEW;end';
-            window.location.href = intentUrl;
+            var cleanUrl = url.replace(/^https?:\/\//, '');
+            var intentUrl = 'intent://' + cleanUrl +
+                '#Intent;' +
+                'scheme=https;' +
+                'action=android.intent.action.VIEW;' +
+                'category=android.intent.category.BROWSABLE;' +
+                'end';
+            var iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = intentUrl;
+            document.body.appendChild(iframe);
+            setTimeout(function() { document.body.removeChild(iframe); }, 2000);
             return;
         } catch(e) {}
     }
-    // 3. 通用方案：window.open _blank（某些WebView会触发外部浏览器）
+    // 6. iOS 使用 window.open Safari 兼容模式
+    if (isIOS) {
+        try {
+            window.open(url, '_blank');
+            return;
+        } catch(e) {}
+    }
+    // 7. 模拟点击 <a target="_blank">（在很多WebView中会触发外部浏览器或弹出选择）
     try {
-        var w = window.open(url, '_blank');
-        if (w && w.focus) { w.focus(); return; }
+        var a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function() { document.body.removeChild(a); }, 100);
+        return;
     } catch(e) {}
-    // 4. 最后手段：_system
+    // 8. window.open _system
     try {
-        var w2 = window.open(url, '_system');
-        if (w2) return;
+        var w = window.open(url, '_system');
+        if (w) return;
     } catch(e) {}
-    // 5. 最终回退：当前页面跳转
+    // 9. 最终回退
     window.location.href = url;
 }
 
