@@ -2520,6 +2520,37 @@
     transition: color 0.15s;
 }
 .comment-action-btn:hover { color: var(--primary); }
+/* B站风格回复输入框 */
+.reply-input-box {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: var(--pixel-soft);
+    border-radius: 10px;
+    border: 1.5px solid var(--primary-light);
+    animation: replySlideIn 0.2s ease;
+}
+@keyframes replySlideIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.reply-textarea {
+    width: 100%;
+    min-height: 50px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--pixel-white);
+    outline: none;
+    resize: vertical;
+    box-sizing: border-box;
+}
+[data-theme="dark"] .reply-textarea {
+    background: #1a0f16;
+    color: #f0d0e0;
+    border-color: rgba(255,102,153,0.2);
+}
 .comment-empty {
     padding: 20px; text-align: center;
     font-size: 13px; color: #bbb;
@@ -9726,14 +9757,6 @@ function closeNavPanel() {
             </div>
         </div>
 
-        <!-- 收藏区 -->
-        <div class="user-home-section">
-            <div class="user-section-title">💖 我的收藏</div>
-            <div class="user-fav-list" id="homeFavList">
-                <div class="user-fav-empty">加载中...</div>
-            </div>
-        </div>
-
         <!-- 底部操作 -->
         <div class="user-home-footer">
             <button style="background:#aaa;color:#fff;" onclick="closeUserHome()">关闭</button>
@@ -9972,9 +9995,6 @@ function renderUserHome(data) {
     const fish = data.fishCoins || 0;
     document.getElementById('redeemNormalBtn').disabled = fish < 15;
     document.getElementById('redeemSuperBtn').disabled = fish < 30;
-
-    // 渲染收藏列表
-    renderUserFavorites(data.favorites || []);
 }
 
 // ── 邮件系统 ──
@@ -10067,6 +10087,26 @@ async function readMail(mailId, el) {
         const btn = el.querySelector('button');
         if (btn && btn.textContent === '领取') btn.textContent = '查看';
     } catch(e) {}
+}
+
+// ── 管理员回收邮件 ──
+async function deleteAdminMail(mailId) {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('请先登录管理员'); return; }
+    if (!confirm('确定回收该邮件吗？所有用户都将无法再看到此邮件。')) return;
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/mail', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ mailId })
+        });
+        const data = await res.json();
+        if (data.success) { showToast('✅ 已回收'); loadAdminMails(); }
+        else { showToast('❌ ' + (data.error || '回收失败')); }
+    } catch(e) { showToast('❌ 网络错误'); }
 }
 
 async function deleteMail(mailId) {
@@ -11148,23 +11188,83 @@ function getTextAvatar() {
     return '<div class="comment-avatar-text">人类</div>';
 }
 
+// ── 回复评论（B站风格：在评论下方插入输入框）──
 function replyToComment(commentId, username) {
     _replyToId = commentId;
     _replyToUser = username;
-    const box = document.getElementById('replyTargetBox');
-    const nameEl = document.getElementById('replyTargetName');
-    if (box && nameEl) {
-        box.style.display = 'block';
-        nameEl.textContent = username;
-    }
-    document.getElementById('commentText')?.focus();
+    // 先清除所有已有的回复输入框
+    document.querySelectorAll('.reply-input-box').forEach(el => el.remove());
+    // 找到被回复的评论元素
+    const commentEl = document.querySelector(`.comment-item[data-comment-id="${CSS.escape(commentId)}"], .comment-reply-item[data-comment-id="${CSS.escape(commentId)}"]`);
+    if (!commentEl) return;
+    // 创建回复输入框
+    const replyBox = document.createElement('div');
+    replyBox.className = 'reply-input-box';
+    replyBox.innerHTML = `
+        <div style="font-size:11px;color:var(--primary);margin-bottom:4px;">回复 @${escapeHtml(username)}</div>
+        <textarea class="reply-textarea" placeholder="写下你的回复..." maxlength="500" rows="2"></textarea>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+            <button onclick="submitReply('${escapeHtml(commentId)}', '${escapeHtml(username)}', this)" style="flex:1;padding:6px 12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:bold;cursor:pointer;">发送</button>
+            <button onclick="this.closest('.reply-input-box').remove()" style="padding:6px 12px;background:#eee;color:#666;border:none;border-radius:8px;font-size:12px;cursor:pointer;">取消</button>
+        </div>
+    `;
+    // 插入到评论元素的最末尾
+    commentEl.appendChild(replyBox);
+    // 自动聚焦
+    replyBox.querySelector('.reply-textarea')?.focus();
 }
 
 function cancelReply() {
     _replyToId = null;
     _replyToUser = null;
+    document.querySelectorAll('.reply-input-box').forEach(el => el.remove());
     const box = document.getElementById('replyTargetBox');
     if (box) box.style.display = 'none';
+}
+
+// ── 提交回复（从评论下方的输入框）──
+async function submitReply(commentId, replyToUser, btnEl) {
+    if (!currentUser) { showToast('请先登录'); openUserModal(); return; }
+    const box = btnEl.closest('.reply-input-box');
+    const textarea = box?.querySelector('.reply-textarea');
+    const comment = textarea?.value?.trim();
+    if (!comment) { showToast('请填写回复内容'); return; }
+    btnEl.disabled = true;
+    btnEl.textContent = '发送中...';
+    try {
+        const res = await fetch(`${USER_API}/api/comment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.sessionToken}`
+            },
+            body: JSON.stringify({
+                cardId: currentCommentCardId,
+                comment,
+                score: 0, // 回复不带评分
+                replyTo: commentId,
+                replyToUser
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ 回复成功！' + (data.expAdded ? ` +${data.expAdded}经验` : ''));
+            box.remove();
+            loadComments(currentCommentCardId);
+        } else if (data.code === 'rate_limited') {
+            showToast('⏰ ' + data.error);
+            btnEl.disabled = false;
+            btnEl.textContent = '发送';
+        } else {
+            showToast('❌ ' + (data.error || '回复失败'));
+            btnEl.disabled = false;
+            btnEl.textContent = '发送';
+        }
+    } catch(e) {
+        showToast('❌ 网络错误');
+        btnEl.disabled = false;
+        btnEl.textContent = '发送';
+    }
 }
 
 // ── 展开/收起回复列表 ──
