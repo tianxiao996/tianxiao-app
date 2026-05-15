@@ -2815,7 +2815,7 @@ function __safeFixDeleteImage(card){
                 📧
                 <span id="mailBadge" style="display:none;position:absolute;top:-2px;right:-2px;background:#ff4444;color:#fff;font-size:9px;font-weight:bold;border-radius:50%;width:14px;height:14px;line-height:14px;text-align:center;">0</span>
             </div>
-            <div id="entryBtn" class="login-icon" onclick="openLogin()" style="visibility: visible;">🔒</div>
+            <div id="entryBtn" class="login-icon" onclick="openLogin()" style="visibility: visible; display:none;">🔒</div>
         </div>
     </div>
     <div class="header-top" style="display:none;">
@@ -8503,7 +8503,7 @@ function copyText(text) {
             <span class="sidebar-item-icon">💖</span>
             <span>我的收藏</span>
         </div>
-        <div class="sidebar-item" id="sidebarAdmin" onclick="openAdminFromSidebar()" style="display:none;">
+        <div class="sidebar-item" id="sidebarAdmin" onclick="openAdminFromSidebar()">
             <span class="sidebar-item-icon">🔒</span>
             <span>管理员模式</span>
         </div>
@@ -8558,6 +8558,7 @@ _cardDetailSource = card;
 
     // ── 构建内容区 ──
     const body = document.getElementById('cardDetailBody');
+    body.scrollTop = 0;   // 重置滚动位置，防止残留上次的位置
     body.innerHTML = '';
 
     // 图片轮播
