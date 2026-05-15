@@ -2256,9 +2256,9 @@
 /* 头像商店 */
 .user-avatar-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
-    max-height: 200px;
+    max-height: 220px;
     overflow-y: auto;
 }
 .user-avatar-item {
@@ -2276,10 +2276,10 @@
 }
 .user-avatar-item:active { transform: scale(0.95); }
 .user-avatar-item .avatar-img {
-    width: 48px; height: 48px;
+    width: 40px; height: 40px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid var(--primary-light);
+    border: 1.5px solid var(--primary-light);
     background: var(--pixel-soft);
 }
 .user-avatar-item .avatar-name {
@@ -2289,16 +2289,19 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 100%;
+    line-height: 1.2;
 }
 .user-avatar-item .avatar-price {
     font-size: 10px;
     color: #ff9800;
     font-weight: bold;
+    line-height: 1.2;
 }
 .user-avatar-item .avatar-owned {
     font-size: 10px;
     color: #4caf50;
     font-weight: bold;
+    line-height: 1.2;
 }
 .user-avatar-item .avatar-current {
     border-color: var(--primary);
@@ -5285,9 +5288,12 @@ async function loadAdminMails() {
         } else {
             listEl.innerHTML = data.mails.map(m => `
                 <div style="background:#fff;border-radius:8px;padding:8px 10px;border:1px solid #ffb74d;margin-bottom:6px;">
-                    <div style="font-size:12px;font-weight:bold;">${escapeHtml(m.title)}</div>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <div style="font-size:12px;font-weight:bold;flex:1;">${escapeHtml(m.title)}</div>
+                        <button onclick="deleteAdminMail('${m.id}')" style="background:#ffebee;color:#e53935;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;flex-shrink:0;">回收</button>
+                    </div>
                     <div style="font-size:11px;color:#888;">${escapeHtml(m.content.substring(0,50))}${m.content.length>50?'...':''}</div>
-                    <div style="font-size:11px;color:#aaa;margin-top:2px;">${formatTime(m.createdAt)} ${m.fishReward?`· 🐟${m.fishReward}`:''} ${m.expireAt?'· 有期限':''}</div>
+                    <div style="font-size:11px;color:#aaa;margin-top:2px;">${formatTime(m.createdAt)} ${m.fishReward?`· 🐟${m.fishReward}`:''} ${m.expireAt?`· 有效期至 ${formatExpireTime(m.expireAt)}`:''}</div>
                 </div>
             `).join('');
         }
@@ -10005,7 +10011,7 @@ async function loadMails() {
                     <div class="mail-content" style="font-size:12px;color:#888;line-height:1.5;display:none;margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);">
                         ${escapeHtml(m.content)}<br>
                         ${m.fishReward ? `<span style="color:#ff9800;font-weight:bold;">🐟 +${m.fishReward} 小鱼干</span><br>` : ''}
-                        ${m.expireAt ? `<span style="font-size:11px;color:#aaa;">有效期至 ${formatTime(m.expireAt)}</span>` : ''}
+                        ${m.expireAt ? `<span style="font-size:11px;color:#aaa;">有效期至 ${formatExpireTime(m.expireAt)}</span>` : ''}
                     </div>
                     <div style="display:flex;gap:8px;margin-top:6px;">
                         <button onclick="event.stopPropagation();readMail('${escapeHtml(m.id)}', this.parentElement.parentElement)" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">${m.read ? '查看' : '领取'}</button>
@@ -10025,35 +10031,42 @@ let _mailExpanded = {};
 
 async function readMail(mailId, el) {
     if (!currentUser) return;
-    // Bug修复：只切换展开/收起，不调用loadMails避免重新渲染
+    // 切换展开/收起
     const contentEl = el.querySelector('.mail-content');
     if (contentEl) {
         const willExpand = contentEl.style.display === 'none';
         contentEl.style.display = willExpand ? 'block' : 'none';
         _mailExpanded[mailId] = willExpand;
     }
-    // 只有未读邮件才请求服务器标记已读
-    const isUnread = el.querySelector('span')?.textContent?.includes('🔴');
-    if (isUnread) {
-        try {
-            const res = await fetch(`${USER_API}/api/user/mail/read`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentUser.sessionToken}`
-                },
-                body: JSON.stringify({ mailId })
-            });
-            const data = await res.json();
-            if (data.success && data.message) showToast('✅ ' + data.message);
-            checkUnreadMails();
-            // 标记已读后只更新当前邮件的UI，不重新渲染整个列表
-            const titleSpan = el.querySelector('span');
-            if (titleSpan) titleSpan.innerHTML = titleSpan.innerHTML.replace('🔴', '📭');
-            el.style.background = 'var(--pixel-soft)';
-            el.style.borderColor = 'var(--border)';
-        } catch(e) {}
-    }
+    // 始终请求服务器（服务器会判断奖励是否已领，避免重复领取）
+    try {
+        const res = await fetch(`${USER_API}/api/user/mail/read`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.sessionToken}`
+            },
+            body: JSON.stringify({ mailId })
+        });
+        const data = await res.json();
+        if (data.success && data.message) {
+            // 有奖励消息才显示toast
+            if (data.fishCoins !== undefined) {
+                showToast('✅ ' + data.message);
+            }
+        }
+        checkUnreadMails();
+        // 更新UI为已读状态
+        const titleSpan = el.querySelector('span');
+        if (titleSpan && titleSpan.innerHTML.includes('🔴')) {
+            titleSpan.innerHTML = titleSpan.innerHTML.replace('🔴', '📭');
+        }
+        el.style.background = 'var(--pixel-soft)';
+        el.style.borderColor = 'var(--border)';
+        // 更新按钮文字
+        const btn = el.querySelector('button');
+        if (btn && btn.textContent === '领取') btn.textContent = '查看';
+    } catch(e) {}
 }
 
 async function deleteMail(mailId) {
@@ -11074,16 +11087,22 @@ function renderCommentInput(cardId, hasCommented) {
         return;
     }
 
-    if (hasCommented) {
-        inputArea.innerHTML = `
-            <div class="comment-login-hint">你已经评论过这个游戏了 ✅</div>
-        `;
-        return;
-    }
-
     // 获取当前用户头像（如果有）
     const myAvatar = _currentCommentUser?.avatar;
     const myLv = _currentCommentUser ? (LEVEL_CONFIG[(_currentCommentUser.level || 1) - 1] || LEVEL_CONFIG[0]) : null;
+    // 如果已评过分，隐藏评分区域（但仍可发纯文字评论和回复）
+    const scoreRowHtml = hasCommented ? '' : `
+        <div class="comment-score-row">
+            <span class="comment-score-label">打分：</span>
+            <div class="score-stars" id="scoreStars">
+                ${[1,2,3,4,5,6,7,8,9,10].map(i =>
+                    `<span class="score-star" onclick="setScore(${i})" data-score="${i}">☆</span>`
+                ).join('')}
+            </div>
+            <span id="scoreValue" style="font-size:12px;color:#aaa;margin-left:4px;"></span>
+        </div>`;
+    const votedHint = hasCommented ? '<div style="font-size:11px;color:#4caf50;margin-bottom:6px;">✅ 你已评过分，可以继续发表评论或回复</div>' : '';
+
     inputArea.innerHTML = `
         <div class="comment-input-area">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
@@ -11094,19 +11113,12 @@ function renderCommentInput(cardId, hasCommented) {
                 <span style="font-size:13px;font-weight:bold;color:var(--text);">${escapeHtml(currentUser?.username || '')}</span>
                 ${myLv ? `<span class="comment-level" style="color:${myLv.color};background:${myLv.bg};">${myLv.name}</span>` : ''}
             </div>
+            ${votedHint}
             <div id="replyTargetBox" style="display:none;margin-bottom:6px;font-size:12px;color:var(--primary);background:var(--pixel-soft);border-radius:8px;padding:6px 10px;">
                 回复 <b id="replyTargetName"></b> <span style="color:#aaa;cursor:pointer;" onclick="cancelReply()">取消</span>
             </div>
             <textarea class="comment-textarea" id="commentText" placeholder="分享你的游戏体验..." maxlength="500"></textarea>
-            <div class="comment-score-row">
-                <span class="comment-score-label">打分：</span>
-                <div class="score-stars" id="scoreStars">
-                    ${[1,2,3,4,5,6,7,8,9,10].map(i =>
-                        `<span class="score-star" onclick="setScore(${i})" data-score="${i}">☆</span>`
-                    ).join('')}
-                </div>
-                <span id="scoreValue" style="font-size:12px;color:#aaa;margin-left:4px;"></span>
-            </div>
+            ${scoreRowHtml}
             <div class="comment-submit-row">
                 <span id="commentWaitHint" style="font-size:11px;color:#aaa;margin-right:8px;display:none;"></span>
                 <button class="comment-submit-btn" id="commentSubmitBtn" onclick="submitComment('${cardId}')">发表评论</button>
@@ -11181,7 +11193,10 @@ async function submitComment(cardId) {
     if (btn) { btn.disabled = true; btn.textContent = '发送中...'; }
 
     try {
-        const body = { cardId, comment, score: _replyToId ? 0 : (currentCommentScore || 0), replyTo: _replyToId, replyToUser: _replyToUser };
+        // 如果没有评分区域（已评过分），强制score=0
+        const hasScoreStars = document.getElementById('scoreStars');
+        const effectiveScore = (!hasScoreStars || _replyToId) ? 0 : (currentCommentScore || 0);
+        const body = { cardId, comment, score: effectiveScore, replyTo: _replyToId, replyToUser: _replyToUser };
 
         const res = await fetch(`${USER_API}/api/comment`, {
             method: 'POST',
@@ -11196,6 +11211,12 @@ async function submitComment(cardId) {
             showToast('✅ 评论成功！' + (data.expAdded ? ` +${data.expAdded}经验` : ''));
             cancelReply();
             document.getElementById('commentText').value = '';
+            // Bug修复：重置评分，避免下次评论时触发"已评过分"
+            currentCommentScore = 0;
+            const stars = document.querySelectorAll('.score-star');
+            stars.forEach(s => s.textContent = '☆');
+            const scoreVal = document.getElementById('scoreValue');
+            if (scoreVal) scoreVal.textContent = '';
             loadComments(cardId);
         } else if (data.code === 'rate_limited') {
             showToast('⏰ ' + (data.error || '评论太频繁'));
@@ -11366,6 +11387,13 @@ function escapeHtml(str) {
 }
 
 // 等级配置（前端同步）
+// 格式化过期时间（始终返回完整日期）
+function formatExpireTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+}
+
 const LEVEL_CONFIG = [
   { level: 1, color: '#ffffff', bg: 'rgba(255,255,255,0.15)', name: 'LV1' },
   { level: 2, color: '#4caf50', bg: 'rgba(76,175,80,0.15)', name: 'LV2' },
