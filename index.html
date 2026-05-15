@@ -2586,6 +2586,89 @@
     transition: color 0.15s;
 }
 .comment-action-btn:hover { color: var(--primary); }
+/* 邮件弹窗Tab */
+.mail-tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    font-size: 13px;
+    font-weight: bold;
+    color: #888;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.15s;
+    user-select: none;
+}
+.mail-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+/* 回复通知项 */
+.reply-notif-item {
+    padding: 10px 12px;
+    background: #fff;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.reply-notif-item:hover {
+    border-color: var(--primary-light);
+}
+.reply-notif-item.unread {
+    background: #fff8f8;
+    border-color: var(--primary-light);
+}
+.reply-notif-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.reply-notif-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid var(--primary-light);
+    background: var(--pixel-soft);
+}
+.reply-notif-avatar-text {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.reply-notif-meta {
+    font-size: 12px;
+    color: #888;
+}
+.reply-notif-meta .username {
+    color: var(--primary);
+    font-weight: bold;
+}
+.reply-notif-content {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+    margin: 6px 0;
+}
+.reply-notif-parent {
+    font-size: 11px;
+    color: #aaa;
+    background: var(--pixel-soft);
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    border-left: 3px solid var(--primary-light);
+}
+
 /* B站风格回复输入框 */
 .reply-input-box {
     margin-top: 8px;
@@ -9894,12 +9977,25 @@ function closeNavPanel() {
 <!-- 📧 邮件弹窗 -->
 <div id="mailPanel" class="user-home-overlay">
     <div class="user-home-box" style="max-width:420px;">
-        <div class="user-home-header" style="margin-bottom:12px;">
+        <div class="user-home-header" style="margin-bottom:0;padding-bottom:0;border-bottom:none;">
             <div style="font-size:20px;">📧</div>
-            <div class="user-home-name">我的邮件</div>
-            <div class="user-home-id" id="mailCount">加载中...</div>
+            <div class="user-home-name">消息中心</div>
         </div>
-        <div id="mailList" style="max-height:400px;overflow-y:auto;">
+        <!-- Tab切换 -->
+        <div style="display:flex;gap:0;margin:12px 0;border-bottom:2px solid var(--pixel-soft);">
+            <div class="mail-tab active" onclick="switchMailTab('mail')" id="mailTabMail">
+                📧 邮件消息 <span id="mailTabBadge" style="display:none;background:#ff4444;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;vertical-align:middle;">0</span>
+            </div>
+            <div class="mail-tab" onclick="switchMailTab('reply')" id="mailTabReply">
+                💬 我的回复 <span id="replyTabBadge" style="display:none;background:#ff4444;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;vertical-align:middle;">0</span>
+            </div>
+        </div>
+        <!-- 邮件消息面板 -->
+        <div id="mailList" style="max-height:400px;overflow-y:auto;display:block;">
+            <div class="user-fav-empty">加载中...</div>
+        </div>
+        <!-- 我的回复面板 -->
+        <div id="replyList" style="max-height:400px;overflow-y:auto;display:none;">
             <div class="user-fav-empty">加载中...</div>
         </div>
         <div class="user-home-footer">
@@ -10152,16 +10248,27 @@ function renderUserHome(data) {
 }
 
 // ── 邮件系统 ──
-let _mailTimer = null;
+let _mailTab = 'mail'; // 当前Tab: 'mail' | 'reply'
 
 function openMailPanel() {
     if (!currentUser) { showToast('请先登录'); openUserModal(); return; }
     document.getElementById('mailPanel').classList.add('show');
-    loadMails();
+    switchMailTab('mail');
 }
 
 function closeMailPanel() {
     document.getElementById('mailPanel').classList.remove('show');
+}
+
+// ── Tab切换 ──
+function switchMailTab(tab) {
+    _mailTab = tab;
+    document.getElementById('mailTabMail').classList.toggle('active', tab === 'mail');
+    document.getElementById('mailTabReply').classList.toggle('active', tab === 'reply');
+    document.getElementById('mailList').style.display = tab === 'mail' ? 'block' : 'none';
+    document.getElementById('replyList').style.display = tab === 'reply' ? 'block' : 'none';
+    if (tab === 'mail') loadMails();
+    else loadReplies();
 }
 
 async function loadMails() {
@@ -10194,9 +10301,88 @@ async function loadMails() {
                 </div>
             `).join('');
         }
-        document.getElementById('mailCount').textContent = `共 ${data.total || 0} 封邮件`;
     } catch(e) {
         document.getElementById('mailList').innerHTML = '<div class="user-fav-empty">加载失败</div>';
+    }
+}
+
+// ── 加载回复通知 ──
+async function loadReplies() {
+    if (!currentUser) return;
+    try {
+        const res = await fetch(`${USER_API}/api/user/replies`, {
+            headers: { 'Authorization': `Bearer ${currentUser.sessionToken}` }
+        });
+        const data = await res.json();
+        const listEl = document.getElementById('replyList');
+        if (!listEl) return;
+        if (!data.notifications || data.notifications.length === 0) {
+            listEl.innerHTML = '<div class="user-fav-empty">暂无回复通知</div>';
+        } else {
+            listEl.innerHTML = data.notifications.map(n => {
+                const isUnread = !n.read;
+                const hasAvatar = n.replyAvatar && n.replyAvatar !== './avatar.png';
+                const lvCfg = LEVEL_CONFIG[(n.replyLevel || 1) - 1] || LEVEL_CONFIG[0];
+                return `
+                <div class="reply-notif-item ${isUnread ? 'unread' : ''}" onclick="openReplyNotif('${escapeHtml(n.id)}', '${escapeHtml(n.cardId)}', '${escapeHtml(n.replyCommentId || '')}')">
+                    <div class="reply-notif-header">
+                        ${hasAvatar
+                            ? `<img class="reply-notif-avatar" src="${escapeHtml(n.replyAvatar)}" alt="">`
+                            : `<div class="reply-notif-avatar-text">人类</div>`
+                        }
+                        <div style="flex:1;min-width:0;">
+                            <div class="reply-notif-meta">
+                                <span class="username">${escapeHtml(n.replyUsername)}</span>
+                                <span style="color:${lvCfg.color};background:${lvCfg.bg};font-size:10px;padding:1px 5px;border-radius:4px;margin-left:4px;">${lvCfg.name}</span>
+                                <span style="color:#aaa;margin-left:4px;">回复了我的评论</span>
+                                ${isUnread ? '<span style="margin-left:4px;color:#ff4444;font-size:10px;">●</span>' : ''}
+                            </div>
+                            <div style="font-size:10px;color:#aaa;">${formatTime(n.createdAt)}</div>
+                        </div>
+                    </div>
+                    <div class="reply-notif-parent">${escapeHtml(n.parentContent || '')}</div>
+                    <div class="reply-notif-content">${escapeHtml(n.replyContent)}</div>
+                </div>`;
+            }).join('');
+        }
+    } catch(e) {
+        document.getElementById('replyList').innerHTML = '<div class="user-fav-empty">加载失败</div>';
+    }
+}
+
+// ── 点击回复通知：打开卡片详情页并滚动到评论 ──
+async function openReplyNotif(notifId, cardId, replyCommentId) {
+    closeMailPanel();
+    // 标记已读
+    try {
+        await fetch(`${USER_API}/api/user/replies/read`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.sessionToken}`
+            },
+            body: JSON.stringify({ notifId })
+        });
+        checkUnreadMails();
+    } catch(e) {}
+    // 打开卡片详情页
+    const card = document.querySelector(`.card[data-card-id="${CSS.escape(cardId)}"]`);
+    if (card) {
+        openCardDetail(card);
+        // 等评论加载后滚动到对应回复
+        if (replyCommentId) {
+            setTimeout(() => {
+                const replyEl = document.querySelector(`.comment-item[data-comment-id="${CSS.escape(replyCommentId)}"], .comment-reply-item[data-comment-id="${CSS.escape(replyCommentId)}"]`);
+                if (replyEl) {
+                    replyEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    replyEl.style.transition = 'box-shadow 0.3s';
+                    replyEl.style.boxShadow = '0 0 0 3px #4caf50';
+                    setTimeout(() => { replyEl.style.boxShadow = ''; }, 2000);
+                }
+            }, 800);
+        }
+    } else {
+        showToast('该资源不在当前列表中');
     }
 }
 
@@ -10284,18 +10470,37 @@ async function checkUnreadMails() {
         return;
     }
     try {
-        const res = await fetch(`${USER_API}/api/user/unread-count`, {
-            headers: { 'Authorization': `Bearer ${currentUser.sessionToken}` }
-        });
-        const data = await res.json();
+        // 同时查询邮件未读和回复通知未读
+        const [mailRes, replyRes] = await Promise.all([
+            fetch(`${USER_API}/api/user/unread-count`, { headers: { 'Authorization': `Bearer ${currentUser.sessionToken}` } }).catch(() => ({ json: () => ({ count: 0 }) })),
+            fetch(`${USER_API}/api/user/replies/unread-count`, { headers: { 'Authorization': `Bearer ${currentUser.sessionToken}` } }).catch(() => ({ json: () => ({ count: 0 }) }))
+        ]);
+        const mailData = await mailRes.json();
+        const replyData = await replyRes.json();
+        const mailCount = mailData.count || 0;
+        const replyCount = replyData.count || 0;
+        const total = mailCount + replyCount;
+
+        // 更新右上角总小红点
         const badge = document.getElementById('mailBadge');
         if (badge) {
-            if (data.count > 0) {
+            if (total > 0) {
                 badge.style.display = 'inline-block';
-                badge.textContent = data.count > 99 ? '99+' : data.count;
+                badge.textContent = total > 99 ? '99+' : total;
             } else {
                 badge.style.display = 'none';
             }
+        }
+        // 更新Tab内小红点
+        const mailTabBadge = document.getElementById('mailTabBadge');
+        const replyTabBadge = document.getElementById('replyTabBadge');
+        if (mailTabBadge) {
+            if (mailCount > 0) { mailTabBadge.style.display = 'inline'; mailTabBadge.textContent = mailCount; }
+            else { mailTabBadge.style.display = 'none'; }
+        }
+        if (replyTabBadge) {
+            if (replyCount > 0) { replyTabBadge.style.display = 'inline'; replyTabBadge.textContent = replyCount; }
+            else { replyTabBadge.style.display = 'none'; }
         }
     } catch(e) {}
 }
