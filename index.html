@@ -3452,6 +3452,14 @@ async function loadFromGrave() {
     const maxRetries = 3; // 最多重试3次
     let retryCount = 0;
     
+    // 显示全屏加载动画
+    const gOverlay = document.getElementById('globalLoadingOverlay');
+    if (gOverlay) gOverlay.classList.add('show');
+    
+    // 记录开始时间，确保动画至少显示500ms
+    const loadStartTime = Date.now();
+    const MIN_LOAD_TIME = 500;
+    
     // 显示进度条
     function showProgress(percent, text) {
         const progressBar = document.getElementById('cloudProgress');
@@ -3563,6 +3571,10 @@ async function loadFromGrave() {
                     console.log("✅ 云端数据已同步");
                     
                     _cloudLoadDone = true; // 🌀 标记云端加载完成
+                    // 确保动画至少显示500ms
+                    const elapsed = Date.now() - loadStartTime;
+                    const delay = Math.max(0, MIN_LOAD_TIME - elapsed);
+                    await new Promise(r => setTimeout(r, delay));
                     // 隐藏门禁后的全局加载遮罩
                     const gOverlay = document.getElementById('globalLoadingOverlay');
                     if (gOverlay) gOverlay.classList.remove('show');
@@ -8569,10 +8581,16 @@ _cardDetailSource = card;
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     bgImg.src = isDark ? 'images/detail_bg_night.jpg' : 'images/detail_bg.jpg';
 
-    bgImg.onload = bgImg.onerror = () => {
-        // 背景图加载完成（或失败也继续），隐藏加载层
+    let bgLoaded = false;
+    const hideLoading = () => {
+        if (bgLoaded) return;
+        bgLoaded = true;
         if (loadLayer) loadLayer.classList.add('hidden');
     };
+
+    bgImg.onload = bgImg.onerror = hideLoading;
+    // 3秒强制超时，避免图片加载卡住
+    setTimeout(hideLoading, 3000);
 
     requestAnimationFrame(() => page.style.transform = 'translateX(0)');
 
@@ -9788,6 +9806,17 @@ function closeNavPanel() {
         <div class="user-home-header">
             <div class="user-home-avatar">🌸</div>
             <div class="user-home-name" id="homeUsername">加载中...</div>
+            <!-- 经验条（B站风格） -->
+            <div id="homeExpBar" style="margin:8px 0;">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                    <span id="homeLevelBadge" style="font-size:11px;font-weight:bold;padding:2px 6px;border-radius:4px;background:var(--primary);color:#fff;">LV1</span>
+                    <span id="homeExpText" style="font-size:11px;color:#888;">0/200</span>
+                </div>
+                <div style="width:100%;height:8px;background:var(--pixel-soft);border-radius:4px;overflow:hidden;">
+                    <div id="homeExpProgress" style="height:100%;width:0%;background:linear-gradient(90deg, var(--primary), var(--primary-light));border-radius:4px;transition:width 0.5s ease;"></div>
+                </div>
+                <div id="homeExpNext" style="font-size:10px;color:#aaa;margin-top:3px;">距离升级还需要 200 经验</div>
+            </div>
             <!-- 封号状态（默认隐藏） -->
             <div id="homeBanStatus" style="display:none;margin:8px 0;background:#ffebee;border:2px solid #ef5350;border-radius:12px;padding:10px 14px;text-align:center;">
                 <div style="font-size:13px;color:#c62828;font-weight:bold;">🚫 你已被封号</div>
@@ -10065,6 +10094,31 @@ function renderUserHome(data) {
         document.querySelectorAll('.user-home-section').forEach(s => s.style.display = '');
         _isUserBanned = false;
         _banInfo = null;
+    }
+
+    // 经验条（B站风格）
+    const lvBadge = document.getElementById('homeLevelBadge');
+    const expText = document.getElementById('homeExpText');
+    const expProgress = document.getElementById('homeExpProgress');
+    const expNext = document.getElementById('homeExpNext');
+    if (lvBadge && data.level) {
+        const lvCfg = LEVEL_CONFIG[(data.level || 1) - 1] || LEVEL_CONFIG[0];
+        lvBadge.textContent = lvCfg.name;
+        lvBadge.style.background = lvCfg.color;
+        lvBadge.style.color = data.level >= 4 ? '#fff' : '#333';
+        const curExp = data.exp || 0;
+        const curTh = data.currentThreshold || 0;
+        const nextTh = data.nextThreshold || 0;
+        expText.textContent = `${curExp}/${nextTh}`;
+        const pct = data.levelProgress || 0;
+        expProgress.style.width = pct + '%';
+        expProgress.style.background = `linear-gradient(90deg, ${lvCfg.color}, ${lvCfg.color}88)`;
+        if (data.level >= 6) {
+            expNext.textContent = '已满级，经验值不再增长';
+        } else {
+            const need = nextTh - curExp;
+            expNext.textContent = `距离升级${lvCfg.name} 还需要 ${need} 经验`;
+        }
     }
 
     document.getElementById('homeFishCoins').textContent = data.fishCoins || 0;
@@ -11161,7 +11215,6 @@ async function loadComments(cardId) {
                         </div>
                         <div class="comment-content">${escapeHtml(parent.comment)}</div>
                         <div class="comment-actions">
-                            <span class="comment-time">${formatTime(parent.createdAt)}</span>
                             <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(parent.id||'')}','${escapeHtml(parent.username)}','${escapeHtml(parent.id||'')}')">回复</span>
                         </div>
                     </div>
@@ -11192,7 +11245,6 @@ async function loadComments(cardId) {
                                 <span class="rp-name" onclick="openBanModal('${escapeHtml(r.userId)}','${escapeHtml(r.username)}')">${escapeHtml(r.username)}</span><span class="comment-level" style="color:${rLv.color};background:${rLv.bg};">${rLv.name}</span> ${atHtml}${escapeHtml(r.comment)}
                             </div>
                             <div class="comment-reply-meta">
-                                <span class="comment-time">${formatTime(r.createdAt)}</span>
                                 <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(parent.id||'')}','${escapeHtml(r.username)}','${escapeHtml(parent.id||'')}')">回复</span>
                                 ${isEditMode ? `<span style="font-size:12px;color:#ff4466;cursor:pointer;" onclick="deleteComment('${escapeHtml(currentCommentCardId)}','${escapeHtml(r.userId)}')">🗑️</span>` : ''}
                             </div>
