@@ -2815,7 +2815,7 @@ function __safeFixDeleteImage(card){
                 📧
                 <span id="mailBadge" style="display:none;position:absolute;top:-2px;right:-2px;background:#ff4444;color:#fff;font-size:9px;font-weight:bold;border-radius:50%;width:14px;height:14px;line-height:14px;text-align:center;">0</span>
             </div>
-            <div id="entryBtn" class="login-icon" onclick="openLogin()" style="visibility: visible;">🔒</div>
+            <!-- 管理员入口已移至评论区下方 -->
         </div>
     </div>
     <div class="header-top" style="display:none;">
@@ -5090,7 +5090,9 @@ function enterAdmin() {
     isEditMode = true; 
     document.body.classList.add("admin-mode");
     document.getElementById("adminBar").style.display = "flex";
-    document.getElementById("entryBtn").style.visibility = "hidden";
+    // 隐藏评论区下方的管理员入口
+    const adminEntry = document.getElementById('adminEntryInComment');
+    if (adminEntry) adminEntry.style.display = 'none';
     
     // 🎯 v4.0 管理员模式下展开所有卡片
     document.querySelectorAll(".card").forEach(card => {
@@ -5144,7 +5146,12 @@ function enterAdmin() {
 function exitAdmin() {
     isEditMode = false; document.body.classList.remove("admin-mode");
     document.getElementById("adminBar").style.display = "none";
-    document.getElementById("entryBtn").style.visibility = "visible";
+    // 显示评论区下方的管理员入口
+    const adminEntry = document.getElementById('adminEntryInComment');
+    if (adminEntry) {
+        const hasAdminToken = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+        adminEntry.style.display = hasAdminToken ? 'block' : 'none';
+    }
     // 隐藏Banner编辑面板
     const bp = document.getElementById("bannerEditPanel"); if(bp) bp.classList.remove("show");
     // 隐藏短链面板
@@ -8814,10 +8821,24 @@ function openAdminFromSidebar() {
         openLogin();
         return;
     }
+    enterAdminMode();
+}
+
+function openAdminFromCommentSection() {
+    if (!adminToken && !sessionStorage.getItem('ADMIN_TOKEN')) {
+        openLogin();
+        return;
+    }
+    enterAdminMode();
+}
+
+function enterAdminMode() {
     isEditMode = true;
     document.body.classList.add('admin-mode');
     document.getElementById('adminBar').style.display = 'flex';
-    document.getElementById('entryBtn').style.visibility = 'hidden';
+    // 更新评论区下方的管理员入口状态
+    const adminEntry = document.getElementById('adminEntryInComment');
+    if (adminEntry) adminEntry.style.display = 'none';
     updateSidebarAdminUI();
     showToast('🔒 管理员模式已开启');
 }
@@ -9565,6 +9586,10 @@ function txnavDeleteSite(siteId) {
 //  详情页
 // ════════════════════════════════════════
 function txnavOpenDetail(siteId) {
+    // Bug修复：重置滚动位置，避免显示上次退出的位置
+    const detailBody = document.getElementById('txnavDetailBody');
+    if (detailBody) detailBody.scrollTop = 0;
+    
     const site = (txnavData.sites || []).find(s => s.id === siteId);
     if (!site) return;
 
@@ -11482,10 +11507,23 @@ function injectCommentSection(cardId) {
         <div class="comment-list" id="commentList">
             <div class="comment-empty">加载中...</div>
         </div>
+        <!-- 管理员入口（评论区下方） -->
+        <div id="adminEntryInComment" style="margin-top:16px;text-align:center;display:none;">
+            <button onclick="openAdminFromCommentSection()" style="background:var(--pixel-soft);color:var(--primary);border:1.5px solid var(--primary-light);border-radius:12px;padding:8px 20px;font-size:12px;font-weight:bold;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+                🔒 管理员模式
+            </button>
+        </div>
     `;
     body.appendChild(section);
 
     loadComments(cardId);
+
+    // 如果有管理员权限，显示评论区下方的管理员入口
+    const adminEntry = document.getElementById('adminEntryInComment');
+    if (adminEntry) {
+        const hasAdminToken = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+        adminEntry.style.display = hasAdminToken ? 'block' : 'none';
+    }
 }
 
 // 加载评论
