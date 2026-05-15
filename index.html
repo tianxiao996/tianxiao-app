@@ -2303,6 +2303,47 @@
     font-weight: bold;
     line-height: 1.2;
 }
+/* 背包头像项 */
+.backpack-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    background: #fff;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+}
+.backpack-item.equipped {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary-light);
+    background: #fff8f8;
+}
+.backpack-item .bp-img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-light);
+    background: var(--pixel-soft);
+}
+.backpack-item.equipped .bp-img {
+    border-color: var(--primary);
+}
+.backpack-item .bp-name {
+    font-size: 10px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+.backpack-item .bp-source {
+    font-size: 9px;
+    color: #aaa;
+}
 .user-avatar-item .avatar-current {
     border-color: var(--primary);
     box-shadow: 0 0 0 2px var(--primary-light);
@@ -2934,7 +2975,7 @@ function __safeFixDeleteImage(card){
                     <input type="number" id="mailExpireInput" placeholder="有效期(天)，0=永久" min="0" value="7" style="flex:1;border:1px solid #ffb74d;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
                     <input type="number" id="mailFishInput" placeholder="小鱼干奖励" min="0" value="0" style="flex:1;border:1px solid #ffb74d;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
                 </div>
-                <input type="text" id="mailAvatarInput" placeholder="限定头像ID（可选）" style="border:1px solid #ffb74d;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
+                <input type="text" id="mailAvatarInput" placeholder="限定头像图床URL（可选）" style="border:1px solid #ffb74d;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
                 <button onclick="sendAdminMail()" style="background:#ff9800;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;">📧 发送给所有用户</button>
             </div>
         </div>
@@ -5451,7 +5492,7 @@ async function sendAdminMail() {
     const content = document.getElementById('mailContentInput')?.value?.trim();
     const expireDays = parseInt(document.getElementById('mailExpireInput')?.value) || 0;
     const fishReward = parseInt(document.getElementById('mailFishInput')?.value) || 0;
-    const avatarRewardId = document.getElementById('mailAvatarInput')?.value?.trim() || null;
+    const avatarRewardUrl = document.getElementById('mailAvatarInput')?.value?.trim() || null;
     if (!title || !content) { showToast('❌ 标题和内容不能为空'); return; }
 
     const btn = document.querySelector('#mailManagePanel button[onclick="sendAdminMail()"]');
@@ -5461,7 +5502,7 @@ async function sendAdminMail() {
         const res = await fetch(WORKER_BASE + '/api/admin/mail', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-            body: JSON.stringify({ title, content, expireDays, fishReward, avatarRewardId })
+            body: JSON.stringify({ title, content, expireDays, fishReward, avatarRewardUrl })
         });
         const data = await res.json();
         if (data.success) {
@@ -8282,15 +8323,16 @@ async function submitBan() {
     }
 }
 
-async function deleteComment(cardId, userId) {
-    if (!confirm('确定删除该用户的这条评论？')) return;
+async function deleteComment(cardId, commentId) {
+    if (!commentId) { showToast('评论ID无效'); return; }
+    if (!confirm('确定删除这条评论？')) return;
     const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
     if (!token) { showToast('请先登录管理员'); return; }
     try {
         const res = await fetch(`${USER_API}/api/admin/comment`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ cardId, userId })
+            body: JSON.stringify({ cardId, commentId })
         });
         const data = await res.json();
         if (data.success) {
@@ -9958,9 +10000,21 @@ function closeNavPanel() {
             <div class="user-avatar-grid" id="homeAvatarGrid">
                 <div class="user-fav-empty">加载中...</div>
             </div>
-            <div id="homeMyAvatars" style="display:none;margin-top:10px;">
-                <div style="font-size:12px;font-weight:bold;color:var(--primary);margin-bottom:6px;">📦 已拥有</div>
-                <div class="user-avatar-grid" id="homeMyAvatarGrid"></div>
+            <div style="margin-top:10px;text-align:center;">
+                <button onclick="showBackpack()" style="background:var(--pixel-soft);color:var(--primary);border:1.5px solid var(--primary-light);border-radius:10px;padding:6px 16px;font-size:12px;font-weight:bold;cursor:pointer;">🎒 我的背包</button>
+            </div>
+        </div>
+
+        <!-- 🎒 背包面板 -->
+        <div class="user-home-section" id="backpackSection" style="display:none;">
+            <div class="user-section-title">🎒 我的背包</div>
+            <div style="font-size:11px;color:#888;margin-bottom:8px;">点击头像装备，已装备的会高亮显示</div>
+            <div class="user-avatar-grid" id="backpackGrid">
+                <div class="user-fav-empty">加载中...</div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px;">
+                <button onclick="unequipAvatar()" style="flex:1;padding:8px;background:#aaa;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:bold;cursor:pointer;">卸下头像</button>
+                <button onclick="showBackpack()" style="flex:1;padding:8px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:bold;cursor:pointer;">关闭背包</button>
             </div>
         </div>
 
@@ -10126,6 +10180,82 @@ function closeUserHome() {
         _checkinWidgetId = null;
     }
     document.getElementById('checkinTurnstileBox').style.display = 'none';
+}
+
+// ── 显示/隐藏背包 ──
+function showBackpack() {
+    const section = document.getElementById('backpackSection');
+    if (!section) return;
+    const isVisible = section.style.display !== 'none';
+    section.style.display = isVisible ? 'none' : 'block';
+    if (!isVisible) loadBackpack();
+}
+
+// ── 加载背包 ──
+async function loadBackpack() {
+    if (!currentUser) return;
+    const grid = document.getElementById('backpackGrid');
+    if (!grid) return;
+    try {
+        const res = await fetch(`${USER_API}/api/user/backpack`, {
+            headers: { 'Authorization': `Bearer ${currentUser.sessionToken}` }
+        });
+        const data = await res.json();
+        if (data.success && data.backpack && data.backpack.length > 0) {
+            grid.innerHTML = data.backpack.map(a => `
+                <div class="backpack-item ${a.equipped ? 'equipped' : ''}" onclick="equipAvatar('${escapeHtml(a.url)}')">
+                    <img class="bp-img" src="${escapeHtml(a.url)}" alt="" onerror="this.style.display='none'">
+                    <div class="bp-name">${escapeHtml(a.name || '头像')}</div>
+                    <div class="bp-source">${a.source === 'mail' ? '📧 邮件' : a.source === 'shop' ? '🛒 商店' : '🎁 其他'}</div>
+                    ${a.equipped ? '<div style="font-size:10px;color:var(--primary);font-weight:bold;">✓ 已装备</div>' : ''}
+                </div>
+            `).join('');
+        } else {
+            grid.innerHTML = '<div class="user-fav-empty">背包为空，去商店购买或领取限定头像吧~</div>';
+        }
+    } catch(e) {
+        grid.innerHTML = '<div class="user-fav-empty">加载失败</div>';
+    }
+}
+
+// ── 装备头像 ──
+async function equipAvatar(url) {
+    if (!currentUser) return;
+    try {
+        const res = await fetch(`${USER_API}/api/user/backpack/equip`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser.sessionToken}`
+            },
+            body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ 头像已装备！');
+            loadBackpack();
+        } else {
+            showToast('❌ ' + (data.error || '装备失败'));
+        }
+    } catch(e) { showToast('❌ 网络错误'); }
+}
+
+// ── 卸下头像 ──
+async function unequipAvatar() {
+    if (!currentUser) return;
+    try {
+        const res = await fetch(`${USER_API}/api/user/backpack/unequip`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${currentUser.sessionToken}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ 已卸下头像');
+            loadBackpack();
+        } else {
+            showToast('❌ ' + (data.error || '卸下失败'));
+        }
+    } catch(e) { showToast('❌ 网络错误'); }
 }
 
 // ── 加载用户主页数据 ──
@@ -11416,7 +11546,7 @@ async function loadComments(cardId) {
                             <span class="comment-level" style="color:${pLv.color};background:${pLv.bg};">${pLv.name}</span>
                             ${parent.score ? `<span class="comment-score-display">${'⭐'.repeat(Math.round(parent.score))} ${parent.score}分</span>` : ''}
                             <span class="comment-time">${formatTime(parent.createdAt)}</span>
-                            ${isEditMode ? `<span style="margin-left:auto;font-size:12px;color:#ff4466;cursor:pointer;padding:2px 6px;" onclick="deleteComment('${escapeHtml(currentCommentCardId)}','${escapeHtml(parent.userId)}')">🗑️</span>` : ''}
+                            ${isEditMode ? `<span style="margin-left:auto;font-size:12px;color:#ff4466;cursor:pointer;padding:2px 6px;" onclick="event.stopPropagation();deleteComment('${escapeHtml(currentCommentCardId)}','${escapeHtml(parent.id || '')}')">🗑️</span>` : ''}
                         </div>
                         <div class="comment-content">${escapeHtml(parent.comment)}</div>
                         <div class="comment-actions">
@@ -11451,7 +11581,7 @@ async function loadComments(cardId) {
                             </div>
                             <div class="comment-reply-meta">
                                 <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(parent.id||'')}','${escapeHtml(r.username)}','${escapeHtml(parent.id||'')}')">回复</span>
-                                ${isEditMode ? `<span style="font-size:12px;color:#ff4466;cursor:pointer;" onclick="deleteComment('${escapeHtml(currentCommentCardId)}','${escapeHtml(r.userId)}')">🗑️</span>` : ''}
+                                ${isEditMode ? `<span style="font-size:12px;color:#ff4466;cursor:pointer;" onclick="event.stopPropagation();deleteComment('${escapeHtml(currentCommentCardId)}','${escapeHtml(r.id || '')}')">🗑️</span>` : ''}
                             </div>
                         </div>
                     </div>`;
