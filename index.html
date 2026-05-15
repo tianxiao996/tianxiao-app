@@ -2789,7 +2789,10 @@ function __safeFixDeleteImage(card){
                 <button onclick="sendAdminMail()" style="background:#ff9800;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;">📧 发送给所有用户</button>
             </div>
         </div>
-        <div style="font-size:12px; font-weight:bold; color:#e65100; margin:10px 0 8px;">📋 已发送邮件</div>
+        <div style="font-size:12px; font-weight:bold; color:#e65100; margin:10px 0 8px;display:flex;align-items:center;justify-content:space-between;">
+            📋 已发送邮件
+            <button onclick="cleanupExpiredMails()" style="background:#ffebee;color:#e53935;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;">🗑️ 清理过期邮件</button>
+        </div>
         <div id="adminMailList" style="max-height:200px;overflow-y:auto;"></div>
     </div>
 
@@ -5288,7 +5291,11 @@ async function sendAdminMail() {
     const expireDays = parseInt(document.getElementById('mailExpireInput')?.value) || 0;
     const fishReward = parseInt(document.getElementById('mailFishInput')?.value) || 0;
     const avatarRewardId = document.getElementById('mailAvatarInput')?.value?.trim() || null;
-    if (!title || !content) { showToast('标题和内容不能为空'); return; }
+    if (!title || !content) { showToast('❌ 标题和内容不能为空'); return; }
+
+    const btn = document.querySelector('#mailManagePanel button[onclick="sendAdminMail()"]');
+    if (btn) { btn.disabled = true; btn.textContent = '发送中...'; }
+
     try {
         const res = await fetch(WORKER_BASE + '/api/admin/mail', {
             method: 'POST',
@@ -5297,12 +5304,19 @@ async function sendAdminMail() {
         });
         const data = await res.json();
         if (data.success) {
-            showToast('✅ ' + data.message);
+            showToast('✅ 邮件发送成功！' + (fishReward ? ` 含${fishReward}条小鱼干奖励` : ''));
             document.getElementById('mailTitleInput').value = '';
             document.getElementById('mailContentInput').value = '';
+            document.getElementById('mailFishInput').value = '0';
             loadAdminMails();
-        } else { showToast('❌ ' + data.error); }
-    } catch(e) { showToast('❌ 网络错误'); }
+        } else {
+            showToast('❌ ' + (data.error || '发送失败'));
+        }
+    } catch(e) {
+        showToast('❌ 网络错误：' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '📧 发送给所有用户'; }
+    }
 }
 
 // ── 加载管理员邮件列表 ──
@@ -5329,6 +5343,21 @@ async function loadAdminMails() {
             `).join('');
         }
     } catch(e) {}
+}
+
+// ── 清理过期邮件 ──
+async function cleanupExpiredMails() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('请先登录管理员'); return; }
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/mail/cleanup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.success) { showToast('✅ ' + data.message); loadAdminMails(); }
+        else { showToast('❌ ' + (data.error || '清理失败')); }
+    } catch(e) { showToast('❌ 网络错误'); }
 }
 
 // ── 删除超级邀请码 ──
@@ -9986,9 +10015,14 @@ function renderUserHome(data) {
         checkinBtn.disabled = true;
         checkinBtn.textContent = '已签到 ✓';
         checkinBtn.classList.add('done');
-        const hrs = Math.floor(data.checkinRemaining / 3600);
-        const mins = Math.floor((data.checkinRemaining % 3600) / 60);
-        checkinTimer.textContent = `${hrs}小时${mins}分后可再签到`;
+        const totalSecs = data.checkinRemaining || 0;
+        const hrs = Math.floor(totalSecs / 3600);
+        const mins = Math.floor((totalSecs % 3600) / 60);
+        if (totalSecs <= 60) {
+            checkinTimer.textContent = '即将可再签到，请稍候刷新';
+        } else {
+            checkinTimer.textContent = `${hrs}小时${mins}分后可再签到`;
+        }
     }
 
     // 兑换按钮状态
@@ -10051,12 +10085,11 @@ let _mailExpanded = {};
 
 async function readMail(mailId, el) {
     if (!currentUser) return;
-    // 切换展开/收起
+    // 展开内容（只展开，不收起）
     const contentEl = el.querySelector('.mail-content');
     if (contentEl) {
-        const willExpand = contentEl.style.display === 'none';
-        contentEl.style.display = willExpand ? 'block' : 'none';
-        _mailExpanded[mailId] = willExpand;
+        contentEl.style.display = 'block';
+        _mailExpanded[mailId] = true;
     }
     // 始终请求服务器（服务器会判断奖励是否已领，避免重复领取）
     try {
@@ -10070,20 +10103,18 @@ async function readMail(mailId, el) {
         });
         const data = await res.json();
         if (data.success && data.message) {
-            // 有奖励消息才显示toast
             if (data.fishCoins !== undefined) {
                 showToast('✅ ' + data.message);
+                updateFishDisplay(data.fishCoins);
             }
         }
         checkUnreadMails();
-        // 更新UI为已读状态
         const titleSpan = el.querySelector('span');
         if (titleSpan && titleSpan.innerHTML.includes('🔴')) {
             titleSpan.innerHTML = titleSpan.innerHTML.replace('🔴', '📭');
         }
         el.style.background = 'var(--pixel-soft)';
         el.style.borderColor = 'var(--border)';
-        // 更新按钮文字
         const btn = el.querySelector('button');
         if (btn && btn.textContent === '领取') btn.textContent = '查看';
     } catch(e) {}
@@ -10160,12 +10191,12 @@ async function doRename() {
     if (!currentUser) return;
     const newName = document.getElementById('renameInput')?.value?.trim();
     if (!newName) { showToast('请输入新用户名'); return; }
-    if (!/[\u4e00-\u9fa5a-zA-Z0-9_]{1,8}$/.test(newName)) { showToast('用户名须1-8位，仅限中英文数字下划线'); return; }
+    if (!/^[\u4e00-\u9fa5a-zA-Z0-9_]{1,8}$/.test(newName)) { showToast('用户名须1-8位，仅限中英文数字下划线'); return; }
     if (newName === currentUser.username) { showToast('新用户名与当前相同'); return; }
-
-    const fish = parseInt(document.getElementById('homeFishCoins')?.textContent || '0');
-    if (fish < 2) { showToast('小鱼干不足，改名需要2条'); return; }
     if (!confirm(`确定花费 2 条小鱼干将用户名改为「${newName}」吗？`)) return;
+
+    const btn = document.querySelector('#renameBox button[onclick="doRename()"]');
+    if (btn) { btn.disabled = true; btn.textContent = '改名中...'; }
 
     try {
         const res = await fetch(`${USER_API}/api/user/rename`, {
@@ -10181,15 +10212,20 @@ async function doRename() {
             currentUser.username = data.username;
             localStorage.setItem('tx_user', JSON.stringify(currentUser));
             updateUserEntryBtn();
-            document.getElementById('homeUsername').textContent = data.username;
-            document.getElementById('homeFishCoins').textContent = data.fishCoins;
+            const unEl = document.getElementById('homeUsername');
+            if (unEl) unEl.textContent = data.username;
+            const fishEl = document.getElementById('homeFishCoins');
+            if (fishEl) fishEl.textContent = data.fishCoins;
             document.getElementById('renameInput').value = '';
             toggleRenameBox();
-            showToast('✅ 改名成功！');
+            showToast('✅ 改名成功！消耗2条小鱼干');
         } else {
             showToast('❌ ' + (data.error || '改名失败'));
         }
     } catch(e) { showToast('❌ 网络错误'); }
+    finally {
+        if (btn) { btn.disabled = false; btn.textContent = '确认改名'; }
+    }
 }
 
 // ── 签到 ──
@@ -11036,13 +11072,14 @@ async function loadComments(cardId) {
                 const pLv = LEVEL_CONFIG[(parent.level || 1) - 1] || LEVEL_CONFIG[0];
                 // 找到该父评论的所有回复
                 const childReplies = replies.filter(r => r.replyTo === parent.id);
+                const FOLD_LIMIT = 2; // 超过2条折叠
 
                 // 父评论HTML
                 let html = `
                 <div class="comment-thread">
                     <div class="comment-item" data-comment-id="${escapeHtml(parent.id || '')}" data-comment-user="${escapeHtml(parent.userId)}">
                         ${parentAvatar
-                            ? `<img class="comment-avatar" src="${escapeHtml(parentAvatar)}" alt="" onerror="this.parentElement.insertAdjacentHTML('afterbegin',getTextAvatar())">`
+                            ? `<img class="comment-avatar" src="${escapeHtml(parentAvatar)}" alt="" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=\\'comment-avatar-text\\'>人类</div>')">`
                             : `<div class="comment-avatar-text">人类</div>`
                         }
                         <div class="comment-body">
@@ -11056,21 +11093,23 @@ async function loadComments(cardId) {
                             <div class="comment-content">${escapeHtml(parent.comment)}</div>
                             <div class="comment-actions">
                                 <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(parent.id || '')}', '${escapeHtml(parent.username)}')">回复</span>
-                                ${childReplies.length > 0 ? `<span class="comment-action-btn" onclick="toggleReplies(this)">${childReplies.length}条回复 ▼</span>` : ''}
                             </div>
                         </div>
                     </div>`;
 
                 // 子回复列表
                 if (childReplies.length > 0) {
-                    html += `<div class="comment-reply-list">`;
-                    html += childReplies.map(r => {
+                    const visibleReplies = childReplies.slice(0, FOLD_LIMIT);
+                    const hiddenReplies = childReplies.slice(FOLD_LIMIT);
+                    const hasMore = hiddenReplies.length > 0;
+
+                    const renderReply = (r) => {
                         const rAvatar = r.avatar && r.avatar !== './avatar.png' ? r.avatar : null;
                         const rLv = LEVEL_CONFIG[(r.level || 1) - 1] || LEVEL_CONFIG[0];
                         return `
                         <div class="comment-reply-item" data-comment-id="${escapeHtml(r.id || '')}" data-comment-user="${escapeHtml(r.userId)}">
                             ${rAvatar
-                                ? `<img class="comment-avatar-small" src="${escapeHtml(rAvatar)}" alt="">`
+                                ? `<img class="comment-avatar-small" src="${escapeHtml(rAvatar)}" alt="" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=\\'comment-avatar-text-small\\'>人类</div>')">`
                                 : `<div class="comment-avatar-text-small">人类</div>`
                             }
                             <div class="comment-reply-body">
@@ -11078,16 +11117,34 @@ async function loadComments(cardId) {
                                     <span class="comment-username" onclick="openBanModal('${escapeHtml(r.userId)}', '${escapeHtml(r.username)}')" style="cursor:pointer; text-decoration:underline; text-decoration-color:var(--primary);">${escapeHtml(r.username)}</span>
                                     <span class="comment-level" style="color:${rLv.color};background:${rLv.bg};">${rLv.name}</span>
                                     <span class="comment-time">${formatTime(r.createdAt)}</span>
+                                    ${isEditMode ? `<span style="margin-left:auto; font-size:12px; color:#ff4466; cursor:pointer; padding:2px 6px;" onclick="deleteComment('${escapeHtml(currentCommentCardId)}', '${escapeHtml(r.userId)}')">🗑️</span>` : ''}
                                 </div>
                                 <div class="comment-content">
-                                    <span class="comment-reply-to">@${escapeHtml(r.replyToUser || '')}</span> ${escapeHtml(r.comment)}
+                                    ${r.replyToUser ? `<span class="comment-reply-to">@${escapeHtml(r.replyToUser)}</span> ` : ''}${escapeHtml(r.comment)}
                                 </div>
                                 <div class="comment-actions">
                                     <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(r.id || '')}', '${escapeHtml(r.username)}')">回复</span>
                                 </div>
                             </div>
                         </div>`;
-                    }).join('');
+                    };
+
+                    html += `<div class="comment-reply-list" style="display:block;">`;
+                    html += visibleReplies.map(renderReply).join('');
+
+                    if (hasMore) {
+                        // 折叠的回复，默认隐藏
+                        html += `<div class="comment-reply-more" id="more_${escapeHtml(parent.id || '')}" style="display:none;">`;
+                        html += hiddenReplies.map(renderReply).join('');
+                        html += `</div>`;
+                        // 展开按钮
+                        html += `<div style="padding:6px 0 2px 0;">
+                            <span class="comment-action-btn" onclick="toggleMoreReplies('${escapeHtml(parent.id || '')}', ${childReplies.length}, this)" style="color:var(--primary);font-size:12px;">
+                                共${childReplies.length}条回复，查看更多 ▼
+                            </span>
+                        </div>`;
+                    }
+
                     html += `</div>`;
                 }
 
@@ -11176,6 +11233,17 @@ function setScore(score) {
     });
     const scoreVal = document.getElementById('scoreValue');
     if (scoreVal) scoreVal.textContent = `${score}分`;
+}
+
+// ── 展开/收起更多回复 ──
+function toggleMoreReplies(parentId, total, btn) {
+    const moreEl = document.getElementById(`more_${parentId}`);
+    if (!moreEl) return;
+    const isHidden = moreEl.style.display === 'none';
+    moreEl.style.display = isHidden ? 'block' : 'none';
+    btn.textContent = isHidden
+        ? `收起回复 ▲`
+        : `共${total}条回复，查看更多 ▼`;
 }
 
 // ── 回复评论 ──
