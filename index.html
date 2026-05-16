@@ -8732,9 +8732,12 @@ _cardDetailSource = card;
 
 function closeCardDetail() {
     const page = document.getElementById('cardDetailPage');
+    const body = document.getElementById('cardDetailBody');
     page.style.transform = 'translateX(100%)';
     setTimeout(() => {
         page.style.display = 'none';
+        // 🛠️ 关键：清空body内容，彻底消除浏览器滚动位置记忆
+        if (body) body.innerHTML = '';
         // 重置加载层，确保下次打开时重新显示加载动画
         const loadLayer = document.getElementById('detailLoading');
         if (loadLayer) loadLayer.classList.remove('hidden');
@@ -8808,6 +8811,22 @@ function updateSidebarAdminUI() {
         const hasToken = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
         adminItem.style.display = hasToken ? 'flex' : 'none';
     }
+    // 🔒 评论区管理员入口显示控制
+    const adminEntryInComment = document.getElementById('adminEntryInComment');
+    if (adminEntryInComment) {
+        const hasToken = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+        adminEntryInComment.style.display = hasToken ? 'block' : 'none';
+    }
+}
+
+// ── 从评论区打开管理员模式 ──
+function enterAdminFromComment() {
+    if (!adminToken && !sessionStorage.getItem('ADMIN_TOKEN')) {
+        openLogin();
+        return;
+    }
+    closeCardDetail();
+    enterAdmin();
 }
 
 // ── 从侧边栏打开管理员模式 ──
@@ -10498,25 +10517,99 @@ async function openReplyNotif(notifId, cardId, replyCommentId) {
         });
         checkUnreadMails();
     } catch(e) {}
-    // 打开卡片详情页
-    const card = document.querySelector(`.card[data-card-id="${CSS.escape(cardId)}"]`);
+    // 查找卡片（遍历所有 .card，不管是否在当前分类可见）
+    let card = null;
+    const allCards = document.querySelectorAll('.card');
+    for (const c of allCards) {
+        if (c.dataset.cardId === cardId) { card = c; break; }
+    }
+    // 如果卡片不在当前可见分类中，切换分类让它显示
+    if (card && card.style.display === 'none') {
+        const cardCat = card.closest('.cat-section');
+        if (cardCat) {
+            const catId = cardCat.dataset.catId;
+            if (catId) switchCategory(catId);
+            else refreshUI(); // 兜底：刷新全部
+        } else {
+            refreshUI(); // 兜底
+        }
+    }
     if (card) {
         openCardDetail(card);
-        // 等评论加载后滚动到对应回复
+        // 等评论加载后滚动到对应回复（轮询等待，比固定超时更可靠）
         if (replyCommentId) {
-            setTimeout(() => {
-                const replyEl = document.querySelector(`.comment-item[data-comment-id="${CSS.escape(replyCommentId)}"], .comment-reply-item[data-comment-id="${CSS.escape(replyCommentId)}"]`);
-                if (replyEl) {
-                    replyEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    replyEl.style.transition = 'box-shadow 0.3s';
-                    replyEl.style.boxShadow = '0 0 0 3px #4caf50';
-                    setTimeout(() => { replyEl.style.boxShadow = ''; }, 2000);
-                }
-            }, 800);
+            scrollToReplyComment(replyCommentId);
+        }
+    } else if (_allCards && _allCards[cardId]) {
+        // 卡片在数据中但DOM中不存在，临时渲染
+        const cardData = _allCards[cardId];
+        const tempCard = renderSingleCard(cardData);
+        if (tempCard) {
+            openCardDetail(tempCard);
+            if (replyCommentId) scrollToReplyComment(replyCommentId);
+        } else {
+            showToast('该资源暂时无法打开');
         }
     } else {
         showToast('该资源不在当前列表中');
     }
+}
+
+// ── 临时渲染单个卡片（用于通知定位兜底）──
+function renderSingleCard(cardData) {
+    if (!cardData) return null;
+    const catSection = document.querySelector('.cat-section');
+    const container = catSection || document.getElementById('box');
+    if (!container) return null;
+
+    const div = document.createElement('div');
+    div.className = 'card active-render';
+    div.dataset.cardId = cardData.id || '';
+    div.style.cssText = 'display:none;'; // 不显示，仅用于数据载体
+
+    // 构建最小化的卡片DOM结构（仅包含openCardDetail需要的数据）
+    div.innerHTML = `
+        <div class="slider-box">
+            ${(cardData.imgs || []).map(src => `<img src="${escapeHtml(src)}" loading="lazy">`).join('')}
+        </div>
+        <div class="info-box">
+            <div class="g-name">${escapeHtml(cardData.name || '未命名')}</div>
+            <div class="g-tags">标签：${escapeHtml((cardData.tags || []).join('，'))}</div>
+            <div class="desc-text">${(cardData.desc || '').replace(/\n/g, '<br>')}</div>
+        </div>
+    `;
+    container.appendChild(div);
+    return div;
+}
+
+// ── 轮询滚动到指定回复评论（最多等2秒）──
+function scrollToReplyComment(replyCommentId) {
+    let attempts = 0;
+    const maxAttempts = 20; // 20 * 100ms = 2秒
+    const checkAndScroll = () => {
+        const replyEl = document.querySelector(
+            `.comment-item[data-comment-id="${CSS.escape(replyCommentId)}"], .comment-reply-item[data-comment-id="${CSS.escape(replyCommentId)}"]`
+        );
+        if (replyEl) {
+            // 找到评论，先展开回复列表（如果折叠）
+            const replyList = replyEl.closest('.comment-reply-list');
+            if (replyList && !replyList.classList.contains('expanded')) {
+                replyList.classList.add('expanded');
+                const toggleBtn = replyList.previousElementSibling?.querySelector('.comment-action-btn[onclick*="toggleReplies"]');
+                if (toggleBtn) toggleBtn.textContent = toggleBtn.textContent.replace('▼', '▲');
+            }
+            replyEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            replyEl.style.transition = 'box-shadow 0.3s';
+            replyEl.style.boxShadow = '0 0 0 3px #4caf50';
+            setTimeout(() => { replyEl.style.boxShadow = ''; }, 3000);
+            return;
+        }
+        attempts++;
+        if (attempts < maxAttempts) {
+            setTimeout(checkAndScroll, 100);
+        }
+    };
+    setTimeout(checkAndScroll, 300); // 给评论区域300ms初始加载时间
 }
 
 // 邮件展开状态追踪（id -> boolean）
@@ -11485,8 +11578,21 @@ function injectCommentSection(cardId) {
         <div class="comment-list" id="commentList">
             <div class="comment-empty">加载中...</div>
         </div>
+        <!-- 🔒 管理员入口（移至评论区下方） -->
+        <div id="adminEntryInComment" style="display:none; margin-top:16px; padding-top:12px; border-top:1px dashed var(--border); text-align:center;">
+            <button onclick="enterAdminFromComment()" style="background:transparent; border:1.5px solid rgba(255,102,153,0.4); color:var(--primary); padding:8px 20px; border-radius:20px; font-size:13px; cursor:pointer; font-family:inherit;">
+                🔒 管理员入口
+            </button>
+        </div>
     `;
     body.appendChild(section);
+
+    // 根据登录状态显示/隐藏管理员入口
+    const adminEntry = document.getElementById('adminEntryInComment');
+    if (adminEntry) {
+        const hasToken = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+        adminEntry.style.display = hasToken ? 'block' : 'none';
+    }
 
     loadComments(cardId);
 }
