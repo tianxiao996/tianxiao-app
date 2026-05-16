@@ -2099,53 +2099,111 @@
 /* ========== 🏠 用户主页 ========== */
 .user-home-overlay {
     position: fixed; inset: 0;
-    background: rgba(0,0,0,0.55);
-    display: none; align-items: center;
-    justify-content: center; z-index: 3000;
-    backdrop-filter: blur(4px);
+    display: none; z-index: 3000;
+    background: var(--pixel-white);
+    flex-direction: column;
+    overflow: hidden;
 }
 .user-home-overlay.show { display: flex; }
-.user-home-box {
+[data-theme="dark"] .user-home-overlay { background: #160a14; }
+
+/* 全屏主页：顶栏 */
+.home-topbar {
+    display: flex; align-items: center;
+    padding: 14px 16px 10px;
+    border-bottom: 1.5px solid var(--primary-light);
     background: var(--pixel-white);
-    width: 92%; max-width: 400px;
-    border-radius: 16px; padding: 20px;
-    box-shadow: 5px 5px 0 rgba(255,130,180,0.3);
-    border: 2px solid var(--primary-light);
-    max-height: 85vh; overflow-y: auto;
-    position: relative;
+    flex-shrink: 0;
+    gap: 10px;
 }
-[data-theme="dark"] .user-home-box {
-    background: #160a14; color: #f0d0e0;
-    border-color: rgba(255,102,153,0.4);
+[data-theme="dark"] .home-topbar { background: #160a14; border-color: rgba(255,102,153,0.25); }
+.home-topbar-back {
+    background: none; border: none; color: var(--primary);
+    font-size: 20px; cursor: pointer; padding: 4px 8px 4px 0;
+    flex-shrink: 0; line-height: 1;
 }
+.home-topbar-title {
+    font-size: 16px; font-weight: bold; color: var(--primary); flex: 1;
+}
+
+/* 全屏主页：可滚动内容区 */
+.home-scroll {
+    flex: 1; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px;
+}
+
+/* 全屏主页：用户信息头部 */
 .user-home-header {
     text-align: center; margin-bottom: 16px;
     padding-bottom: 14px;
     border-bottom: 1.5px solid var(--pixel-soft);
 }
-.user-home-avatar {
-    font-size: 40px; line-height: 1; margin-bottom: 6px;
-}
-.user-home-name {
-    font-size: 17px; font-weight: bold;
-    color: var(--primary); margin-bottom: 3px;
-}
-.user-home-id {
-    font-size: 11px; color: #aaa;
-    word-break: break-all;
-}
-/* 小鱼干显示 */
+.user-home-avatar { font-size: 52px; line-height: 1; margin-bottom: 8px; }
+.user-home-name { font-size: 19px; font-weight: bold; color: var(--primary); margin-bottom: 3px; }
+.user-home-id { font-size: 11px; color: #aaa; word-break: break-all; }
 .user-home-fish {
     display: inline-flex; align-items: center;
     gap: 4px; background: linear-gradient(135deg, #ffecd2, #fcb69f);
     border: 2px solid #ff9800; border-radius: 20px;
-    padding: 6px 14px; font-size: 14px;
-    font-weight: bold; color: #e65100; margin-top: 8px;
+    padding: 7px 18px; font-size: 16px;
+    font-weight: bold; color: #e65100; margin-top: 10px;
 }
 [data-theme="dark"] .user-home-fish {
     background: linear-gradient(135deg, #3a2510, #5a3510);
     border-color: #ff9800; color: #ffb74d;
 }
+
+/* 快捷功能按钮网格 */
+.home-shortcut-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.home-shortcut-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; padding: 14px 8px;
+    background: var(--pixel-soft);
+    border: 1.5px solid var(--primary-light);
+    border-radius: 14px; cursor: pointer;
+    font-size: 12px; font-weight: bold; color: var(--primary);
+    transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+}
+[data-theme="dark"] .home-shortcut-btn {
+    background: rgba(255,102,153,0.08);
+    border-color: rgba(255,102,153,0.25);
+}
+.home-shortcut-btn:active { transform: scale(0.95); opacity: 0.8; }
+.home-shortcut-btn .btn-icon { font-size: 26px; line-height: 1; }
+
+/* 子页面（头像商店/背包/收藏）— 全屏推入 */
+.home-subpage {
+    position: fixed; inset: 0; z-index: 3100;
+    background: var(--pixel-white);
+    display: flex; flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+}
+[data-theme="dark"] .home-subpage { background: #160a14; }
+.home-subpage.open { transform: translateX(0); }
+.home-subpage .home-scroll { flex: 1; overflow-y: auto; padding: 16px; }
+
+/* 底部操作栏 */
+.home-footer-bar {
+    display: flex; gap: 10px; padding: 12px 16px;
+    border-top: 1.5px solid var(--primary-light);
+    background: var(--pixel-white); flex-shrink: 0;
+}
+[data-theme="dark"] .home-footer-bar {
+    background: #160a14; border-color: rgba(255,102,153,0.25);
+}
+.home-footer-bar button {
+    flex: 1; padding: 11px; border: none; border-radius: 12px;
+    font-size: 14px; font-weight: bold; cursor: pointer;
+}
+
+.user-home-box { display: none; } /* 旧弹窗盒子废弃 */
 /* 签到区 */
 .user-home-section {
     margin-bottom: 16px;
@@ -8693,7 +8751,8 @@ _cardDetailSource = card;
         body.appendChild(btnWrap);
     }
 
-    // ── 显示详情页（右侧滑入）──
+    // ── 显示详情页（右侧滑入）+ 压入 history 防返回键退出 ──
+    history.pushState({ page: 'cardDetail' }, '');
     const page = document.getElementById('cardDetailPage');
     page.style.display = 'flex';
     // 确保每次打开都从顶部开始
@@ -9948,105 +10007,180 @@ function closeNavPanel() {
 </div>
 <!-- 🏠 用户主页弹窗 -->
 <div id="userHomeModal" class="user-home-overlay">
-    <div class="user-home-box">
-        <!-- 头部信息 -->
+    <!-- ── 顶栏 ── -->
+    <div class="home-topbar">
+        <button class="home-topbar-back" onclick="closeUserHome()">←</button>
+        <div class="home-topbar-title">🌸 我的主页</div>
+        <button onclick="doLogout()" style="background:none;border:none;color:#aaa;font-size:12px;cursor:pointer;padding:4px 0 4px 8px;flex-shrink:0;">退出</button>
+    </div>
+
+    <!-- ── 可滚动主内容 ── -->
+    <div class="home-scroll">
+
+        <!-- 用户头部 -->
         <div class="user-home-header">
-            <div class="user-home-avatar">🌸</div>
+            <div class="user-home-avatar" id="homeAvatarDisplay">🌸</div>
             <div class="user-home-name" id="homeUsername">加载中...</div>
-            <!-- 经验条（B站风格） -->
-            <div id="homeExpBar" style="margin:8px 0;">
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-                    <span id="homeLevelBadge" style="font-size:11px;font-weight:bold;padding:2px 6px;border-radius:4px;background:var(--primary);color:#fff;">LV1</span>
+            <div class="user-home-id" id="homeUserId"></div>
+            <!-- 经验条 -->
+            <div id="homeExpBar" style="margin:10px 0 4px;">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;justify-content:center;">
+                    <span id="homeLevelBadge" style="font-size:11px;font-weight:bold;padding:2px 8px;border-radius:4px;background:var(--primary);color:#fff;">LV1</span>
                     <span id="homeExpText" style="font-size:11px;color:#888;">0/200</span>
                 </div>
                 <div style="width:100%;height:8px;background:var(--pixel-soft);border-radius:4px;overflow:hidden;">
-                    <div id="homeExpProgress" style="height:100%;width:0%;background:linear-gradient(90deg, var(--primary), var(--primary-light));border-radius:4px;transition:width 0.5s ease;"></div>
+                    <div id="homeExpProgress" style="height:100%;width:0%;background:linear-gradient(90deg,var(--primary),var(--primary-light));border-radius:4px;transition:width 0.5s ease;"></div>
                 </div>
-                <div id="homeExpNext" style="font-size:10px;color:#aaa;margin-top:3px;">距离升级还需要 200 经验</div>
+                <div id="homeExpNext" style="font-size:10px;color:#aaa;margin-top:3px;text-align:center;">距离升级还需要 200 经验</div>
             </div>
-            <!-- 封号状态（默认隐藏） -->
-            <div id="homeBanStatus" style="display:none;margin:8px 0;background:#ffebee;border:2px solid #ef5350;border-radius:12px;padding:10px 14px;text-align:center;">
+            <!-- 封号状态 -->
+            <div id="homeBanStatus" style="display:none;margin:10px 0;background:#ffebee;border:2px solid #ef5350;border-radius:12px;padding:10px 14px;text-align:center;">
                 <div style="font-size:13px;color:#c62828;font-weight:bold;">🚫 你已被封号</div>
                 <div id="homeBanReason" style="font-size:11px;color:#e53935;margin-top:3px;"></div>
                 <div id="homeBanCountdown" style="font-size:14px;color:#d32f2f;font-weight:bold;margin-top:5px;background:#fff;border-radius:8px;padding:6px 0;"></div>
                 <div style="font-size:11px;color:#999;margin-top:4px;">请遵守法律法规</div>
             </div>
-            <div style="margin-top:6px;" id="homeRenameRow">
-                <button onclick="toggleRenameBox()" style="background:none;border:1px solid var(--primary-light);color:var(--primary);border-radius:10px;padding:3px 10px;font-size:11px;cursor:pointer;">✏️ 改名（2🐟）</button>
+            <!-- 改名 -->
+            <div style="margin-top:8px;" id="homeRenameRow">
+                <button onclick="toggleRenameBox()" style="background:none;border:1.5px solid var(--primary-light);color:var(--primary);border-radius:12px;padding:5px 14px;font-size:12px;cursor:pointer;">✏️ 改名（2🐟）</button>
             </div>
-            <!-- 改名输入框（默认隐藏） -->
-            <div id="renameBox" style="display:none;margin-top:8px;background:var(--pixel-soft);border-radius:10px;padding:10px;border:1.5px solid var(--primary-light);">
-                <div style="font-size:11px;color:#888;margin-bottom:6px;">新用户名（1-8字符，2条小鱼干/次）</div>
-                <input type="text" id="renameInput" placeholder="输入新用户名" maxlength="8" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:8px;outline:none;">
-                <div style="display:flex;gap:6px;">
-                    <button onclick="doRename()" style="flex:1;padding:8px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:bold;cursor:pointer;">确认改名</button>
-                    <button onclick="toggleRenameBox()" style="padding:8px 12px;background:#aaa;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;">取消</button>
+            <div id="renameBox" style="display:none;margin-top:10px;background:var(--pixel-soft);border-radius:12px;padding:12px;border:1.5px solid var(--primary-light);">
+                <div style="font-size:11px;color:#888;margin-bottom:8px;">新用户名（1-8字符，2条小鱼干/次）</div>
+                <input type="text" id="renameInput" placeholder="输入新用户名" maxlength="8" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:8px;outline:none;">
+                <div style="display:flex;gap:8px;">
+                    <button onclick="doRename()" style="flex:1;padding:9px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:bold;cursor:pointer;">确认改名</button>
+                    <button onclick="toggleRenameBox()" style="padding:9px 14px;background:#aaa;color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;">取消</button>
                 </div>
             </div>
+            <!-- 小鱼干 -->
             <div class="user-home-fish" id="homeFishRow">🐟 小鱼干 × <span id="homeFishCoins">0</span></div>
         </div>
 
-        <!-- 签到区 -->
+        <!-- 快捷功能按钮 -->
+        <div class="home-shortcut-grid">
+            <div class="home-shortcut-btn" onclick="openHomeSubpage('checkin')">
+                <span class="btn-icon">📅</span>每日签到
+            </div>
+            <div class="home-shortcut-btn" onclick="openHomeSubpage('redeem')">
+                <span class="btn-icon">🎫</span>邀请码兑换
+            </div>
+            <div class="home-shortcut-btn" onclick="openHomeSubpage('favorites')">
+                <span class="btn-icon">❤️</span>我的收藏
+            </div>
+            <div class="home-shortcut-btn" onclick="openHomeSubpage('shop')">
+                <span class="btn-icon">🎨</span>头像商店
+            </div>
+            <div class="home-shortcut-btn" onclick="openHomeSubpage('backpack')">
+                <span class="btn-icon">🎒</span>我的背包
+            </div>
+            <div class="home-shortcut-btn" onclick="openHomeSubpage('mail')">
+                <span class="btn-icon">📧</span>消息中心
+            </div>
+        </div>
+
+    </div><!-- /.home-scroll -->
+</div>
+
+<!-- ══ 子页面：签到 ══ -->
+<div class="home-subpage" id="subpage-checkin">
+    <div class="home-topbar">
+        <button class="home-topbar-back" onclick="closeHomeSubpage('checkin')">←</button>
+        <div class="home-topbar-title">📅 每日签到</div>
+    </div>
+    <div class="home-scroll">
         <div class="user-home-section">
-            <div class="user-section-title">📅 每日签到</div>
             <div class="user-checkin-row">
                 <button class="user-checkin-btn" id="checkinBtn" onclick="doCheckin()">签到领取</button>
                 <span class="user-checkin-timer" id="checkinTimer"></span>
             </div>
-            <div id="checkinTurnstileBox" style="display:none;">
+            <div id="checkinTurnstileBox" style="display:none;margin-top:10px;">
                 <div style="font-size:11px;color:#888;margin-bottom:6px;">完成人机验证后自动签到</div>
                 <div id="checkinTurnstileWidget"></div>
             </div>
         </div>
+        <div style="text-align:center;color:#aaa;font-size:13px;margin-top:20px;">每天签到可获得 1 条小鱼干 🐟<br>集满 15 条兑换普通邀请码，集满 30 条兑换超级邀请码</div>
+    </div>
+</div>
 
-        <!-- 兑换区 -->
+<!-- ══ 子页面：邀请码兑换 ══ -->
+<div class="home-subpage" id="subpage-redeem">
+    <div class="home-topbar">
+        <button class="home-topbar-back" onclick="closeHomeSubpage('redeem')">←</button>
+        <div class="home-topbar-title">🎫 邀请码兑换</div>
+    </div>
+    <div class="home-scroll">
         <div class="user-home-section">
-            <div class="user-section-title">🎫 邀请码兑换</div>
             <div class="user-redeem-row">
                 <button class="user-redeem-btn" id="redeemNormalBtn" onclick="redeemCode('normal')">
-                    普通邀请码
-                    <div class="redeem-cost">15 条小鱼干</div>
+                    普通邀请码<div class="redeem-cost">15 条小鱼干</div>
                 </button>
                 <button class="user-redeem-btn" id="redeemSuperBtn" onclick="redeemCode('super')">
-                    ⭐ 超级邀请码
-                    <div class="redeem-cost">30 条小鱼干</div>
+                    ⭐ 超级邀请码<div class="redeem-cost">30 条小鱼干</div>
                 </button>
             </div>
-            <div id="redeemResult" style="display:none;"></div>
+            <div id="redeemResult" style="display:none;margin-top:12px;"></div>
         </div>
+    </div>
+</div>
 
-        <!-- 🎨 头像商店 -->
-        <div class="user-home-section">
-            <div class="user-section-title">🎨 头像商店</div>
-            <div style="font-size:11px;color:#888;margin-bottom:8px;">点击头像预览，购买后即可使用</div>
-            <div class="user-avatar-grid" id="homeAvatarGrid">
-                <div class="user-fav-empty">加载中...</div>
-            </div>
-            <div style="margin-top:10px;text-align:center;">
-                <button onclick="showBackpack()" style="background:var(--pixel-soft);color:var(--primary);border:1.5px solid var(--primary-light);border-radius:10px;padding:6px 16px;font-size:12px;font-weight:bold;cursor:pointer;">🎒 我的背包</button>
-            </div>
+<!-- ══ 子页面：我的收藏 ══ -->
+<div class="home-subpage" id="subpage-favorites">
+    <div class="home-topbar">
+        <button class="home-topbar-back" onclick="closeHomeSubpage('favorites')">←</button>
+        <div class="home-topbar-title">❤️ 我的收藏</div>
+    </div>
+    <div class="home-scroll">
+        <div class="user-fav-grid" id="homeFavGrid">
+            <div class="user-fav-empty">加载中...</div>
         </div>
+    </div>
+</div>
 
-        <!-- 🎒 背包面板 -->
-        <div class="user-home-section" id="backpackSection" style="display:none;">
-            <div class="user-section-title">🎒 我的背包</div>
-            <div style="font-size:11px;color:#888;margin-bottom:8px;">点击头像装备，已装备的会高亮显示</div>
-            <div class="user-avatar-grid" id="backpackGrid">
-                <div class="user-fav-empty">加载中...</div>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:10px;">
-                <button onclick="unequipAvatar()" style="flex:1;padding:8px;background:#aaa;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:bold;cursor:pointer;">卸下头像</button>
-                <button onclick="showBackpack()" style="flex:1;padding:8px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:bold;cursor:pointer;">关闭背包</button>
-            </div>
+<!-- ══ 子页面：头像商店 ══ -->
+<div class="home-subpage" id="subpage-shop">
+    <div class="home-topbar">
+        <button class="home-topbar-back" onclick="closeHomeSubpage('shop')">←</button>
+        <div class="home-topbar-title">🎨 头像商店</div>
+    </div>
+    <div class="home-scroll">
+        <div style="font-size:12px;color:#888;margin-bottom:12px;text-align:center;">点击头像预览，购买后即可使用</div>
+        <div class="user-avatar-grid" id="homeAvatarGrid">
+            <div class="user-fav-empty">加载中...</div>
         </div>
+    </div>
+</div>
 
-        <!-- 底部操作 -->
-        <div class="user-home-footer">
-            <button style="background:#aaa;color:#fff;" onclick="closeUserHome()">关闭</button>
-            <button style="background:var(--primary);color:#fff;" onclick="doLogout()">退出登录</button>
+<!-- ══ 子页面：我的背包 ══ -->
+<div class="home-subpage" id="subpage-backpack">
+    <div class="home-topbar">
+        <button class="home-topbar-back" onclick="closeHomeSubpage('backpack')">←</button>
+        <div class="home-topbar-title">🎒 我的背包</div>
+    </div>
+    <div class="home-scroll">
+        <div style="font-size:12px;color:#888;margin-bottom:12px;text-align:center;">点击头像装备，已装备的会高亮显示</div>
+        <div class="user-avatar-grid" id="backpackGrid">
+            <div class="user-fav-empty">加载中...</div>
         </div>
+        <div style="display:flex;gap:10px;margin-top:14px;">
+            <button onclick="unequipAvatar()" style="flex:1;padding:11px;background:#aaa;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:bold;cursor:pointer;">卸下头像</button>
+        </div>
+    </div>
+</div>
 
-        <span class="user-modal-close" onclick="closeUserHome()">关闭</span>
+<!-- ══ 子页面：消息中心（原 mailPanel 内容移入）══ -->
+<div class="home-subpage" id="subpage-mail">
+    <div class="home-topbar">
+        <button class="home-topbar-back" onclick="closeHomeSubpage('mail')">←</button>
+        <div class="home-topbar-title">📧 消息中心</div>
+    </div>
+    <div class="home-scroll" id="mailSubScroll">
+        <!-- Tab切换 -->
+        <div style="display:flex;gap:0;margin-bottom:14px;border-radius:10px;overflow:hidden;border:1.5px solid var(--primary-light);">
+            <button id="mailTab1" onclick="switchMailTab('inbox')" style="flex:1;padding:9px;background:var(--primary);color:#fff;border:none;font-size:13px;font-weight:bold;cursor:pointer;">📥 收件箱</button>
+            <button id="mailTab2" onclick="switchMailTab('system')" style="flex:1;padding:9px;background:var(--pixel-soft);color:var(--primary);border:none;font-size:13px;font-weight:bold;cursor:pointer;">📢 系统通知</button>
+        </div>
+        <div id="mailInboxList" style="display:block;"></div>
+        <div id="mailSystemList" style="display:none;"></div>
     </div>
 </div>
 
@@ -10180,11 +10314,40 @@ let _checkinCardId = null;     // 当前要签到的卡片（跳转用）
 let _isUserBanned = false;     // 用户是否被封号（用于评论等区域显示）
 let _banInfo = null;           // 封号信息 {bannedUntil, reason, daysLeft}
 
+// ══════════════════════════════════════════
+// 用户主页（全屏）
+// ══════════════════════════════════════════
+
+// ── Bug 修复：拦截 App 系统返回键，防止直接退出软件 ──
+// 每次打开详情页/主页时 pushState，返回键先消耗这个历史层
+window.addEventListener('popstate', function(e) {
+    // 优先关闭最顶层子页面
+    const openSub = document.querySelector('.home-subpage.open');
+    if (openSub) {
+        const id = openSub.id.replace('subpage-', '');
+        closeHomeSubpage(id);
+        return;
+    }
+    // 其次关闭主页
+    const homeModal = document.getElementById('userHomeModal');
+    if (homeModal && homeModal.classList.contains('show')) {
+        closeUserHome();
+        return;
+    }
+    // 其次关闭详情页
+    const detailPage = document.getElementById('cardDetailPage');
+    if (detailPage && detailPage.style.display !== 'none') {
+        closeCardDetail();
+        return;
+    }
+});
+
 function openUserHome() {
     if (!currentUser) { openUserModal(); return; }
-    document.getElementById('userHomeModal').classList.add('show');
+    const modal = document.getElementById('userHomeModal');
+    modal.classList.add('show');
     document.getElementById('redeemResult').style.display = 'none';
-    // 先显示缓存/加载中，再拉最新数据
+    history.pushState({ page: 'userHome' }, '');  // 让返回键能拦截
     if (_userHomeData) {
         renderUserHome(_userHomeData);
     } else {
@@ -10195,14 +10358,80 @@ function openUserHome() {
 }
 
 function closeUserHome() {
+    // 先关掉所有子页面
+    document.querySelectorAll('.home-subpage.open').forEach(el => el.classList.remove('open'));
     document.getElementById('userHomeModal').classList.remove('show');
-    // 清理签到Turnstile
     if (_checkinWidgetId !== null) {
         try { turnstile.remove(_checkinWidgetId); } catch(e) {}
         _checkinWidgetId = null;
     }
     document.getElementById('checkinTurnstileBox').style.display = 'none';
 }
+
+// 打开子页面（全屏推入）
+function openHomeSubpage(name) {
+    const el = document.getElementById(`subpage-${name}`);
+    if (!el) return;
+    el.classList.add('open');
+    history.pushState({ page: `subpage-${name}` }, '');
+    // 按需加载数据
+    if (name === 'shop')     loadAvatarShop();
+    if (name === 'backpack') loadBackpack();
+    if (name === 'favorites') loadHomeFavorites();
+    if (name === 'mail')     { loadMailInbox(); loadMailSystem(); }
+    if (name === 'checkin')  { /* checkin状态已在loadUserHomeData中加载 */ }
+}
+
+// 关闭子页面
+function closeHomeSubpage(name) {
+    const el = document.getElementById(`subpage-${name}`);
+    if (el) el.classList.remove('open');
+}
+
+// 收藏列表加载（子页面专用）
+async function loadHomeFavorites() {
+    const grid = document.getElementById('homeFavGrid');
+    if (!grid) return;
+    if (!currentUser) { grid.innerHTML = '<div class="user-fav-empty">请先登录</div>'; return; }
+    grid.innerHTML = '<div class="user-fav-empty">加载中...</div>';
+    try {
+        const res = await fetch(`${USER_API}/api/user/favorites`, {
+            headers: { 'Authorization': `Bearer ${currentUser.sessionToken}` }
+        });
+        const data = await res.json();
+        if (!data.success || !data.favorites || data.favorites.length === 0) {
+            grid.innerHTML = '<div class="user-fav-empty">暂无收藏</div>'; return;
+        }
+        grid.innerHTML = data.favorites.map(cardId => `
+            <div class="user-fav-item" onclick="openCardDetailById('${escapeHtml(cardId)}'); closeHomeSubpage('favorites'); closeUserHome();">
+                <div class="user-fav-id">${escapeHtml(cardId)}</div>
+                <div class="user-fav-label">点击查看 ▶</div>
+            </div>
+        `).join('');
+    } catch(e) {
+        grid.innerHTML = '<div class="user-fav-empty">加载失败</div>';
+    }
+}
+
+// 背包加载（子页面专用）
+function loadBackpack() {
+    // 复用原有 showBackpack 的加载逻辑
+    const section = document.getElementById('backpackSection');
+    if (section) {
+        // 触发原加载
+        renderBackpackGrid && renderBackpackGrid();
+    }
+    // 直接调 loadUserBackpack（如果有）
+    loadUserBackpack && loadUserBackpack();
+}
+
+// showBackpack 兼容旧调用（现在改为打开子页面）
+function showBackpack() {
+    openHomeSubpage('backpack');
+}
+
+// ── 渲染主页时更新头像显示 ──
+const _origRenderUserHome = typeof renderUserHome === 'function' ? renderUserHome : null;
 
 // ── 显示/隐藏背包 ──
 function showBackpack() {
@@ -10404,12 +10633,14 @@ let _mailTab = 'mail'; // 当前Tab: 'mail' | 'reply'
 
 function openMailPanel() {
     if (!currentUser) { showToast('请先登录'); openUserModal(); return; }
-    document.getElementById('mailPanel').classList.add('show');
-    switchMailTab('mail');
+    // 如果主页已打开，直接开子页面；否则先开主页再开子页面
+    const homeOpen = document.getElementById('userHomeModal')?.classList.contains('show');
+    if (!homeOpen) openUserHome();
+    setTimeout(() => openHomeSubpage('mail'), homeOpen ? 0 : 50);
 }
 
 function closeMailPanel() {
-    document.getElementById('mailPanel').classList.remove('show');
+    closeHomeSubpage('mail');
 }
 
 // ── Tab切换 ──
