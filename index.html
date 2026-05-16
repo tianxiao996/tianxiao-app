@@ -2139,7 +2139,16 @@
     padding-bottom: 14px;
     border-bottom: 1.5px solid var(--pixel-soft);
 }
-.user-home-avatar { font-size: 52px; line-height: 1; margin-bottom: 8px; }
+.user-home-avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    margin: 0 auto 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 52px; line-height: 1;
+    overflow: hidden; border: 3px solid var(--primary-light);
+    background: var(--pixel-soft);
+}
+.user-home-avatar img {
+    width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+}
 .user-home-name { font-size: 19px; font-weight: bold; color: var(--primary); margin-bottom: 3px; }
 .user-home-id { font-size: 11px; color: #aaa; word-break: break-all; }
 .user-home-fish {
@@ -10078,7 +10087,7 @@ function closeNavPanel() {
             <div class="home-shortcut-btn" onclick="openHomeSubpage('redeem')">
                 <span class="btn-icon">🎫</span>邀请码兑换
             </div>
-            <div class="home-shortcut-btn" onclick="openHomeSubpage('favorites')">
+            <div class="home-shortcut-btn" onclick="closeUserHome(); sidebarGoFavorite();">
                 <span class="btn-icon">❤️</span>我的收藏
             </div>
             <div class="home-shortcut-btn" onclick="openHomeSubpage('shop')">
@@ -10133,19 +10142,6 @@ function closeNavPanel() {
                 </button>
             </div>
             <div id="redeemResult" style="display:none;margin-top:12px;"></div>
-        </div>
-    </div>
-</div>
-
-<!-- ══ 子页面：我的收藏 ══ -->
-<div class="home-subpage" id="subpage-favorites">
-    <div class="home-topbar">
-        <button class="home-topbar-back" onclick="closeHomeSubpage('favorites')">←</button>
-        <div class="home-topbar-title">❤️ 我的收藏</div>
-    </div>
-    <div class="home-scroll">
-        <div class="user-fav-grid" id="homeFavGrid">
-            <div class="user-fav-empty">加载中...</div>
         </div>
     </div>
 </div>
@@ -10372,53 +10368,14 @@ function openHomeSubpage(name) {
     history.pushState({ page: `subpage-${name}` }, '');
     // 按需加载数据
     if (name === 'shop')     loadAvatarShop();
-    if (name === 'backpack') loadBackpack();
-    if (name === 'favorites') loadHomeFavorites();
-    if (name === 'mail')     { loadMailInbox(); loadMailSystem(); }
-    if (name === 'checkin')  { /* checkin状态已在loadUserHomeData中加载 */ }
+    if (name === 'backpack') loadUserBackpack && loadUserBackpack();
+    if (name === 'mail')     { loadMails(); loadReplies(); }
 }
 
 // 关闭子页面
 function closeHomeSubpage(name) {
     const el = document.getElementById(`subpage-${name}`);
     if (el) el.classList.remove('open');
-}
-
-// 收藏列表加载（子页面专用）
-async function loadHomeFavorites() {
-    const grid = document.getElementById('homeFavGrid');
-    if (!grid) return;
-    if (!currentUser) { grid.innerHTML = '<div class="user-fav-empty">请先登录</div>'; return; }
-    grid.innerHTML = '<div class="user-fav-empty">加载中...</div>';
-    try {
-        const res = await fetch(`${USER_API}/api/user/favorites`, {
-            headers: { 'Authorization': `Bearer ${currentUser.sessionToken}` }
-        });
-        const data = await res.json();
-        if (!data.success || !data.favorites || data.favorites.length === 0) {
-            grid.innerHTML = '<div class="user-fav-empty">暂无收藏</div>'; return;
-        }
-        grid.innerHTML = data.favorites.map(cardId => `
-            <div class="user-fav-item" onclick="openCardDetailById('${escapeHtml(cardId)}'); closeHomeSubpage('favorites'); closeUserHome();">
-                <div class="user-fav-id">${escapeHtml(cardId)}</div>
-                <div class="user-fav-label">点击查看 ▶</div>
-            </div>
-        `).join('');
-    } catch(e) {
-        grid.innerHTML = '<div class="user-fav-empty">加载失败</div>';
-    }
-}
-
-// 背包加载（子页面专用）
-function loadBackpack() {
-    // 复用原有 showBackpack 的加载逻辑
-    const section = document.getElementById('backpackSection');
-    if (section) {
-        // 触发原加载
-        renderBackpackGrid && renderBackpackGrid();
-    }
-    // 直接调 loadUserBackpack（如果有）
-    loadUserBackpack && loadUserBackpack();
 }
 
 // showBackpack 兼容旧调用（现在改为打开子页面）
@@ -10536,6 +10493,20 @@ async function loadUserHomeData() {
 // ── 渲染用户主页 ──
 function renderUserHome(data) {
     document.getElementById('homeUsername').textContent = data.username || currentUser?.username || '未知';
+
+    // ── 头像显示（穿戴头像 > 默认"人类"文字）──
+    const avatarEl = document.getElementById('homeAvatarDisplay');
+    if (avatarEl) {
+        const avatarUrl = data.avatar && data.avatar !== '' ? data.avatar : null;
+        if (avatarUrl) {
+            avatarEl.innerHTML = `<img src="${escapeHtml(avatarUrl)}" alt="头像" onerror="this.parentElement.innerHTML='人类'">`;
+        } else {
+            avatarEl.innerHTML = '人类';
+            avatarEl.style.fontSize = '18px';
+            avatarEl.style.fontWeight = 'bold';
+            avatarEl.style.color = 'var(--primary)';
+        }
+    }
 
     // 🚫 封号状态显示
     const banBox = document.getElementById('homeBanStatus');
