@@ -2815,7 +2815,7 @@ function __safeFixDeleteImage(card){
                 📧
                 <span id="mailBadge" style="display:none;position:absolute;top:-2px;right:-2px;background:#ff4444;color:#fff;font-size:9px;font-weight:bold;border-radius:50%;width:14px;height:14px;line-height:14px;text-align:center;">0</span>
             </div>
-            <div id="entryBtn" class="login-icon" onclick="openLogin()" style="visibility: visible; display:none;">🔒</div>
+            <div id="entryBtn" class="login-icon" onclick="openLogin()" style="visibility: visible;">🔒</div>
         </div>
     </div>
     <div class="header-top" style="display:none;">
@@ -8503,7 +8503,7 @@ function copyText(text) {
             <span class="sidebar-item-icon">💖</span>
             <span>我的收藏</span>
         </div>
-        <div class="sidebar-item" id="sidebarAdmin" onclick="openAdminFromSidebar()">
+        <div class="sidebar-item" id="sidebarAdmin" onclick="openAdminFromSidebar()" style="display:none;">
             <span class="sidebar-item-icon">🔒</span>
             <span>管理员模式</span>
         </div>
@@ -8558,7 +8558,6 @@ _cardDetailSource = card;
 
     // ── 构建内容区 ──
     const body = document.getElementById('cardDetailBody');
-    body.scrollTop = 0;   // 重置滚动位置，防止残留上次的位置
     body.innerHTML = '';
 
     // 图片轮播
@@ -11551,7 +11550,7 @@ async function loadComments(cardId) {
                         </div>
                         <div class="comment-content">${escapeHtml(parent.comment)}</div>
                         <div class="comment-actions">
-                            <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(parent.id||'')}','${escapeHtml(parent.username)}','${escapeHtml(parent.id||'')}')">回复</span>
+                            <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(parent.id||'')}','${escapeHtml(parent.username)}','${escapeHtml(parent.id||'')}','${escapeHtml(parent.userId)}')">回复</span>
                         </div>
                     </div>
                 </div>`;
@@ -11581,7 +11580,7 @@ async function loadComments(cardId) {
                                 <span class="rp-name" onclick="openBanModal('${escapeHtml(r.userId)}','${escapeHtml(r.username)}')">${escapeHtml(r.username)}</span><span class="comment-level" style="color:${rLv.color};background:${rLv.bg};">${rLv.name}</span> ${atHtml}${escapeHtml(r.comment)}
                             </div>
                             <div class="comment-reply-meta">
-                                <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(parent.id||'')}','${escapeHtml(r.username)}','${escapeHtml(parent.id||'')}')">回复</span>
+                                <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(parent.id||'')}','${escapeHtml(r.username)}','${escapeHtml(parent.id||'')}','${escapeHtml(r.userId)}')">回复</span>
                                 ${isEditMode ? `<span style="font-size:12px;color:#ff4466;cursor:pointer;" onclick="event.stopPropagation();deleteComment('${escapeHtml(currentCommentCardId)}','${escapeHtml(r.id || '')}')">🗑️</span>` : ''}
                             </div>
                         </div>
@@ -11703,6 +11702,7 @@ function toggleMoreReplies(parentId, total, btn) {
 // ── 回复评论 ──
 let _replyToId = null;
 let _replyToUser = null;
+let _replyToUserId = null;
 let _currentCommentUser = null;
 
 // ── 生成文字头像HTML（img加载失败时回退）──
@@ -11711,12 +11711,14 @@ function getTextAvatar() {
 }
 
 // ── 回复评论（B站风格：在评论下方插入输入框）──
-// replyToComment(rootParentId, replyToUser, rootParentId)
+// replyToComment(rootParentId, replyToUser, _unused, replyToUserId)
 // rootParentId: 根评论ID（所有回复都归组到此）
-// replyToUser: @提及的用户名（可能是回复的作者）
-function replyToComment(rootParentId, username, _unused) {
-    _replyToId   = rootParentId;   // 始终存根评论 ID
-    _replyToUser = username;
+// replyToUser: @提及的用户名
+// replyToUserId: 被回复用户的userId（用于通知）
+function replyToComment(rootParentId, username, _unused, replyToUserId) {
+    _replyToId     = rootParentId;
+    _replyToUser   = username;
+    _replyToUserId = replyToUserId || null;
     // 清除已有输入框
     document.querySelectorAll('.reply-input-box').forEach(el => el.remove());
 
@@ -11731,7 +11733,7 @@ function replyToComment(rootParentId, username, _unused) {
         <div style="font-size:11px;color:var(--primary);margin-bottom:4px;">回复 @${escapeHtml(username)}</div>
         <textarea class="reply-textarea" placeholder="写下你的回复..." maxlength="500" rows="2"></textarea>
         <div style="display:flex;gap:6px;margin-top:6px;">
-            <button onclick="submitReply('${escapeHtml(rootParentId)}','${escapeHtml(username)}',this)" style="flex:1;padding:6px 12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:bold;cursor:pointer;">发送</button>
+            <button onclick="submitReply('${escapeHtml(rootParentId)}','${escapeHtml(username)}','${escapeHtml(replyToUserId||'')}',this)" style="flex:1;padding:6px 12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:bold;cursor:pointer;">发送</button>
             <button onclick="this.closest('.reply-input-box').remove()" style="padding:6px 12px;background:#eee;color:#666;border:none;border-radius:8px;font-size:12px;cursor:pointer;">取消</button>
         </div>
     `;
@@ -11743,13 +11745,14 @@ function replyToComment(rootParentId, username, _unused) {
 function cancelReply() {
     _replyToId = null;
     _replyToUser = null;
+    _replyToUserId = null;
     document.querySelectorAll('.reply-input-box').forEach(el => el.remove());
     const box = document.getElementById('replyTargetBox');
     if (box) box.style.display = 'none';
 }
 
 // ── 提交回复（从评论下方的输入框）──
-async function submitReply(commentId, replyToUser, btnEl) {
+async function submitReply(commentId, replyToUser, replyToUserId, btnEl) {
     if (!currentUser) { showToast('请先登录'); openUserModal(); return; }
     const box = btnEl.closest('.reply-input-box');
     const textarea = box?.querySelector('.reply-textarea');
@@ -11767,9 +11770,10 @@ async function submitReply(commentId, replyToUser, btnEl) {
             body: JSON.stringify({
                 cardId: currentCommentCardId,
                 comment,
-                score: 0, // 回复不带评分
+                score: 0,
                 replyTo: commentId,
-                replyToUser
+                replyToUser,
+                replyToUserId: replyToUserId || null  // 新增：被回复用户的userId
             })
         });
         const data = await res.json();
