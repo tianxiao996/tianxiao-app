@@ -11801,7 +11801,11 @@ async function loadComments(cardId) {
 
         const res = await fetch(`${USER_API}/api/comment?cardId=${encodeURIComponent(cardId)}`, { headers });
         const data = await res.json();
-        if (!data.success) return;
+        if (!data.success) {
+            const listEl = document.getElementById('commentList');
+            if (listEl) listEl.innerHTML = `<div class="comment-empty">${escapeHtml(data.error || '获取评论失败')}</div>`;
+            return;
+        }
 
         // 更新平均分
         const avgEl = document.getElementById('commentAvgScore');
@@ -11810,7 +11814,7 @@ async function loadComments(cardId) {
         }
 
         // 渲染输入区
-        renderCommentInput(cardId, data.hasCommented);
+        renderCommentInput(cardId, data.userVoted);
 
         // 渲染评论列表
         const listEl = document.getElementById('commentList');
@@ -12131,7 +12135,7 @@ async function submitComment(cardId) {
         // 如果没有评分区域（已评过分），强制score=0
         const hasScoreStars = document.getElementById('scoreStars');
         const effectiveScore = (!hasScoreStars || _replyToId) ? 0 : (currentCommentScore || 0);
-        const body = { cardId, comment, score: effectiveScore, replyTo: _replyToId, replyToUser: _replyToUser };
+        const body = { cardId, comment, score: effectiveScore, replyTo: _replyToId, replyToUser: _replyToUser, replyToUserId: _replyToUserId || null };
 
         const res = await fetch(`${USER_API}/api/comment`, {
             method: 'POST',
