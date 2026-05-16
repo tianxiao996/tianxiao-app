@@ -2203,7 +2203,21 @@
     font-size: 14px; font-weight: bold; cursor: pointer;
 }
 
-.user-home-box { display: none; } /* 旧弹窗盒子废弃 */
+#userHomeModal .user-home-box { display: none; } /* 主页弹窗内旧盒子废弃，其他地方（mailPanel等）不影响 */
+
+.user-home-box {
+    background: var(--pixel-white);
+    width: 92%; max-width: 400px;
+    border-radius: 16px; padding: 20px;
+    box-shadow: 5px 5px 0 rgba(255,130,180,0.3);
+    border: 2px solid var(--primary-light);
+    max-height: 85vh; overflow-y: auto;
+    position: relative;
+}
+[data-theme="dark"] .user-home-box {
+    background: #160a14; color: #f0d0e0;
+    border-color: rgba(255,102,153,0.4);
+}
 /* 签到区 */
 .user-home-section {
     margin-bottom: 16px;
