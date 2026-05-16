@@ -10073,7 +10073,7 @@ function closeNavPanel() {
             <div class="home-shortcut-btn" onclick="openHomeSubpage('backpack')">
                 <span class="btn-icon">🎒</span>我的背包
             </div>
-            <div class="home-shortcut-btn" onclick="openHomeSubpage('mail')">
+            <div class="home-shortcut-btn" onclick="openMailPanel()">
                 <span class="btn-icon">📧</span>消息中心
             </div>
         </div>
@@ -10167,24 +10167,6 @@ function closeNavPanel() {
     </div>
 </div>
 
-<!-- ══ 子页面：消息中心（原 mailPanel 内容移入）══ -->
-<div class="home-subpage" id="subpage-mail">
-    <div class="home-topbar">
-        <button class="home-topbar-back" onclick="closeHomeSubpage('mail')">←</button>
-        <div class="home-topbar-title">📧 消息中心</div>
-    </div>
-    <div class="home-scroll" id="mailSubScroll">
-        <!-- Tab切换 -->
-        <div style="display:flex;gap:0;margin-bottom:14px;border-radius:10px;overflow:hidden;border:1.5px solid var(--primary-light);">
-            <button id="mailTab1" onclick="switchMailTab('inbox')" style="flex:1;padding:9px;background:var(--primary);color:#fff;border:none;font-size:13px;font-weight:bold;cursor:pointer;">📥 收件箱</button>
-            <button id="mailTab2" onclick="switchMailTab('system')" style="flex:1;padding:9px;background:var(--pixel-soft);color:var(--primary);border:none;font-size:13px;font-weight:bold;cursor:pointer;">📢 系统通知</button>
-        </div>
-        <div id="mailInboxList" style="display:block;"></div>
-        <div id="mailSystemList" style="display:none;"></div>
-    </div>
-</div>
-
-<!-- 📧 邮件弹窗 -->
 <div id="mailPanel" class="user-home-overlay">
     <div class="user-home-box" style="max-width:420px;">
         <div class="user-home-header" style="margin-bottom:0;padding-bottom:0;border-bottom:none;">
@@ -10633,14 +10615,12 @@ let _mailTab = 'mail'; // 当前Tab: 'mail' | 'reply'
 
 function openMailPanel() {
     if (!currentUser) { showToast('请先登录'); openUserModal(); return; }
-    // 如果主页已打开，直接开子页面；否则先开主页再开子页面
-    const homeOpen = document.getElementById('userHomeModal')?.classList.contains('show');
-    if (!homeOpen) openUserHome();
-    setTimeout(() => openHomeSubpage('mail'), homeOpen ? 0 : 50);
+    document.getElementById('mailPanel').classList.add('show');
+    switchMailTab('mail');
 }
 
 function closeMailPanel() {
-    closeHomeSubpage('mail');
+    document.getElementById('mailPanel').classList.remove('show');
 }
 
 // ── Tab切换 ──
