@@ -2815,7 +2815,6 @@ function __safeFixDeleteImage(card){
                 📧
                 <span id="mailBadge" style="display:none;position:absolute;top:-2px;right:-2px;background:#ff4444;color:#fff;font-size:9px;font-weight:bold;border-radius:50%;width:14px;height:14px;line-height:14px;text-align:center;">0</span>
             </div>
-            <div id="entryBtn" class="login-icon" onclick="openLogin()" style="visibility: visible;">🔒</div>
         </div>
     </div>
     <div class="header-top" style="display:none;">
@@ -5090,7 +5089,7 @@ function enterAdmin() {
     isEditMode = true; 
     document.body.classList.add("admin-mode");
     document.getElementById("adminBar").style.display = "flex";
-    document.getElementById("entryBtn").style.visibility = "hidden";
+    // entryBtn已移除
     
     // 🎯 v4.0 管理员模式下展开所有卡片
     document.querySelectorAll(".card").forEach(card => {
@@ -5144,7 +5143,7 @@ function enterAdmin() {
 function exitAdmin() {
     isEditMode = false; document.body.classList.remove("admin-mode");
     document.getElementById("adminBar").style.display = "none";
-    document.getElementById("entryBtn").style.visibility = "visible";
+    // entryBtn已移除
     // 隐藏Banner编辑面板
     const bp = document.getElementById("bannerEditPanel"); if(bp) bp.classList.remove("show");
     // 隐藏短链面板
@@ -8503,7 +8502,7 @@ function copyText(text) {
             <span class="sidebar-item-icon">💖</span>
             <span>我的收藏</span>
         </div>
-        <div class="sidebar-item" id="sidebarAdmin" onclick="openAdminFromSidebar()" style="display:none;">
+        <div class="sidebar-item" id="sidebarAdmin" onclick="openAdminFromSidebar()">
             <span class="sidebar-item-icon">🔒</span>
             <span>管理员模式</span>
         </div>
@@ -8559,6 +8558,7 @@ _cardDetailSource = card;
     // ── 构建内容区 ──
     const body = document.getElementById('cardDetailBody');
     body.innerHTML = '';
+    body.scrollTop = 0; // 重置滚动位置，防止保留上次退出时的位置
 
     // 图片轮播
     if (imgSrcs.length > 0) {
@@ -8696,6 +8696,9 @@ _cardDetailSource = card;
     // ── 显示详情页（右侧滑入）──
     const page = document.getElementById('cardDetailPage');
     page.style.display = 'flex';
+    // 确保每次打开都从顶部开始
+    const bodyEl = document.getElementById('cardDetailBody');
+    if (bodyEl) bodyEl.scrollTop = 0;
 
     // ── 背景图加载等待 ──
     const dbl   = document.getElementById('detailBgLayer');
@@ -8817,7 +8820,7 @@ function openAdminFromSidebar() {
     isEditMode = true;
     document.body.classList.add('admin-mode');
     document.getElementById('adminBar').style.display = 'flex';
-    document.getElementById('entryBtn').style.visibility = 'hidden';
+    // entryBtn已移除
     updateSidebarAdminUI();
     showToast('🔒 管理员模式已开启');
 }
@@ -11711,9 +11714,9 @@ function getTextAvatar() {
 }
 
 // ── 回复评论（B站风格：在评论下方插入输入框）──
-// replyToComment(rootParentId, replyToUser, _unused, replyToUserId)
+// replyToComment(rootParentId, username, _unused, replyToUserId)
 // rootParentId: 根评论ID（所有回复都归组到此）
-// replyToUser: @提及的用户名
+// username: @提及的用户名
 // replyToUserId: 被回复用户的userId（用于通知）
 function replyToComment(rootParentId, username, _unused, replyToUserId) {
     _replyToId     = rootParentId;
@@ -11773,7 +11776,7 @@ async function submitReply(commentId, replyToUser, replyToUserId, btnEl) {
                 score: 0,
                 replyTo: commentId,
                 replyToUser,
-                replyToUserId: replyToUserId || null  // 新增：被回复用户的userId
+                replyToUserId: replyToUserId || null  // 被回复用户的userId，用于精准发通知
             })
         });
         const data = await res.json();
