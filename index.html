@@ -2914,7 +2914,8 @@ function __safeFixDeleteImage(card){
         <div id="adminBarToggleRow" style="max-width:550px;margin:0 auto 8px auto;display:flex;justify-content:center;">
             <button id="adminBarToggleBtn" onclick="toggleAdminBarCollapse()" style="background:#555!important;padding:4px 20px;font-size:12px;border-radius:20px;min-width:unset!important;max-width:unset!important;flex:unset!important;">▲ 收起面板</button>
         </div>
-        <div id="adminBarBtns">
+        <!-- 确保面板默认展开：不设置 style="display:none" -->
+        <div id="adminBarBtns" data-force-visible="true">
         <button onclick="addCard()">➕ 新增</button>
         <button class="btn-save" onclick="saveToCloud()">☁️ 保存云端</button>
         <button onclick="toggleCatPanel()" style="background:#e91e63!important;">🏷️ 分类</button>
@@ -2930,6 +2931,7 @@ function __safeFixDeleteImage(card){
         <button onclick="openAvatarManagePanel()" style="background:#e91e63!important;">🎨 头像</button>
         <button onclick="openMailManagePanel()" style="background:#ff5722!important;">📧 发邮件</button>
         <button id="adminAuditBtn" onclick="toggleAdminAuditMode()" style="background:#ff5722!important;">💬 审核评论</button>
+        <button onclick="migrateCommentsToD1()" style="background:#00695c!important;">🗃️ KV→D1迁移</button>
         <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button>
         </div>
     </div>
@@ -4120,6 +4122,34 @@ function autoSave() {
 let _toastTimer = null;
 
 // 🐛 临时调试：显示所有卡片的DOM结构信息
+// ── 管理员：将KV中的评论数据迁移到D1 ──
+async function migrateCommentsToD1() {
+    if (!confirm('🗃️ 确定要将KV中的评论数据迁移到D1数据库吗？\n\n此操作会将所有卡片的评论和回复通知从KV迁移到D1。\n迁移过程中评论功能仍然可用。')) return;
+    const btn = document.querySelector('button[onclick="migrateCommentsToD1()"]');
+    if (btn) { btn.disabled = true; btn.textContent = '🔄 迁移中...'; }
+    try {
+        const res = await fetch(`${USER_API}/api/migrate-kv-to-d1`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${adminToken || sessionStorage.getItem('ADMIN_TOKEN')}`
+            }
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ ' + data.message);
+            alert('✅ ' + data.message + (data.result.errors.length > 0 ? '\n\n错误详情：\n' + data.result.errors.join('\n') : ''));
+        } else {
+            showToast('❌ ' + (data.error || '迁移失败'));
+            alert('❌ 迁移失败：' + (data.error || '未知错误'));
+        }
+    } catch (e) {
+        showToast('❌ 网络错误：' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🗃️ KV→D1迁移'; }
+    }
+}
+
 function debugCardStructure() {
     const cards = document.querySelectorAll('.card');
     let report = `共 ${cards.length} 张卡片\n\n`;
@@ -5170,6 +5200,13 @@ function enterAdmin() {
     isEditMode = true; 
     document.body.classList.add("admin-mode");
     document.getElementById("adminBar").style.display = "flex";
+    // 确保管理员面板默认展开，避免按钮被隐藏
+    const adminBarBtns = document.getElementById('adminBarBtns');
+    const adminToggleBtn = document.getElementById('adminBarToggleBtn');
+    if (adminBarBtns && adminBarBtns.style.display === 'none') {
+        adminBarBtns.style.display = '';
+        if (adminToggleBtn) adminToggleBtn.textContent = '▲ 收起面板';
+    }
     // entryBtn已移除
     
     // 🎯 v4.0 管理员模式下展开所有卡片
