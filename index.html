@@ -5489,6 +5489,110 @@ async function loadSuperInvites() {
     } catch(e) {}
 }
 
+// ════════════════════════════════════════════
+//  装扮商店全屏页
+// ════════════════════════════════════════════
+
+// ── 打开全屏装扮商店 ──
+function openAvatarShopPage() {
+    const page = document.getElementById('avatarShopPage');
+    if (!page) return;
+    page.style.display = 'flex';
+    requestAnimationFrame(() => requestAnimationFrame(() => page.classList.add('show')));
+    loadAvatarShopPage();
+}
+
+// ── 关闭全屏装扮商店 ──
+function closeAvatarShopPage() {
+    const page = document.getElementById('avatarShopPage');
+    if (!page) return;
+    page.classList.remove('show');
+    setTimeout(() => { page.style.display = 'none'; }, 220);
+}
+
+// ── 加载全屏装扮商店数据 ──
+async function loadAvatarShopPage() {
+    const grid = document.getElementById('avatarShopGrid');
+    const ownedGrid = document.getElementById('avatarShopOwnedGrid');
+    const ownedTitle = document.getElementById('shopOwnedTitle');
+    const adminSection = document.getElementById('shopAdminSection');
+    if (!grid) return;
+
+    // 管理员显示新增区域
+    if (adminSection) {
+        adminSection.style.display = (isEditMode || adminToken || sessionStorage.getItem('ADMIN_TOKEN')) ? 'block' : 'none';
+    }
+
+    try {
+        const headers = currentUser ? { 'Authorization': `Bearer ${currentUser.sessionToken}` } : {};
+        const res = await fetch(`${USER_API}/api/user/avatars`, { headers });
+        const data = await res.json();
+        if (data.success && data.avatars && data.avatars.length > 0) {
+            const owned = data.avatars.filter(a => a.owned);
+            const notOwned = data.avatars.filter(a => !a.owned);
+
+            // 未拥有的装扮
+            if (notOwned.length > 0) {
+                grid.innerHTML = notOwned.map(a => `
+                    <div class="user-avatar-item" onclick="buyAvatar('${a.id}', ${a.price}, '${escapeHtml(a.name)}')">
+                        <img class="avatar-img" src="${escapeHtml(a.url)}" alt="" onerror="this.src='./avatar.png'">
+                        <div class="avatar-name">${escapeHtml(a.name)}</div>
+                        <div class="avatar-price">🐟 ${a.price}</div>
+                    </div>
+                `).join('');
+            } else {
+                grid.innerHTML = '<div class="shop-empty">暂无新装扮</div>';
+            }
+
+            // 已拥有的装扮
+            if (owned.length > 0 && ownedGrid && ownedTitle) {
+                ownedTitle.style.display = '';
+                ownedGrid.innerHTML = owned.map(a => `
+                    <div class="user-avatar-item ${a.url === _userHomeData?.avatar ? 'avatar-current' : ''}" onclick="setCurrentAvatar('${a.id}', '${escapeHtml(a.url)}')">
+                        <img class="avatar-img" src="${escapeHtml(a.url)}" alt="" onerror="this.src='./avatar.png'">
+                        <div class="avatar-name">${escapeHtml(a.name)}</div>
+                        <div class="avatar-owned">已拥有</div>
+                    </div>
+                `).join('');
+            } else if (ownedTitle) {
+                ownedTitle.style.display = 'none';
+                if (ownedGrid) ownedGrid.innerHTML = '';
+            }
+        } else {
+            grid.innerHTML = '<div class="shop-empty">暂无装扮，请等待管理员上架</div>';
+            if (ownedTitle) ownedTitle.style.display = 'none';
+            if (ownedGrid) ownedGrid.innerHTML = '';
+        }
+    } catch(e) {
+        grid.innerHTML = '<div class="shop-empty">加载失败</div>';
+    }
+}
+
+// ── 在装扮商店内新增装扮（管理员）──
+async function createAvatarFromShop() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('请先登录管理员'); return; }
+    const name = document.getElementById('shopAvatarNameInput')?.value?.trim();
+    const url = document.getElementById('shopAvatarUrlInput')?.value?.trim();
+    const price = parseInt(document.getElementById('shopAvatarPriceInput')?.value) || 0;
+    if (!name || !url) { showToast('请填写完整信息'); return; }
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/avatar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ action: 'create', url, name, price })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ ' + data.message);
+            document.getElementById('shopAvatarNameInput').value = '';
+            document.getElementById('shopAvatarUrlInput').value = '';
+            document.getElementById('shopAvatarPriceInput').value = '5';
+            loadAvatarShopPage();
+        } else { showToast('❌ ' + data.error); }
+    } catch(e) { showToast('❌ 网络错误'); }
+}
+
 // ── 打开头像管理面板 ──
 function openAvatarManagePanel() {
     const panel = document.getElementById('avatarManagePanel');
@@ -5549,30 +5653,6 @@ async function createAdminAvatar() {
 }
 
 // ── 在装扮商店内新增头像（管理员）──
-async function createAvatarFromShop() {
-    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
-    if (!token) { showToast('请先登录管理员'); return; }
-    const name = document.getElementById('shopAvatarNameInput')?.value?.trim();
-    const url = document.getElementById('shopAvatarUrlInput')?.value?.trim();
-    const price = parseInt(document.getElementById('shopAvatarPriceInput')?.value) || 0;
-    if (!name || !url) { showToast('请填写完整信息'); return; }
-    try {
-        const res = await fetch(WORKER_BASE + '/api/admin/avatar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-            body: JSON.stringify({ action: 'create', url, name, price })
-        });
-        const data = await res.json();
-        if (data.success) {
-            showToast('✅ ' + data.message);
-            document.getElementById('shopAvatarNameInput').value = '';
-            document.getElementById('shopAvatarUrlInput').value = '';
-            document.getElementById('shopAvatarPriceInput').value = '5';
-            loadAvatarShop(); // 刷新装扮商店
-        } else { showToast('❌ ' + data.error); }
-    } catch(e) { showToast('❌ 网络错误'); }
-}
-
 // ── 删除头像 ──
 async function deleteAdminAvatar(avatarId) {
     const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
@@ -9904,6 +9984,64 @@ function closeNavPanel() {
     transition: transform 0.22s cubic-bezier(.4,0,.2,1);
 }
 #txnavDetailPage.show { transform: translateX(0); }
+/* ══ 装扮商店全屏页 ══ */
+#avatarShopPage {
+    position: fixed;
+    inset: 0;
+    z-index: 2200;
+    background: var(--bg);
+    display: none;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+}
+#avatarShopPage.show { transform: translateX(0); }
+#avatarShopHeader {
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    height: 57px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 8px;
+}
+#avatarShopBody {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    padding: 16px;
+}
+#avatarShopBody .shop-section-title {
+    font-size: 15px;
+    font-weight: bold;
+    color: var(--primary);
+    margin: 20px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+}
+#avatarShopBody .shop-section-title:first-child { margin-top: 0; }
+#avatarShopBody .shop-empty {
+    text-align: center;
+    color: #aaa;
+    font-size: 13px;
+    padding: 30px 0;
+}
+/* 管理员在装扮商店内新增 */
+#shopAdminSection {
+    background: #fce4ec;
+    border: 1px dashed #e91e63;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 20px;
+}
+#shopAdminSection .shop-admin-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #c2185b;
+    margin-bottom: 10px;
+}
 #txnavDetailHeader {
     display: flex;
     align-items: center;
@@ -9928,6 +10066,35 @@ function closeNavPanel() {
         <div style="width:40px;"></div>
     </div>
     <div id="txnavDetailBody"></div>
+</div>
+
+<!-- ══ 装扮商店全屏页 ══ -->
+<div id="avatarShopPage">
+    <div id="avatarShopHeader">
+        <div class="fullpage-back-btn" onclick="closeAvatarShopPage()">←</div>
+        <div class="fullpage-header-title" style="flex:1;text-align:center;">🎨 装扮商店</div>
+        <div style="width:40px;"></div>
+    </div>
+    <div id="avatarShopBody">
+        <!-- 管理员新增区域（仅管理员可见） -->
+        <div id="shopAdminSection" style="display:none;">
+            <div class="shop-admin-title">🎨 管理员新增装扮</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <input type="text" id="shopAvatarNameInput" placeholder="装扮名称" style="border:1px solid #f48fb1;border-radius:8px;padding:10px 12px;font-size:14px;outline:none;font-family:inherit;">
+                <input type="text" id="shopAvatarUrlInput" placeholder="图床图片URL" style="border:1px solid #f48fb1;border-radius:8px;padding:10px 12px;font-size:14px;outline:none;font-family:inherit;">
+                <input type="number" id="shopAvatarPriceInput" placeholder="小鱼干价格" min="0" value="5" style="border:1px solid #f48fb1;border-radius:8px;padding:10px 12px;font-size:14px;outline:none;font-family:inherit;">
+                <button onclick="createAvatarFromShop()" style="background:#e91e63;color:#fff;border:none;border-radius:10px;padding:10px;font-size:14px;font-weight:bold;cursor:pointer;font-family:inherit;">➕ 添加装扮</button>
+            </div>
+        </div>
+        <!-- 未拥有的装扮 -->
+        <div class="shop-section-title">🛒 可购买</div>
+        <div class="user-avatar-grid" id="avatarShopGrid">
+            <div class="shop-empty">加载中...</div>
+        </div>
+        <!-- 已拥有的装扮 -->
+        <div class="shop-section-title" id="shopOwnedTitle" style="display:none;">🎒 已拥有</div>
+        <div class="user-avatar-grid" id="avatarShopOwnedGrid"></div>
+    </div>
 </div>
 
 <!-- Turnstile 人机验证弹窗 -->
@@ -10084,7 +10251,7 @@ function closeNavPanel() {
 
         <!-- 用户头部 -->
         <div class="user-home-header">
-            <div class="user-home-avatar" id="homeAvatarDisplay" onclick="openHomeSubpage('shop')" title="点击打开装扮商店" style="cursor:pointer;">🌸</div>
+            <div class="user-home-avatar" id="homeAvatarDisplay" onclick="openAvatarShopPage()" title="点击打开装扮商店" style="cursor:pointer;">🌸</div>
             <div class="user-home-name" id="homeUsername">加载中...</div>
             <div class="user-home-id" id="homeUserId"></div>
             <!-- 经验条 -->
@@ -10132,7 +10299,7 @@ function closeNavPanel() {
             <div class="home-shortcut-btn" onclick="closeUserHome(); sidebarGoFavorite();">
                 <span class="btn-icon">❤️</span>我的收藏
             </div>
-            <div class="home-shortcut-btn" onclick="openHomeSubpage('shop')">
+            <div class="home-shortcut-btn" onclick="openAvatarShopPage()">
                 <span class="btn-icon">🎨</span>装扮商店
             </div>
             <div class="home-shortcut-btn" onclick="openHomeSubpage('backpack')">
@@ -10550,7 +10717,7 @@ function renderUserHome(data) {
     // 点击头像打开装扮商店
     const avatarEl = document.getElementById('homeAvatarDisplay');
     if (avatarEl) {
-        avatarEl.onclick = () => openHomeSubpage('shop');
+        avatarEl.onclick = () => openAvatarShopPage();
         avatarEl.title = '点击打开装扮商店';
         avatarEl.style.cursor = 'pointer';
         const avatarUrl = data.avatar && data.avatar !== '' ? data.avatar : null;
