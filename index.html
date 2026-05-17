@@ -2930,8 +2930,6 @@ function __safeFixDeleteImage(card){
         <button onclick="openAvatarManagePanel()" style="background:#e91e63!important;">🎨 头像</button>
         <button onclick="openMailManagePanel()" style="background:#ff5722!important;">📧 发邮件</button>
         <button id="adminAuditBtn" onclick="toggleAdminAuditMode()" style="background:#ff5722!important;">💬 审核评论</button>
-        <button onclick="adminD1Init()" style="background:#1565c0!important;">🗄️ D1建表</button>
-        <button onclick="adminMigrateComments()" style="background:#1b5e20!important;">📦 迁移评论</button>
         <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button>
         </div>
     </div>
@@ -3914,53 +3912,6 @@ async function uploadNewCardLinksToKV(token) {
 
 
 // 🔒 一键迁移：把所有 link-text 里的明文 URL 全部上传到 KV 并清除
-// ── D1初始化建表 ──
-async function adminD1Init() {
-    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
-    if (!token) { showToast('请先登录管理员'); return; }
-    if (!confirm('确定要初始化D1数据库吗？这将创建评论表（已存在则跳过）。')) return;
-    try {
-        showToast('⏳ 正在初始化D1...');
-        const res = await fetch(WORKER_BASE + '/api/admin/d1-init', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
-        });
-        const data = await res.json();
-        if (data.success) {
-            showToast('✅ ' + data.message);
-        } else {
-            showToast('❌ ' + (data.error || '初始化失败'));
-        }
-    } catch(e) {
-        showToast('❌ 网络错误：' + e.message);
-    }
-}
-
-// ── 迁移KV评论到D1 ──
-async function adminMigrateComments() {
-    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
-    if (!token) { showToast('请先登录管理员'); return; }
-    if (!confirm('确定要迁移KV评论到D1吗？\n\n请确保已先点击"D1建表"完成初始化。\n迁移过程可能需要几秒钟，请勿关闭页面。')) return;
-    try {
-        showToast('⏳ 正在迁移评论数据，请稍候...');
-        const res = await fetch(WORKER_BASE + '/api/admin/migrate-comments', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
-        });
-        const data = await res.json();
-        if (data.success) {
-            showToast('✅ ' + data.message);
-            if (data.errors && data.errors.length > 0) {
-                console.warn('迁移时有部分错误：', data.errors);
-            }
-        } else {
-            showToast('❌ ' + (data.error || '迁移失败'));
-        }
-    } catch(e) {
-        showToast('❌ 网络错误：' + e.message);
-    }
-}
-
 async function migrateAllLinksToKV() {
     const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
     if (!token) { showToast('❌ 请先登录管理员'); return; }
@@ -11850,7 +11801,11 @@ async function loadComments(cardId) {
 
         const res = await fetch(`${USER_API}/api/comment?cardId=${encodeURIComponent(cardId)}`, { headers });
         const data = await res.json();
-        if (!data.success) return;
+        if (!data.success) {
+            const listEl = document.getElementById('commentList');
+            if (listEl) listEl.innerHTML = `<div class="comment-empty">${escapeHtml(data.error || '获取评论失败')}</div>`;
+            return;
+        }
 
         // 更新平均分
         const avgEl = document.getElementById('commentAvgScore');
@@ -11859,7 +11814,7 @@ async function loadComments(cardId) {
         }
 
         // 渲染输入区
-        renderCommentInput(cardId, data.hasCommented);
+        renderCommentInput(cardId, data.userVoted);
 
         // 渲染评论列表
         const listEl = document.getElementById('commentList');
@@ -12180,7 +12135,7 @@ async function submitComment(cardId) {
         // 如果没有评分区域（已评过分），强制score=0
         const hasScoreStars = document.getElementById('scoreStars');
         const effectiveScore = (!hasScoreStars || _replyToId) ? 0 : (currentCommentScore || 0);
-        const body = { cardId, comment, score: effectiveScore, replyTo: _replyToId, replyToUser: _replyToUser };
+        const body = { cardId, comment, score: effectiveScore, replyTo: _replyToId, replyToUser: _replyToUser, replyToUserId: _replyToUserId || null };
 
         const res = await fetch(`${USER_API}/api/comment`, {
             method: 'POST',
