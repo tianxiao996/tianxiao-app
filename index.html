@@ -2186,7 +2186,7 @@
 .home-shortcut-btn:active { transform: scale(0.95); opacity: 0.8; }
 .home-shortcut-btn .btn-icon { font-size: 26px; line-height: 1; }
 
-/* 子页面（头像商店/背包/收藏）— 全屏推入 */
+/* 子页面（装扮商店/背包/收藏）— 全屏推入 */
 .home-subpage {
     position: fixed; inset: 0; z-index: 3100;
     background: var(--pixel-white);
@@ -2334,7 +2334,7 @@
     text-align: center; padding: 20px;
     font-size: 12px; color: #aaa;
 }
-/* 头像商店 */
+/* 装扮商店 */
 .user-avatar-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -3027,9 +3027,9 @@ function __safeFixDeleteImage(card){
         <button class="cat-save-btn" onclick="saveCategoryOrder()">✅ 保存并更新导航</button>
     </div>
 
-    <!-- 🎨 头像管理面板（管理员） -->
+    <!-- 🎨 装扮管理面板（管理员） -->
     <div id="avatarManagePanel" style="display:none; background:#fce4ec; border:1px dashed #e91e63; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:600px;">
-        <div style="font-size:13px; font-weight:bold; color:#c2185b; margin-bottom:10px;">🎨 头像管理</div>
+        <div style="font-size:13px; font-weight:bold; color:#c2185b; margin-bottom:10px;">🎨 装扮管理</div>
         <div style="background:#fff; border-radius:10px; padding:12px; margin-bottom:10px; border:1px solid #f48fb1;">
             <div style="font-size:12px; font-weight:bold; color:#ad1457; margin-bottom:8px;">➕ 新增头像</div>
             <div style="display:flex; flex-direction:column; gap:6px;">
@@ -3056,6 +3056,7 @@ function __safeFixDeleteImage(card){
                     <input type="number" id="mailExpireInput" placeholder="有效期(天)，0=永久" min="0" value="7" style="flex:1;border:1px solid #ffb74d;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
                     <input type="number" id="mailFishInput" placeholder="小鱼干奖励" min="0" value="0" style="flex:1;border:1px solid #ffb74d;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
                 </div>
+                <input type="text" id="mailAvatarNameInput" placeholder="限定头像名称（如限定头像必填）" style="border:1px solid #ffb74d;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
                 <input type="text" id="mailAvatarInput" placeholder="限定头像图床URL（可选）" style="border:1px solid #ffb74d;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
                 <button onclick="sendAdminMail()" style="background:#ff9800;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;">📧 发送给所有用户</button>
             </div>
@@ -5547,6 +5548,31 @@ async function createAdminAvatar() {
     } catch(e) { showToast('❌ 网络错误'); }
 }
 
+// ── 在装扮商店内新增头像（管理员）──
+async function createAvatarFromShop() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('请先登录管理员'); return; }
+    const name = document.getElementById('shopAvatarNameInput')?.value?.trim();
+    const url = document.getElementById('shopAvatarUrlInput')?.value?.trim();
+    const price = parseInt(document.getElementById('shopAvatarPriceInput')?.value) || 0;
+    if (!name || !url) { showToast('请填写完整信息'); return; }
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/avatar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ action: 'create', url, name, price })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ ' + data.message);
+            document.getElementById('shopAvatarNameInput').value = '';
+            document.getElementById('shopAvatarUrlInput').value = '';
+            document.getElementById('shopAvatarPriceInput').value = '5';
+            loadAvatarShop(); // 刷新装扮商店
+        } else { showToast('❌ ' + data.error); }
+    } catch(e) { showToast('❌ 网络错误'); }
+}
+
 // ── 删除头像 ──
 async function deleteAdminAvatar(avatarId) {
     const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
@@ -5581,6 +5607,9 @@ async function sendAdminMail() {
     const expireDays = parseInt(document.getElementById('mailExpireInput')?.value) || 0;
     const fishReward = parseInt(document.getElementById('mailFishInput')?.value) || 0;
     const avatarRewardUrl = document.getElementById('mailAvatarInput')?.value?.trim() || null;
+    const avatarRewardName = document.getElementById('mailAvatarNameInput')?.value?.trim() || null;
+    // 如果填了头像URL但没填名称，提示必填
+    if (avatarRewardUrl && !avatarRewardName) { showToast('❌ 填写了头像URL，必须填写头像名称'); return; }
     if (!title || !content) { showToast('❌ 标题和内容不能为空'); return; }
 
     const btn = document.querySelector('#mailManagePanel button[onclick="sendAdminMail()"]');
@@ -5590,14 +5619,16 @@ async function sendAdminMail() {
         const res = await fetch(WORKER_BASE + '/api/admin/mail', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-            body: JSON.stringify({ title, content, expireDays, fishReward, avatarRewardUrl })
+            body: JSON.stringify({ title, content, expireDays, fishReward, avatarRewardUrl, avatarRewardName })
         });
         const data = await res.json();
         if (data.success) {
-            showToast('✅ 邮件发送成功！' + (fishReward ? ` 含${fishReward}条小鱼干奖励` : ''));
+            showToast('✅ 邮件发送成功！' + (fishReward ? ` 含${fishReward}条小鱼干奖励` : '') + (avatarRewardUrl ? ' + 限定头像' : ''));
             document.getElementById('mailTitleInput').value = '';
             document.getElementById('mailContentInput').value = '';
             document.getElementById('mailFishInput').value = '0';
+            document.getElementById('mailAvatarInput').value = '';
+            document.getElementById('mailAvatarNameInput').value = '';
             loadAdminMails();
         } else {
             showToast('❌ ' + (data.error || '发送失败'));
@@ -10053,7 +10084,7 @@ function closeNavPanel() {
 
         <!-- 用户头部 -->
         <div class="user-home-header">
-            <div class="user-home-avatar" id="homeAvatarDisplay">🌸</div>
+            <div class="user-home-avatar" id="homeAvatarDisplay" onclick="openHomeSubpage('shop')" title="点击打开装扮商店" style="cursor:pointer;">🌸</div>
             <div class="user-home-name" id="homeUsername">加载中...</div>
             <div class="user-home-id" id="homeUserId"></div>
             <!-- 经验条 -->
@@ -10102,7 +10133,7 @@ function closeNavPanel() {
                 <span class="btn-icon">❤️</span>我的收藏
             </div>
             <div class="home-shortcut-btn" onclick="openHomeSubpage('shop')">
-                <span class="btn-icon">🎨</span>头像商店
+                <span class="btn-icon">🎨</span>装扮商店
             </div>
             <div class="home-shortcut-btn" onclick="openHomeSubpage('backpack')">
                 <span class="btn-icon">🎒</span>我的背包
@@ -10157,16 +10188,26 @@ function closeNavPanel() {
     </div>
 </div>
 
-<!-- ══ 子页面：头像商店 ══ -->
+<!-- ══ 子页面：装扮商店 ══ -->
 <div class="home-subpage" id="subpage-shop">
     <div class="home-topbar">
         <button class="home-topbar-back" onclick="closeHomeSubpage('shop')">←</button>
-        <div class="home-topbar-title">🎨 头像商店</div>
+        <div class="home-topbar-title">🎨 装扮商店</div>
     </div>
     <div class="home-scroll">
-        <div style="font-size:12px;color:#888;margin-bottom:12px;text-align:center;">点击头像预览，购买后即可使用</div>
+        <div style="font-size:12px;color:#888;margin-bottom:12px;text-align:center;">点击头像预览，消耗小鱼干购买后即可使用</div>
         <div class="user-avatar-grid" id="homeAvatarGrid">
             <div class="user-fav-empty">加载中...</div>
+        </div>
+        <!-- 🎨 管理员：在装扮商店内新增头像 -->
+        <div id="shopAdminAdd" style="display:none; margin-top:20px; padding:14px; background:#fce4ec; border:1px dashed #e91e63; border-radius:12px;">
+            <div style="font-size:13px; font-weight:bold; color:#c2185b; margin-bottom:10px;">🎨 管理员新增装扮</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                <input type="text" id="shopAvatarNameInput" placeholder="装扮名称" style="border:1px solid #f48fb1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
+                <input type="text" id="shopAvatarUrlInput" placeholder="图床图片URL" style="border:1px solid #f48fb1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
+                <input type="number" id="shopAvatarPriceInput" placeholder="小鱼干价格" min="0" value="5" style="border:1px solid #f48fb1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
+                <button onclick="createAvatarFromShop()" style="background:#e91e63;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;">➕ 添加装扮</button>
+            </div>
         </div>
     </div>
 </div>
@@ -10506,13 +10547,17 @@ function renderUserHome(data) {
     document.getElementById('homeUsername').textContent = data.username || currentUser?.username || '未知';
 
     // ── 头像显示（穿戴头像 > 默认"人类"文字）──
+    // 点击头像打开装扮商店
     const avatarEl = document.getElementById('homeAvatarDisplay');
     if (avatarEl) {
+        avatarEl.onclick = () => openHomeSubpage('shop');
+        avatarEl.title = '点击打开装扮商店';
+        avatarEl.style.cursor = 'pointer';
         const avatarUrl = data.avatar && data.avatar !== '' ? data.avatar : null;
         if (avatarUrl) {
-            avatarEl.innerHTML = `<img src="${escapeHtml(avatarUrl)}" alt="头像" onerror="this.parentElement.innerHTML='人类'">`;
+            avatarEl.innerHTML = `<img src="${escapeHtml(avatarUrl)}" alt="头像" onerror="this.parentElement.textContent='人类';this.parentElement.style.fontSize='18px';this.parentElement.style.fontWeight='bold';this.parentElement.style.color='var(--primary)';">`;
         } else {
-            avatarEl.innerHTML = '人类';
+            avatarEl.textContent = '人类';
             avatarEl.style.fontSize = '18px';
             avatarEl.style.fontWeight = 'bold';
             avatarEl.style.color = 'var(--primary)';
@@ -11059,7 +11104,7 @@ async function submitCheckin(tsToken) {
                 _userHomeData.canCheckin = false;
                 _userHomeData.checkinRemaining = 24 * 3600; // 24小时 = 86400秒
             }
-            // 刷新头像商店（不调用 loadUserHomeData 避免覆盖小鱼干显示）
+            // 刷新装扮商店（不调用 loadUserHomeData 避免覆盖小鱼干显示）
             loadAvatarShop();
         } else {
             if (data.remainingSeconds) {
@@ -11129,12 +11174,17 @@ async function redeemCode(type) {
     }
 }
 
-// ── 加载头像商店 ──
+// ── 加载装扮商店 ──
 async function loadAvatarShop() {
     const grid = document.getElementById('homeAvatarGrid');
     const myGrid = document.getElementById('homeMyAvatarGrid');
     const myBox = document.getElementById('homeMyAvatars');
+    const shopAdminAdd = document.getElementById('shopAdminAdd');
     if (!grid) return;
+    // 管理员模式下显示商店内新增入口
+    if (shopAdminAdd) {
+        shopAdminAdd.style.display = (isEditMode || adminToken || sessionStorage.getItem('ADMIN_TOKEN')) ? 'block' : 'none';
+    }
     try {
         const headers = currentUser ? { 'Authorization': `Bearer ${currentUser.sessionToken}` } : {};
         const res = await fetch(`${USER_API}/api/user/avatars`, { headers });
