@@ -2931,7 +2931,6 @@ function __safeFixDeleteImage(card){
         <button onclick="openAvatarManagePanel()" style="background:#e91e63!important;">🎨 头像</button>
         <button onclick="openMailManagePanel()" style="background:#ff5722!important;">📧 发邮件</button>
         <button id="adminAuditBtn" onclick="toggleAdminAuditMode()" style="background:#ff5722!important;">💬 审核评论</button>
-        <button onclick="migrateCommentsToD1()" style="background:#00695c!important;">🗃️ KV→D1迁移</button>
         <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button>
         </div>
     </div>
@@ -4122,34 +4121,6 @@ function autoSave() {
 let _toastTimer = null;
 
 // 🐛 临时调试：显示所有卡片的DOM结构信息
-// ── 管理员：将KV中的评论数据迁移到D1 ──
-async function migrateCommentsToD1() {
-    if (!confirm('🗃️ 确定要将KV中的评论数据迁移到D1数据库吗？\n\n此操作会将所有卡片的评论和回复通知从KV迁移到D1。\n迁移过程中评论功能仍然可用。')) return;
-    const btn = document.querySelector('button[onclick="migrateCommentsToD1()"]');
-    if (btn) { btn.disabled = true; btn.textContent = '🔄 迁移中...'; }
-    try {
-        const res = await fetch(`${USER_API}/api/migrate-kv-to-d1`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${adminToken || sessionStorage.getItem('ADMIN_TOKEN')}`
-            }
-        });
-        const data = await res.json();
-        if (data.success) {
-            showToast('✅ ' + data.message);
-            alert('✅ ' + data.message + (data.result.errors.length > 0 ? '\n\n错误详情：\n' + data.result.errors.join('\n') : ''));
-        } else {
-            showToast('❌ ' + (data.error || '迁移失败'));
-            alert('❌ 迁移失败：' + (data.error || '未知错误'));
-        }
-    } catch (e) {
-        showToast('❌ 网络错误：' + e.message);
-    } finally {
-        if (btn) { btn.disabled = false; btn.textContent = '🗃️ KV→D1迁移'; }
-    }
-}
-
 function debugCardStructure() {
     const cards = document.querySelectorAll('.card');
     let report = `共 ${cards.length} 张卡片\n\n`;
@@ -6578,6 +6549,12 @@ function initCardFavorites() {
 }
 
 function toggleFavorite(btn) {
+    // 🔒 收藏功能必须登录
+    if (!currentToken) {
+        showToast('❤️ 请先登录后再收藏');
+        setTimeout(() => openLogin(), 800);
+        return;
+    }
     const card = btn.closest('.card');
     if (!card) return;
     const cardId = card.dataset.cardId;
@@ -8616,10 +8593,6 @@ function copyText(text) {
             <span>评论区</span>
             <span id="sidebarCommentEdit" onclick="event.stopPropagation(); editCommentUrl();" style="display:none; margin-left:auto; font-size:12px; color:#aaa; padding:2px 6px; border-radius:4px; background:#f0f0f0;">⚙️</span>
         </div>
-        <div class="sidebar-item" id="sidebarFavorite" onclick="sidebarGoFavorite()">
-            <span class="sidebar-item-icon">💖</span>
-            <span>我的收藏</span>
-        </div>
         <div class="sidebar-item" id="sidebarAdmin" onclick="openAdminFromSidebar()">
             <span class="sidebar-item-icon">🔒</span>
             <span>管理员模式</span>
@@ -8681,12 +8654,13 @@ _cardDetailSource = card;
     // 图片轮播
     if (imgSrcs.length > 0) {
         const galleryWrap = document.createElement('div');
-        galleryWrap.style.cssText = 'position:relative;width:100%;max-width:480px;margin:0 auto;overflow:hidden;background:#111;border:2px solid rgba(255,102,153,0.6);border-radius:4px;box-sizing:border-box;' +
-            'border-left:2px solid rgba(255,102,153,0.25);border-right:2px solid rgba(255,102,153,0.25);';
+        // 宽度和下方文字区域对齐（max-width:560px + 两边各20px padding = calc(100% - 40px)）
+        galleryWrap.style.cssText = 'position:relative;width:calc(100% - 40px);max-width:560px;margin:16px auto 10px;overflow:hidden;background:#111;border:3px solid #ff99bb;border-radius:14px;box-sizing:border-box;';
+        galleryWrap.className = 'detail-gallery-wrap';
 
         const aspect = document.createElement('div');
-        // 4:3 比例，比 16:9 更适合游戏封面，PC端有 max-width 约束不会过大
-        aspect.style.cssText = 'width:100%;padding-top:75%;position:relative;overflow:hidden;background:#111;';
+        // 4:3 比例，比 16:9 更适合游戏封面
+        aspect.style.cssText = 'width:100%;padding-top:75%;position:relative;overflow:hidden;background:#111;border-radius:11px;';
 
         let curIdx = 0;
         const track = document.createElement('div');
