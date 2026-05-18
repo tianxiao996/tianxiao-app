@@ -3658,9 +3658,12 @@ async function loadFromGrave() {
     const maxRetries = 3; // 最多重试3次
     let retryCount = 0;
     
+    // 🔒 密码未通过时不显示加载动画
+    const gatePassed = sessionStorage.getItem('TX_GATE_PASSED') === '1';
+    
     // 显示全屏加载动画
     const gOverlay = document.getElementById('globalLoadingOverlay');
-    if (gOverlay) gOverlay.classList.add('show');
+    if (gOverlay && gatePassed) gOverlay.classList.add('show');
     
     // 记录开始时间，确保动画至少显示500ms
     const loadStartTime = Date.now();
@@ -5497,6 +5500,9 @@ async function loadSuperInvites() {
 function openAvatarShopPage() {
     const page = document.getElementById('avatarShopPage');
     if (!page) return;
+    // 关闭可能遮挡的弹窗
+    closeUserModal();
+    closeMailPanel();
     page.style.display = 'flex';
     requestAnimationFrame(() => requestAnimationFrame(() => page.classList.add('show')));
     loadAvatarShopPage();
@@ -9985,10 +9991,11 @@ function closeNavPanel() {
 }
 #txnavDetailPage.show { transform: translateX(0); }
 /* ══ 装扮商店全屏页 ══ */
+/* ══ 装扮商店全屏页 ══ */
 #avatarShopPage {
     position: fixed;
     inset: 0;
-    z-index: 2200;
+    z-index: 4000; /* 必须高于 userModal(3000) 和 gateKeeper(2000) */
     background: var(--bg);
     display: none;
     flex-direction: column;
@@ -10243,7 +10250,6 @@ function closeNavPanel() {
     <div class="home-topbar">
         <button class="home-topbar-back" onclick="closeUserHome()">←</button>
         <div class="home-topbar-title">🌸 我的主页</div>
-        <button onclick="doLogout()" style="background:none;border:none;color:#aaa;font-size:12px;cursor:pointer;padding:4px 0 4px 8px;flex-shrink:0;">退出</button>
     </div>
 
     <!-- ── 可滚动主内容 ── -->
@@ -10307,6 +10313,9 @@ function closeNavPanel() {
             </div>
             <div class="home-shortcut-btn" onclick="openMailPanel()">
                 <span class="btn-icon">📧</span>消息中心
+            </div>
+            <div class="home-shortcut-btn" onclick="doLogout()" style="color:#aaa;">
+                <span class="btn-icon">🚪</span>退出登录
             </div>
         </div>
 
@@ -10399,6 +10408,7 @@ function closeNavPanel() {
 <div id="mailPanel" class="user-home-overlay">
     <div class="user-home-box" style="max-width:420px;">
         <div class="user-home-header" style="margin-bottom:0;padding-bottom:0;border-bottom:none;">
+            <div class="fullpage-back-btn" onclick="closeMailPanel()" style="margin-right:8px;">←</div>
             <div style="font-size:20px;">📧</div>
             <div class="user-home-name">消息中心</div>
         </div>
@@ -10419,10 +10429,6 @@ function closeNavPanel() {
         <div id="replyList" style="max-height:400px;overflow-y:auto;display:none;">
             <div class="user-fav-empty">加载中...</div>
         </div>
-        <div class="user-home-footer">
-            <button style="background:#aaa;color:#fff;" onclick="closeMailPanel()">关闭</button>
-        </div>
-        <span class="user-modal-close" onclick="closeMailPanel()">关闭</span>
     </div>
 </div>
 
