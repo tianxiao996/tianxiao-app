@@ -2928,6 +2928,7 @@ function __safeFixDeleteImage(card){
         <button onclick="setInviteCode()" style="background:#673ab7!important;">🎫 邀请码</button>
         <button onclick="openUserQueryPanel()" style="background:#2196f3!important;">🔍 查用户</button>
         <button onclick="openWordlistPanel()" style="background:#00796b!important;">🚫 屏蔽词</button>
+        <button onclick="openAvatarShopPage()" style="background:#e91e63!important;">🎨 装扮商店</button>
         <button onclick="openMailManagePanel()" style="background:#ff5722!important;">📧 发邮件</button>
         <button id="adminAuditBtn" onclick="toggleAdminAuditMode()" style="background:#ff5722!important;">💬 审核评论</button>
         <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button>
@@ -5491,6 +5492,26 @@ function openAvatarShopPage() {
     loadAvatarShopPage();
 }
 
+// ── 装扮商店浮动按钮点击 ──
+function onShopFabClick() {
+    const isAdmin = isEditMode || adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (isAdmin) {
+        toggleShopAdminPanel();
+    }
+}
+
+// ── 切换装扮商店管理面板显示/隐藏 ──
+function toggleShopAdminPanel() {
+    const panel = document.getElementById('shopAdminSection');
+    if (!panel) return;
+    if (panel.style.display === 'none' || !panel.style.display) {
+        panel.style.display = 'block';
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
 // ── 关闭全屏装扮商店 ──
 function closeAvatarShopPage() {
     const page = document.getElementById('avatarShopPage');
@@ -5507,9 +5528,15 @@ async function loadAvatarShopPage() {
     const adminSection = document.getElementById('shopAdminSection');
     if (!grid) return;
 
-    // 管理员显示新增区域
+    // 管理员显示浮动按钮，普通用户隐藏
+    const isAdmin = isEditMode || adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    const fabBtn = document.getElementById('shopFabBtn');
+    if (fabBtn) {
+        fabBtn.style.display = isAdmin ? 'flex' : 'none';
+    }
+    // 上传面板默认隐藏（点击浮动按钮才显示）
     if (adminSection) {
-        adminSection.style.display = (isEditMode || adminToken || sessionStorage.getItem('ADMIN_TOKEN')) ? 'block' : 'none';
+        adminSection.style.display = 'none';
     }
 
     try {
@@ -10012,9 +10039,12 @@ function closeNavPanel() {
         <div style="width:40px;"></div>
     </div>
     <div id="avatarShopBody">
-        <!-- 管理员新增区域（仅管理员可见） -->
-        <div id="shopAdminSection" style="display:none;">
-            <div class="shop-admin-title">🎨 管理员新增装扮</div>
+        <!-- 管理员新增装扮弹窗（平时隐藏，点击浮动按钮弹出） -->
+        <div id="shopAdminSection" style="display:none; margin-bottom:20px; padding:14px; background:#fce4ec; border:1px dashed #e91e63; border-radius:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div style="font-size:13px; font-weight:bold; color:#c2185b;">🎨 新增装扮</div>
+                <div class="fullpage-back-btn" onclick="toggleShopAdminPanel()" style="width:28px;height:28px;font-size:14px;">✕</div>
+            </div>
             <div style="display:flex;flex-direction:column;gap:8px;">
                 <input type="text" id="shopAvatarNameInput" placeholder="装扮名称" style="border:1px solid #f48fb1;border-radius:8px;padding:10px 12px;font-size:14px;outline:none;font-family:inherit;">
                 <input type="text" id="shopAvatarUrlInput" placeholder="图床图片URL" style="border:1px solid #f48fb1;border-radius:8px;padding:10px 12px;font-size:14px;outline:none;font-family:inherit;">
@@ -10034,6 +10064,10 @@ function closeNavPanel() {
         <div id="shopAdminListSection" style="display:none;">
             <div class="shop-section-title">📋 已上架装扮</div>
             <div id="avatarShopAdminList"></div>
+        </div>
+        <!-- 浮动按钮：管理员显示"➕ 添加装扮" -->
+        <div id="shopFabBtn" style="display:none; position:fixed; bottom:20px; right:20px; width:56px; height:56px; border-radius:50%; background:var(--primary); color:#fff; font-size:24px; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.3); cursor:pointer; z-index:4100;" onclick="onShopFabClick()">
+            ➕
         </div>
     </div>
 </div>
@@ -10341,10 +10375,13 @@ function closeNavPanel() {
 
 <div id="mailPanel" class="user-home-overlay">
     <div class="user-home-box" style="max-width:420px;">
-        <div class="user-home-header" style="margin-bottom:0;padding-bottom:0;border-bottom:none;">
-            <div class="fullpage-back-btn" onclick="closeMailPanel()" style="margin-right:8px;">←</div>
-            <div style="font-size:20px;">📧</div>
-            <div class="user-home-name">消息中心</div>
+        <div class="user-home-header" style="margin-bottom:0;padding-bottom:0;border-bottom:none;display:flex;align-items:center;justify-content:space-between;text-align:left;">
+            <div class="fullpage-back-btn" onclick="closeMailPanel()">←</div>
+            <div style="display:flex;align-items:center;gap:6px;flex:1;justify-content:center;">
+                <div style="font-size:20px;">📧</div>
+                <div class="user-home-name" style="margin-bottom:0;">消息中心</div>
+            </div>
+            <div style="width:36px;"></div>
         </div>
         <!-- Tab切换 -->
         <div style="display:flex;gap:0;margin:12px 0;border-bottom:2px solid var(--pixel-soft);">
