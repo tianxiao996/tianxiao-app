@@ -2476,21 +2476,30 @@
     display: flex; align-items: center;
     gap: 6px;
 }
-.comment-sort-btn {
-    padding: 3px 8px;
-    border-radius: 10px;
+/* B站风格评论排序栏 */
+.comment-sort-bar {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 12px;
+    color: #999;
+}
+.comment-sort-tab {
+    padding: 2px 6px;
     cursor: pointer;
     color: #999;
-    background: transparent;
-    border: 1px solid transparent;
-    transition: all 0.15s;
+    transition: color 0.15s;
     font-weight: normal;
 }
-.comment-sort-btn.active {
+.comment-sort-tab.active {
     color: var(--primary);
-    background: var(--primary-light);
-    border-color: var(--primary);
     font-weight: bold;
+}
+.comment-sort-divider {
+    color: #ddd;
+    font-size: 11px;
+    user-select: none;
 }
 .comment-action-btn.liked {
     color: #e91e63;
@@ -11995,11 +12004,12 @@ function injectCommentSection(cardId) {
     section.className = 'comment-section';
     section.innerHTML = `
         <div class="comment-section-title">
-            💬 玩家评论
+            💬 玩家评论<span id="commentCountNum"></span>
             <span class="comment-avg-score" id="commentAvgScore"></span>
-            <span style="margin-left:auto;display:flex;gap:4px;font-size:11px;">
-                <span id="sortHot" class="comment-sort-btn active" onclick="switchCommentSort('hot')">🔥 热度</span>
-                <span id="sortTime" class="comment-sort-btn" onclick="switchCommentSort('time')">🕐 时间</span>
+            <span class="comment-sort-bar" id="commentSortBar" style="display:none;">
+                <span id="sortHot" class="comment-sort-tab active" onclick="switchCommentSort('hot')">按热度</span>
+                <span class="comment-sort-divider">|</span>
+                <span id="sortTime" class="comment-sort-tab" onclick="switchCommentSort('time')">按时间</span>
             </span>
         </div>
         <div id="commentInputArea"></div>
@@ -12037,8 +12047,16 @@ async function loadComments(cardId) {
         // 更新平均分
         const avgEl = document.getElementById('commentAvgScore');
         if (avgEl) {
-            avgEl.textContent = data.avgScore ? `平均分 ⭐ ${data.avgScore}` : '';
+            avgEl.textContent = data.avgScore ? `(${data.avgScore}分)` : '';
         }
+
+        // 显示并更新排序栏 + 评论数量
+        const sortBar = document.getElementById('commentSortBar');
+        if (sortBar) sortBar.style.display = 'flex';
+        document.getElementById('sortHot')?.classList.toggle('active', _commentSortMode === 'hot');
+        document.getElementById('sortTime')?.classList.toggle('active', _commentSortMode === 'time');
+        const countNumEl = document.getElementById('commentCountNum');
+        if (countNumEl) countNumEl.textContent = data.totalCount ? ` ${data.totalCount}` : '';
 
         // 渲染输入区
         renderCommentInput(cardId, data.userVoted);
