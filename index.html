@@ -2960,6 +2960,7 @@ function __safeFixDeleteImage(card){
         <button onclick="openWordlistPanel()" style="background:#00796b!important;">🚫 屏蔽词</button>
         <button onclick="openAvatarShopPage()" style="background:#e91e63!important;">🎨 装扮商店</button>
         <button onclick="openMailManagePanel()" style="background:#ff5722!important;">📧 发邮件</button>
+        <button onclick="openLinkProxyPanel()" style="background:#4caf50!important;">🔗 链接代理</button>
         <button id="adminAuditBtn" onclick="toggleAdminAuditMode()" style="background:#ff5722!important;">💬 审核评论</button>
         <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button>
         </div>
@@ -3080,6 +3081,35 @@ function __safeFixDeleteImage(card){
             <button onclick="cleanupExpiredMails()" style="background:#ffebee;color:#e53935;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;">🗑️ 清理过期邮件</button>
         </div>
         <div id="adminMailList" style="max-height:200px;overflow-y:auto;"></div>
+    <!-- 🔗 链接代理面板（管理员）— 将任意链接转换为 Worker 代理链接，抹除源站痕迹 -->
+    <div id="linkProxyPanel" style="display:none; background:#e8f5e9; border:1px dashed #4caf50; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:600px;">
+        <div style="font-size:13px; font-weight:bold; color:#2e7d32; margin-bottom:10px;">🔗 链接代理转换（隐藏真实来源）</div>
+        <div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #a5d6a7;">
+            <div style="font-size:12px; color:#666; margin-bottom:8px;">输入任意直链（GitHub、蓝奏云等），转换为你的域名代理链接，F12也追踪不到源站</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                <input type="text" id="linkProxyInput" placeholder="粘贴原始链接（如 https://github.com/.../file.dat）" style="border:1px solid #a5d6a7;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;font-family:inherit;">
+                <input type="text" id="linkProxyName" placeholder="文件名（可选，如 A146.dat）" style="border:1px solid #a5d6a7;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;font-family:inherit;">
+                <button onclick="convertLinkProxy()" style="background:#4caf50;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;">🔄 转换链接</button>
+            </div>
+            <div id="linkProxyResult" style="display:none; margin-top:10px; padding:10px; background:#f1f8e9; border-radius:8px; border:1px solid #c8e6c9;">
+                <div style="font-size:11px; color:#558b2f; font-weight:bold; margin-bottom:4px;">✅ 转换成功！复制下方链接使用：</div>
+                <div id="linkProxyOutput" style="font-size:12px; color:#2e7d32; word-break:break-all; background:#fff; padding:6px 8px; border-radius:4px; border:1px solid #a5d6a7; font-family:monospace;"></div>
+                <div style="display:flex; gap:6px; margin-top:8px;">
+                    <button onclick="copyLinkProxy()" style="flex:1; background:#66bb6a;color:#fff;border:none;border-radius:6px;padding:6px;font-size:12px;cursor:pointer;">📋 复制链接</button>
+                    <button onclick="useLinkProxyInCard()" style="flex:1; background:#42a5f5;color:#fff;border:none;border-radius:6px;padding:6px;font-size:12px;cursor:pointer;">📥 填入当前卡片下载框</button>
+                </div>
+            </div>
+        </div>
+        <!-- 已保存的代理链接列表 -->
+        <div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #a5d6a7; margin-top:10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <div style="font-size:12px; font-weight:bold; color:#2e7d32;">📋 已保存的代理链接</div>
+                <button onclick="loadSavedProxyLinks()" style="background:#66bb6a; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer;">🔄 刷新</button>
+            </div>
+            <div id="savedProxyLinksList" style="display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto;">
+                <div style="font-size:12px; color:#aaa; text-align:center; padding:10px;">点击刷新查看</div>
+            </div>
+        </div>
     </div>
 
 </header>
@@ -5677,6 +5707,155 @@ async function deleteAdminAvatar(avatarId) {
         const data = await res.json();
         if (data.success) { showToast('✅ 已删除'); loadAdminAvatars(); }
     } catch(e) {}
+}
+
+// ════════════════════════════════════════════
+// 🔗 链接代理面板功能
+// ════════════════════════════════════════════
+
+// ── 打开/关闭链接代理面板 ──
+function openLinkProxyPanel() {
+    const panel = document.getElementById('linkProxyPanel');
+    const mailPanel = document.getElementById('mailManagePanel');
+    const auditPanel = document.getElementById('adminAuditPanel');
+    if (mailPanel) mailPanel.style.display = 'none';
+    if (auditPanel) auditPanel.style.display = 'none';
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if (panel.style.display === 'block') {
+        loadSavedProxyLinks();
+        document.getElementById('linkProxyInput').focus();
+    }
+}
+
+// ── 转换链接为代理链接 ──
+async function convertLinkProxy() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('请先登录管理员'); return; }
+    
+    const input = document.getElementById('linkProxyInput');
+    const nameInput = document.getElementById('linkProxyName');
+    const resultBox = document.getElementById('linkProxyResult');
+    const output = document.getElementById('linkProxyOutput');
+    const url = input?.value?.trim();
+    const filename = nameInput?.value?.trim() || '';
+    
+    if (!url) { showToast('❌ 请输入原始链接'); return; }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        showToast('❌ 链接必须以 http:// 或 https:// 开头'); return;
+    }
+    
+    try {
+        // 发送到 Worker 保存，获取短 ID
+        const res = await fetch(WORKER_BASE + '/api/admin/proxy-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ url, filename })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const proxyUrl = location.origin + '/api/proxy/' + data.id;
+            output.textContent = proxyUrl;
+            resultBox.style.display = 'block';
+            showToast('✅ 转换成功！');
+            loadSavedProxyLinks(); // 刷新列表
+        } else {
+            showToast('❌ ' + (data.error || '转换失败'));
+        }
+    } catch(e) {
+        showToast('❌ 网络错误：' + e.message);
+    }
+}
+
+// ── 复制代理链接 ──
+function copyLinkProxy() {
+    const output = document.getElementById('linkProxyOutput');
+    if (!output || !output.textContent) return;
+    navigator.clipboard.writeText(output.textContent).then(() => {
+        showToast('✅ 已复制到剪贴板');
+    }).catch(() => {
+        // fallback
+        const ta = document.createElement('textarea');
+        ta.value = output.textContent;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('✅ 已复制到剪贴板');
+    });
+}
+
+// ── 将代理链接填入当前卡片的下载框 ──
+function useLinkProxyInCard() {
+    const output = document.getElementById('linkProxyOutput');
+    if (!output || !output.textContent) { showToast('❌ 没有可使用的链接'); return; }
+    
+    // 尝试填入当前编辑卡片的下载框
+    const dldInput = document.getElementById('editCardDld');
+    if (dldInput) {
+        dldInput.value = output.textContent;
+        showToast('✅ 已填入下载链接编辑框');
+        // 关闭面板
+        document.getElementById('linkProxyPanel').style.display = 'none';
+        return;
+    }
+    
+    // 如果没有编辑框打开，提示用户
+    showToast('⚠️ 请先在管理员模式下点击卡片编辑按钮');
+}
+
+// ── 加载已保存的代理链接列表 ──
+async function loadSavedProxyLinks() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) return;
+    const listEl = document.getElementById('savedProxyLinksList');
+    if (!listEl) return;
+    listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:10px;">加载中...</div>';
+    
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/proxy-links', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.success && data.links && data.links.length > 0) {
+            listEl.innerHTML = data.links.map(l => `
+                <div style="display:flex;align-items:center;gap:8px;background:#f9fbe7;border-radius:8px;padding:8px 10px;border:1px solid #c8e6c9;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:12px;font-weight:bold;color:#33691e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.filename || '未命名')}</div>
+                        <div style="font-size:11px;color:#78909c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.url.substring(0,60))}${l.url.length>60?'...':''}</div>
+                        <div style="font-size:10px;color:#558b2f;font-family:monospace;">${location.origin}/api/proxy/${l.id}</div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+                        <button onclick="navigator.clipboard.writeText('${location.origin}/api/proxy/${l.id}');showToast('✅ 已复制');" style="background:#66bb6a;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;">复制</button>
+                        <button onclick="deleteProxyLink('${l.id}')" style="background:#ffebee;color:#e53935;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;">删除</button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:10px;">暂无保存的代理链接</div>';
+        }
+    } catch(e) {
+        listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:10px;">加载失败</div>';
+    }
+}
+
+// ── 删除代理链接 ──
+async function deleteProxyLink(id) {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('请先登录管理员'); return; }
+    if (!confirm('确定删除这条代理链接？')) return;
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/proxy-link/' + id, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ 已删除');
+            loadSavedProxyLinks();
+        } else {
+            showToast('❌ ' + (data.error || '删除失败'));
+        }
+    } catch(e) { showToast('❌ 网络错误'); }
 }
 
 // ── 打开邮件管理面板 ──
