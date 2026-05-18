@@ -2928,7 +2928,6 @@ function __safeFixDeleteImage(card){
         <button onclick="setInviteCode()" style="background:#673ab7!important;">🎫 邀请码</button>
         <button onclick="openUserQueryPanel()" style="background:#2196f3!important;">🔍 查用户</button>
         <button onclick="openWordlistPanel()" style="background:#00796b!important;">🚫 屏蔽词</button>
-        <button onclick="openAvatarManagePanel()" style="background:#e91e63!important;">🎨 头像</button>
         <button onclick="openMailManagePanel()" style="background:#ff5722!important;">📧 发邮件</button>
         <button id="adminAuditBtn" onclick="toggleAdminAuditMode()" style="background:#ff5722!important;">💬 审核评论</button>
         <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button>
@@ -3027,23 +3026,7 @@ function __safeFixDeleteImage(card){
         <button class="cat-save-btn" onclick="saveCategoryOrder()">✅ 保存并更新导航</button>
     </div>
 
-    <!-- 🎨 装扮管理面板（管理员） -->
-    <div id="avatarManagePanel" style="display:none; background:#fce4ec; border:1px dashed #e91e63; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:600px;">
-        <div style="font-size:13px; font-weight:bold; color:#c2185b; margin-bottom:10px;">🎨 装扮管理</div>
-        <div style="background:#fff; border-radius:10px; padding:12px; margin-bottom:10px; border:1px solid #f48fb1;">
-            <div style="font-size:12px; font-weight:bold; color:#ad1457; margin-bottom:8px;">➕ 新增头像</div>
-            <div style="display:flex; flex-direction:column; gap:6px;">
-                <input type="text" id="avatarNameInput" placeholder="头像名称" style="border:1px solid #f48fb1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
-                <input type="text" id="avatarUrlInput" placeholder="图床图片URL" style="border:1px solid #f48fb1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
-                <input type="number" id="avatarPriceInput" placeholder="小鱼干价格" min="0" value="5" style="border:1px solid #f48fb1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
-                <button onclick="createAdminAvatar()" style="background:#e91e63;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;">➕ 添加头像</button>
-            </div>
-        </div>
-        <div style="font-size:12px; font-weight:bold; color:#ad1457; margin-bottom:8px;">📋 已上架头像</div>
-        <div id="adminAvatarList" style="display:flex;flex-wrap:wrap;gap:8px;max-height:200px;overflow-y:auto;">
-            <span style="font-size:12px;color:#aaa;">点击刷新查看列表</span>
-        </div>
-    </div>
+
 
     <!-- 📧 邮件管理面板（管理员） -->
     <div id="mailManagePanel" style="display:none; background:#fff3e0; border:1px dashed #ff9800; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:600px;">
@@ -5250,7 +5233,7 @@ function exitAdmin() {
     // 🐛 Bug修复：隐藏屏蔽词面板
     const wp = document.getElementById("wordlistPanel"); if(wp) wp.style.display = "none";
     // 隐藏头像管理面板
-    const ap = document.getElementById("avatarManagePanel"); if(ap) ap.style.display = "none";
+
     // 隐藏邮件管理面板
     const mp = document.getElementById("mailManagePanel"); if(mp) mp.style.display = "none";
     updateSidebarAdminUI();
@@ -5569,6 +5552,29 @@ async function loadAvatarShopPage() {
             if (ownedTitle) ownedTitle.style.display = 'none';
             if (ownedGrid) ownedGrid.innerHTML = '';
         }
+        // ── 管理员：加载已上架装扮列表（带删除按钮）──
+        const isAdmin = isEditMode || adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+        const adminListSection = document.getElementById('shopAdminListSection');
+        const adminListEl = document.getElementById('avatarShopAdminList');
+        if (isAdmin && adminListSection && adminListEl) {
+            adminListSection.style.display = 'block';
+            if (data.avatars && data.avatars.length > 0) {
+                adminListEl.innerHTML = data.avatars.map(a => `
+                    <div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:8px;padding:6px 10px;border:1px solid #f48fb1;margin-bottom:6px;">
+                        <img src="${escapeHtml(a.url)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:12px;font-weight:bold;">${escapeHtml(a.name)}</div>
+                            <div style="font-size:11px;color:#888;">🐟 ${a.price} · ID: ${a.id}</div>
+                        </div>
+                        <button onclick="deleteAdminAvatar('${a.id}')" style="background:#ffebee;color:#e53935;border:none;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;">删除</button>
+                    </div>
+                `).join('');
+            } else {
+                adminListEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:10px;">暂无装扮</div>';
+            }
+        } else if (adminListSection) {
+            adminListSection.style.display = 'none';
+        }
     } catch(e) {
         grid.innerHTML = '<div class="shop-empty">加载失败</div>';
     }
@@ -5599,65 +5605,6 @@ async function createAvatarFromShop() {
     } catch(e) { showToast('❌ 网络错误'); }
 }
 
-// ── 打开头像管理面板 ──
-function openAvatarManagePanel() {
-    const panel = document.getElementById('avatarManagePanel');
-    const mailPanel = document.getElementById('mailManagePanel');
-    if (mailPanel) mailPanel.style.display = 'none';
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    if (panel.style.display === 'block') loadAdminAvatars();
-}
-
-// ── 加载管理员头像列表 ──
-async function loadAdminAvatars() {
-    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
-    if (!token) return;
-    try {
-        const res = await fetch(WORKER_BASE + '/api/admin/avatars', { headers: { 'Authorization': 'Bearer ' + token } });
-        const data = await res.json();
-        const listEl = document.getElementById('adminAvatarList');
-        if (!listEl) return;
-        if (!data.avatars || data.avatars.length === 0) {
-            listEl.innerHTML = '<span style="font-size:12px;color:#aaa;">暂无头像</span>';
-        } else {
-            listEl.innerHTML = data.avatars.map(a => `
-                <div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:8px;padding:6px 10px;border:1px solid #f48fb1;flex:1;min-width:200px;">
-                    <img src="${escapeHtml(a.url)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
-                    <div style="flex:1;min-width:0;">
-                        <div style="font-size:12px;font-weight:bold;">${escapeHtml(a.name)}</div>
-                        <div style="font-size:11px;color:#888;">🐟 ${a.price} · ID: ${a.id}</div>
-                    </div>
-                    <button onclick="deleteAdminAvatar('${a.id}')" style="background:#ffebee;color:#e53935;border:none;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;">删除</button>
-                </div>
-            `).join('');
-        }
-    } catch(e) {}
-}
-
-// ── 创建头像 ──
-async function createAdminAvatar() {
-    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
-    if (!token) { showToast('请先登录管理员'); return; }
-    const name = document.getElementById('avatarNameInput')?.value?.trim();
-    const url = document.getElementById('avatarUrlInput')?.value?.trim();
-    const price = parseInt(document.getElementById('avatarPriceInput')?.value) || 0;
-    if (!name || !url) { showToast('请填写完整信息'); return; }
-    try {
-        const res = await fetch(WORKER_BASE + '/api/admin/avatar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-            body: JSON.stringify({ action: 'create', url, name, price })
-        });
-        const data = await res.json();
-        if (data.success) {
-            showToast('✅ ' + data.message);
-            document.getElementById('avatarNameInput').value = '';
-            document.getElementById('avatarUrlInput').value = '';
-            loadAdminAvatars();
-        } else { showToast('❌ ' + data.error); }
-    } catch(e) { showToast('❌ 网络错误'); }
-}
-
 // ── 在装扮商店内新增头像（管理员）──
 // ── 删除头像 ──
 async function deleteAdminAvatar(avatarId) {
@@ -5678,8 +5625,6 @@ async function deleteAdminAvatar(avatarId) {
 // ── 打开邮件管理面板 ──
 function openMailManagePanel() {
     const panel = document.getElementById('mailManagePanel');
-    const avatarPanel = document.getElementById('avatarManagePanel');
-    if (avatarPanel) avatarPanel.style.display = 'none';
     panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     if (panel.style.display === 'block') loadAdminMails();
 }
@@ -9021,22 +8966,6 @@ function updateSidebarAdminUI() {
         const hasToken = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
         adminItem.style.display = hasToken ? 'flex' : 'none';
     }
-    // 🔒 评论区管理员入口显示控制
-    const adminEntryInComment = document.getElementById('adminEntryInComment');
-    if (adminEntryInComment) {
-        const hasToken = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
-        adminEntryInComment.style.display = hasToken ? 'block' : 'none';
-    }
-}
-
-// ── 从评论区打开管理员模式 ──
-function enterAdminFromComment() {
-    if (!adminToken && !sessionStorage.getItem('ADMIN_TOKEN')) {
-        openLogin();
-        return;
-    }
-    closeCardDetail();
-    enterAdmin();
 }
 
 // ── 从侧边栏打开管理员模式 ──
@@ -10101,6 +10030,11 @@ function closeNavPanel() {
         <!-- 已拥有的装扮 -->
         <div class="shop-section-title" id="shopOwnedTitle" style="display:none;">🎒 已拥有</div>
         <div class="user-avatar-grid" id="avatarShopOwnedGrid"></div>
+        <!-- 管理员：已上架装扮列表（带删除） -->
+        <div id="shopAdminListSection" style="display:none;">
+            <div class="shop-section-title">📋 已上架装扮</div>
+            <div id="avatarShopAdminList"></div>
+        </div>
     </div>
 </div>
 
@@ -12008,21 +11942,8 @@ function injectCommentSection(cardId) {
         <div class="comment-list" id="commentList">
             <div class="comment-empty">加载中...</div>
         </div>
-        <!-- 🔒 管理员入口（移至评论区下方） -->
-        <div id="adminEntryInComment" style="display:none; margin-top:16px; padding-top:12px; border-top:1px dashed var(--border); text-align:center;">
-            <button onclick="enterAdminFromComment()" style="background:transparent; border:1.5px solid rgba(255,102,153,0.4); color:var(--primary); padding:8px 20px; border-radius:20px; font-size:13px; cursor:pointer; font-family:inherit;">
-                🔒 管理员入口
-            </button>
-        </div>
     `;
     body.appendChild(section);
-
-    // 根据登录状态显示/隐藏管理员入口
-    const adminEntry = document.getElementById('adminEntryInComment');
-    if (adminEntry) {
-        const hasToken = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
-        adminEntry.style.display = hasToken ? 'block' : 'none';
-    }
 
     loadComments(cardId);
 }
