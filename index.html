@@ -12022,12 +12022,14 @@ function injectCommentSection(cardId) {
     loadComments(cardId);
 }
 
-// 切换评论排序
+// 切换评论排序（前端瞬间切换，不重新请求API）
 function switchCommentSort(mode) {
     _commentSortMode = mode;
     document.getElementById('sortHot')?.classList.toggle('active', mode === 'hot');
     document.getElementById('sortTime')?.classList.toggle('active', mode === 'time');
-    if (currentCommentCardId) loadComments(currentCommentCardId);
+    if (_cachedComments && currentCommentCardId) {
+        renderCommentList(_cachedComments, currentCommentCardId);
+    }
 }
 
 // 加载评论
@@ -12073,19 +12075,39 @@ async function loadComments(cardId) {
             return;
         }
 
-        // ── 排序：热度（点赞数降序）或时间（最早在前）──
-        if (_commentSortMode === 'hot') {
-            data.comments.sort((a, b) => (b.likes || 0) - (a.likes || 0));
-        } else {
-            data.comments.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-        }
+        // 缓存数据
+        _cachedComments = data.comments;
+        renderCommentList(data.comments, cardId);
+    } catch(e) {
+        const listEl = document.getElementById('commentList');
+        if (listEl) listEl.innerHTML = '<div class="comment-empty">获取评论失败</div>';
+    }
+}
 
-        // ── 分离父评论和回复（兼容 replyTo 为空字符串的老数据）──
-        const parents = data.comments.filter(c => !c.replyTo || c.replyTo === '');
-        const replies  = data.comments.filter(c =>  c.replyTo && c.replyTo !== '');
+// ── 渲染评论列表（前端排序，瞬间切换）──
+function renderCommentList(comments, cardId) {
+    const listEl = document.getElementById('commentList');
+    if (!listEl) return;
 
-        // ── 构建树状结构 ──
-        listEl.innerHTML = parents.map(parent => {
+    if (!comments || comments.length === 0) {
+        listEl.innerHTML = '<div class="comment-empty">还没有评论，来第一个评论吧！</div>';
+        return;
+    }
+
+    // ── 排序：热度（点赞数降序）或时间（最早在前）──
+    const sorted = [...comments];
+    if (_commentSortMode === 'hot') {
+        sorted.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+    } else {
+        sorted.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    }
+
+    // ── 分离父评论和回复（兼容 replyTo 为空字符串的老数据）──
+    const parents = sorted.filter(c => !c.replyTo || c.replyTo === '');
+    const replies = sorted.filter(c =>  c.replyTo && c.replyTo !== '');
+
+    // ── 构建树状结构 ──
+    listEl.innerHTML = parents.map(parent => {
             const parentAvatar = parent.avatar && parent.avatar !== './avatar.png' ? parent.avatar : null;
             const pLv = LEVEL_CONFIG[(parent.level || 1) - 1] || LEVEL_CONFIG[0];
 
@@ -12170,12 +12192,6 @@ async function loadComments(cardId) {
             html += `</div>`; // .comment-thread
             return html;
         }).join('');
-
-    } catch(e) {
-        console.error('加载评论失败', e);
-        const listEl = document.getElementById('commentList');
-        if (listEl) listEl.innerHTML = '<div class="comment-empty">加载评论失败，请刷新重试</div>';
-    }
 }
 
 
@@ -12272,6 +12288,7 @@ let _replyToUser = null;
 let _replyToUserId = null;
 let _commentSortMode = 'hot'; // 'hot' | 'time'
 let _currentCommentUser = null;
+let _cachedComments = null; // 缓存评论数据，切换排序时瞬间渲染
 
 // ── 生成文字头像HTML（img加载失败时回退）──
 function getTextAvatar() {
@@ -12376,6 +12393,7 @@ async function submitReply(commentId, replyToUser, replyToUserId, btnEl) {
         if (data.success) {
             showToast('✅ 回复成功！' + (data.expAdded ? ` +${data.expAdded}经验` : ''));
             box.remove();
+            _cachedComments = null; // 清空缓存，重新加载
             loadComments(currentCommentCardId);
         } else if (data.code === 'rate_limited') {
             showToast('⏰ ' + data.error);
@@ -12443,6 +12461,7 @@ async function submitComment(cardId) {
             stars.forEach(s => s.textContent = '☆');
             const scoreVal = document.getElementById('scoreValue');
             if (scoreVal) scoreVal.textContent = '';
+            _cachedComments = null; // 清空缓存，重新加载
             loadComments(cardId);
         } else if (data.code === 'rate_limited') {
             showToast('⏰ ' + (data.error || '评论太频繁'));
