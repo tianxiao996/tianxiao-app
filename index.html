@@ -12133,7 +12133,7 @@ function renderCommentList(comments, cardId) {
                         </div>
                         <div class="comment-content">${escapeHtml(parent.comment)}</div>
                         <div class="comment-actions">
-                            <span class="comment-action-btn ${parent.userLiked ? 'liked' : ''}" onclick="toggleCommentLike('${escapeHtml(parent.id||'')}', this)">
+                            <span class="comment-action-btn ${parent.userLiked ? 'liked' : ''}" data-likes="${parent.likes || 0}" data-liked="${parent.userLiked ? '1' : '0'}" onclick="toggleCommentLike('${escapeHtml(parent.id||'')}', this)">
                                 ${parent.userLiked ? '❤️' : '🤍'} ${parent.likes || 0}
                             </span>
                             <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(parent.id||'')}','${escapeHtml(parent.username)}','${escapeHtml(parent.id||'')}','${escapeHtml(parent.userId)}')">回复</span>
@@ -12166,7 +12166,7 @@ function renderCommentList(comments, cardId) {
                                 <span class="rp-name" onclick="openBanModal('${escapeHtml(r.userId)}','${escapeHtml(r.username)}')">${escapeHtml(r.username)}</span><span class="comment-level" style="color:${rLv.color};background:${rLv.bg};">${rLv.name}</span> ${atHtml}${escapeHtml(r.comment)}
                             </div>
                             <div class="comment-reply-meta">
-                                <span class="comment-action-btn ${r.userLiked ? 'liked' : ''}" onclick="toggleCommentLike('${escapeHtml(r.id||'')}', this)">
+                                <span class="comment-action-btn ${r.userLiked ? 'liked' : ''}" data-likes="${r.likes || 0}" data-liked="${r.userLiked ? '1' : '0'}" onclick="toggleCommentLike('${escapeHtml(r.id||'')}', this)">
                                     ${r.userLiked ? '❤️' : '🤍'} ${r.likes || 0}
                                 </span>
                                 <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(parent.id||'')}','${escapeHtml(r.username)}','${escapeHtml(parent.id||'')}','${escapeHtml(r.userId)}')">回复</span>
@@ -12315,12 +12315,13 @@ async function toggleCommentLike(commentId, btnEl) {
         });
         const data = await res.json();
         if (data.success) {
-            // 即时更新UI
+            // 即时更新UI（用data-likes属性存储点赞数，不从textContent解析）
             const isNowLiked = action === 'like';
             btnEl.classList.toggle('liked', isNowLiked);
-            const currentText = btnEl.textContent.trim();
-            let currentCount = parseInt(currentText.replace(/[^0-9]/g, '')) || 0;
+            let currentCount = parseInt(btnEl.dataset.likes) || 0;
             currentCount = isNowLiked ? currentCount + 1 : Math.max(0, currentCount - 1);
+            btnEl.dataset.likes = currentCount;
+            btnEl.dataset.liked = isNowLiked ? '1' : '0';
             btnEl.innerHTML = `${isNowLiked ? '❤️' : '🤍'} ${currentCount}`;
         } else {
             showToast(data.error || '操作失败');
