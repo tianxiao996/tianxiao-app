@@ -5924,20 +5924,33 @@ async function submitDlCaptcha() {
 
         // 验证通过，打开下载页面
         _secureDlSession.downloadToken = data.downloadToken;
-        const step2 = document.getElementById('dlStep2');
-        if (step2) step2.innerHTML = '<div style="text-align:center;padding:20px;"><div style="font-size:28px;margin-bottom:8px;">🎉</div><div style="font-size:14px;color:#888;">验证通过！正在打开安全下载页面...</div></div>';
 
-        // 关闭弹窗后打开下载页面（带完整验证信息）
+        // 构造下载页URL
         const dlPageUrl = WORKER_BASE + '/dl-gh/' + data.downloadToken + '?url=' + encodeURIComponent(_secureDlSession.fileUrl) + '&label=' + encodeURIComponent(_secureDlSession.fileLabel || '');
 
-        // 先移除弹窗再打开页面
-        setTimeout(() => {
+        // ⚠️ 必须在用户点击事件的同步栈中调用 window.open()，否则浏览器会拦截弹窗
+        // 先打开下载页（此时还在用户点击的处理函数执行中），再移除弹窗
+        const newWin = window.open(dlPageUrl, '_blank');
+        if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
+            // 弹窗被拦截，显示手动打开链接
+            const step2 = document.getElementById('dlStep2');
+            if (step2) {
+                step2.innerHTML = `
+                    <div style="text-align:center;padding:20px;">
+                        <div style="font-size:36px;margin-bottom:12px;">⚠️</div>
+                        <div style="font-size:14px;color:#e53935;margin-bottom:12px;">浏览器拦截了弹窗</div>
+                        <div style="font-size:12px;color:#666;margin-bottom:16px;">请点击下方按钮手动打开下载页</div>
+                        <a href="${dlPageUrl}" target="_blank" class="modal-btn" style="display:inline-block;width:100%;box-sizing:border-box;background:linear-gradient(135deg,#ff6699,#e91e63);text-decoration:none;color:#fff;text-align:center;margin-bottom:8px;">打开下载页面</a>
+                        <button onclick="document.getElementById('secureDownloadModal').remove()" class="modal-btn btn-cancel" style="width:100%;">关闭</button>
+                    </div>`;
+            }
+        } else {
+            // 下载页成功打开，移除弹窗
             const modal = document.getElementById('secureDownloadModal');
             if (modal) modal.remove();
-            window.open(dlPageUrl, '_blank');
             // 刷新用户数据
             if (typeof refreshCurrentUser === 'function') refreshCurrentUser();
-        }, 600);
+        }
     } catch(e) {
         if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
         showDlError('网络错误：' + e.message);
@@ -8003,6 +8016,12 @@ function addLinkJumpButtons() {
             dlBtn.textContent = '⬇️ 直接下载';
             dlBtn.onclick = async function(e) {
                 e.stopPropagation();
+                // 🔒 GitHub链接走完整安全下载流程（Turnstile+算术验证+粉色下载页）
+                if (savedUrl.includes('github.com') || savedUrl.includes('raw.githubusercontent.com')) {
+                    openSecureDownloadFlow(savedUrl, 'GitHub资源');
+                    return;
+                }
+                // 非GitHub链接：Turnstile验证后直接打开
                 dlBtn.textContent = '⏳ 验证中...';
                 dlBtn.disabled = true;
                 try {
