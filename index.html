@@ -5714,6 +5714,156 @@ async function deleteAdminAvatar(avatarId) {
 }
 
 // ════════════════════════════════════════════
+// 🔒 GitHub安全下载保护系统
+// ════════════════════════════════════════════
+
+let _secureDlSession = null;
+
+// ── 打开安全下载验证弹窗 ──
+function openSecureDownloadFlow(fileUrl, fileLabel) {
+    const userToken = sessionStorage.getItem('userToken') || localStorage.getItem('userToken');
+    if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return; }
+
+    const modal = document.createElement('div');
+    modal.id = 'secureDownloadModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+        <div style="max-width:420px;width:92%;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.4);overflow:hidden;" onclick="event.stopPropagation()">
+            <div style="background:linear-gradient(135deg,#ff6699,#e91e63);padding:20px;text-align:center;color:#fff;">
+                <div style="font-size:36px;margin-bottom:6px;">🔒</div>
+                <div style="font-size:17px;font-weight:bold;">安全下载通道</div>
+                <div style="font-size:12px;opacity:0.85;margin-top:4px;">${escapeHtml(fileLabel || 'GitHub资源')}</div>
+            </div>
+            <div style="padding:20px;">
+                <div id="dlStep1">
+                    <div style="font-size:14px;color:#555;margin-bottom:12px;text-align:center;">为防止自动化批量下载，请完成人机验证</div>
+                    <div style="margin-bottom:12px;padding:10px;background:#fff3e0;border-radius:8px;font-size:12px;color:#e65100;text-align:center;">💡 下载将消耗 <b>1条小鱼干</b>，24小时内限下载3次</div>
+                    <div style="display:flex;justify-content:center;margin-bottom:16px;"><div id="dlTurnstileContainer" style="min-height:65px;"></div></div>
+                    <div id="dlStatsInfo" style="font-size:11px;color:#999;text-align:center;margin-bottom:10px;">正在查询下载配额...</div>
+                    <button onclick="document.getElementById('secureDownloadModal').remove()" class="modal-btn btn-cancel" style="width:100%;">取消</button>
+                </div>
+                <div id="dlStep2" style="display:none;">
+                    <div style="font-size:14px;color:#555;margin-bottom:16px;text-align:center;">请回答下面的算术题</div>
+                    <div style="text-align:center;margin-bottom:16px;">
+                        <div id="dlCaptchaQuestion" style="font-size:28px;font-weight:bold;color:#ff6699;font-family:monospace;background:#fce4ec;padding:16px 24px;border-radius:12px;display:inline-block;"></div>
+                    </div>
+                    <input type="text" id="dlCaptchaInput" placeholder="输入答案" style="width:100%;padding:14px;border:2px solid #fce4ec;border-radius:12px;font-size:18px;text-align:center;box-sizing:border-box;margin-bottom:16px;outline:none;" onkeydown="if(event.key==='Enter')submitDlCaptcha()">
+                    <button onclick="submitDlCaptcha()" id="dlCaptchaSubmitBtn" class="modal-btn" style="width:100%;background:linear-gradient(135deg,#ff6699,#e91e63);margin-bottom:10px;">验证并下载</button>
+                    <button onclick="document.getElementById('secureDownloadModal').remove()" class="modal-btn btn-cancel" style="width:100%;">取消</button>
+                </div>
+                <div id="dlError" style="display:none;text-align:center;padding:10px 0;">
+                    <div style="font-size:36px;margin-bottom:8px;">❌</div>
+                    <div id="dlErrorText" style="font-size:14px;color:#e53935;margin-bottom:16px;"></div>
+                    <button onclick="document.getElementById('secureDownloadModal').remove()" class="modal-btn btn-cancel" style="width:100%;">关闭</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+    _secureDlSession = { fileUrl, fileLabel, userToken };
+    loadDlStats(userToken);
+    setTimeout(() => renderDlTurnstile(), 100);
+}
+
+// ── 加载下载配额 ──
+async function loadDlStats(userToken) {
+    const infoEl = document.getElementById('dlStatsInfo');
+    if (!infoEl) return;
+    try {
+        const res = await fetch(WORKER_BASE + '/api/download-flow/stats', { headers: { 'Authorization': 'Bearer ' + userToken } });
+        const data = await res.json();
+        if (data.success) infoEl.innerHTML = `今日已下载 <b style="color:#ff6699">${data.downloadCount}</b>/3 次 | 小鱼干 <b style="color:#ff9800">${data.fishCoins}</b> 条`;
+    } catch(e) { infoEl.textContent = ''; }
+}
+
+// ── 渲染Turnstile ──
+function renderDlTurnstile() {
+    const container = document.getElementById('dlTurnstileContainer');
+    if (!container || !window.turnstile) { if (container) container.innerHTML = '<div style="color:#999;font-size:12px;">⏳ 加载中...</div>'; setTimeout(renderDlTurnstile, 500); return; }
+    container.innerHTML = '';
+    const el = document.createElement('div');
+    container.appendChild(el);
+    window.turnstile.render(el, {
+        sitekey: TURNSTILE_SITE_KEY,
+        callback: (token) => { handleDlTurnstileSuccess(token); },
+        'error-callback': () => { showDlError('验证加载失败'); },
+        'expired-callback': () => { window.turnstile.reset(el); },
+        theme: 'light', size: 'normal',
+    });
+}
+
+// ── Turnstile成功 → 初始化会话 ──
+async function handleDlTurnstileSuccess(turnstileToken) {
+    if (!_secureDlSession) return;
+    const step1 = document.getElementById('dlStep1');
+    if (step1) step1.innerHTML = '<div style="text-align:center;padding:20px;"><div style="font-size:28px;margin-bottom:8px;">⏳</div><div style="font-size:14px;color:#888;">正在初始化安全会话...</div></div>';
+
+    try {
+        const res = await fetch(WORKER_BASE + '/api/download-flow/init', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cardId: '', turnstileToken, userToken: _secureDlSession.userToken })
+        });
+        const data = await res.json();
+        if (!data.success) { showDlError(data.error || '初始化失败'); return; }
+
+        _secureDlSession.sessionId = data.sessionId;
+        const step1El = document.getElementById('dlStep1');
+        const step2El = document.getElementById('dlStep2');
+        if (step1El) step1El.style.display = 'none';
+        if (step2El) { step2El.style.display = 'block'; document.getElementById('dlCaptchaQuestion').textContent = data.captchaQuestion; setTimeout(() => document.getElementById('dlCaptchaInput')?.focus(), 100); }
+    } catch(e) { showDlError('网络错误：' + e.message); }
+}
+
+// ── 提交算术验证码 ──
+async function submitDlCaptcha() {
+    if (!_secureDlSession || !_secureDlSession.sessionId) return;
+    const answer = document.getElementById('dlCaptchaInput')?.value?.trim();
+    if (!answer) { showToast('请输入答案'); return; }
+
+    const btn = document.getElementById('dlCaptchaSubmitBtn');
+    if (btn) { btn.textContent = '验证中...'; btn.disabled = true; }
+
+    try {
+        const res = await fetch(WORKER_BASE + '/api/download-flow/verify', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: _secureDlSession.sessionId, captchaAnswer: answer, userToken: _secureDlSession.userToken })
+        });
+        const data = await res.json();
+        if (!data.success) {
+            if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
+            showDlError(data.error || '验证失败');
+            return;
+        }
+
+        // 验证通过，同步打开下载页（避免浏览器拦截弹窗）
+        const dlPageUrl = WORKER_BASE + '/dl-gh/' + data.downloadToken + '?url=' + encodeURIComponent(_secureDlSession.fileUrl) + '&label=' + encodeURIComponent(_secureDlSession.fileLabel || '');
+        const newWin = window.open(dlPageUrl, '_blank');
+        if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
+            // 弹窗被拦截，显示手动链接
+            const step2 = document.getElementById('dlStep2');
+            if (step2) {
+                step2.innerHTML = `<div style="text-align:center;padding:20px;"><div style="font-size:36px;margin-bottom:12px;">⚠️</div><div style="font-size:14px;color:#e53935;margin-bottom:12px;">浏览器拦截了弹窗</div><a href="${dlPageUrl}" target="_blank" class="modal-btn" style="display:inline-block;width:100%;box-sizing:border-box;background:linear-gradient(135deg,#ff6699,#e91e63);text-decoration:none;color:#fff;text-align:center;margin-bottom:8px;">打开下载页面</a><button onclick="document.getElementById('secureDownloadModal').remove()" class="modal-btn btn-cancel" style="width:100%;">关闭</button></div>`;
+            }
+        } else {
+            document.getElementById('secureDownloadModal')?.remove();
+            if (typeof refreshCurrentUser === 'function') refreshCurrentUser();
+        }
+    } catch(e) {
+        if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
+        showDlError('网络错误：' + e.message);
+    }
+}
+
+// ── 显示下载错误 ──
+function showDlError(msg) {
+    document.getElementById('dlStep1').style.display = 'none';
+    document.getElementById('dlStep2').style.display = 'none';
+    document.getElementById('dlError').style.display = 'block';
+    document.getElementById('dlErrorText').textContent = msg;
+}
+
+// ════════════════════════════════════════════
 // 🔗 链接代理面板功能
 // ════════════════════════════════════════════
 
@@ -7162,19 +7312,27 @@ function addLinkJumpButtons() {
             const dlBtn = document.createElement('button');
             dlBtn.className = 'direct-dl-btn';
             dlBtn.textContent = '⬇️ 直接下载';
-            dlBtn.onclick = async function(e) {
+            dlBtn.onclick = function(e) {
                 e.stopPropagation();
+                // 🔒 GitHub链接走完整安全下载流程
+                if (savedUrl.includes('github.com') || savedUrl.includes('raw.githubusercontent.com')) {
+                    openSecureDownloadFlow(savedUrl, 'GitHub资源');
+                    return;
+                }
+                // 非GitHub：原流程（Turnstile验证后直接打开）
                 dlBtn.textContent = '⏳ 验证中...';
                 dlBtn.disabled = true;
-                try {
-                    await requestTurnstileToken();
-                    window.open(savedUrl, '_blank');
-                } catch(err) {
-                    if (err.message !== '取消') showToast('❌ 验证失败，请重试');
-                } finally {
-                    dlBtn.textContent = '⬇️ 直接下载';
-                    dlBtn.disabled = false;
-                }
+                (async () => {
+                    try {
+                        await requestTurnstileToken();
+                        window.open(savedUrl, '_blank');
+                    } catch(err) {
+                        if (err.message !== '取消') showToast('❌ 验证失败，请重试');
+                    } finally {
+                        dlBtn.textContent = '⬇️ 直接下载';
+                        dlBtn.disabled = false;
+                    }
+                })();
             };
             infoBox.insertBefore(dlBtn, editArea);
         }
@@ -7197,7 +7355,14 @@ function updateDirectDl(input) {
         const dlBtn = document.createElement('button');
         dlBtn.className = 'direct-dl-btn';
         dlBtn.textContent = '⬇️ 直接下载';
-        dlBtn.onclick = () => window.open(url, '_blank');
+        dlBtn.onclick = () => {
+            // 🔒 GitHub链接走安全下载流程
+            if (url.includes('github.com') || url.includes('raw.githubusercontent.com')) {
+                openSecureDownloadFlow(url, 'GitHub资源');
+            } else {
+                window.open(url, '_blank');
+            }
+        };
         const editArea = infoBox.querySelector('.direct-dl-edit');
         infoBox.insertBefore(dlBtn, editArea);
     }
@@ -7708,7 +7873,14 @@ function renderLinkItems(container, items) {
         const openBtn = document.createElement('button');
         openBtn.style.cssText = `width:100%; padding:12px; border:none; border-radius:8px; background:${drive.color}; color:#fff; font-size:14px; font-weight:bold; cursor:pointer; margin-bottom:8px; touch-action:manipulation;`;
         openBtn.textContent = drive.icon + ' 打开 ' + drive.name;
-        openBtn.addEventListener('click', () => window.open(url, '_blank'));
+        openBtn.addEventListener('click', () => {
+            // 🔒 GitHub链接走安全下载流程
+            if (url.includes('github.com') || url.includes('raw.githubusercontent.com')) {
+                openSecureDownloadFlow(url, label || drive.name);
+            } else {
+                window.open(url, '_blank');
+            }
+        });
         itemDiv.appendChild(openBtn);
 
         const copyBtn = document.createElement('button');
