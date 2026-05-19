@@ -8036,7 +8036,14 @@ function updateDirectDl(input) {
         const dlBtn = document.createElement('button');
         dlBtn.className = 'direct-dl-btn';
         dlBtn.textContent = '⬇️ 直接下载';
-        dlBtn.onclick = () => window.open(url, '_blank');
+        dlBtn.onclick = () => {
+            // 🔒 GitHub链接走安全下载流程（Turnstile验证+算术验证码+粉色下载页）
+            if (url.includes('github.com') || url.includes('raw.githubusercontent.com')) {
+                openSecureDownloadFlow(url, 'GitHub资源');
+            } else {
+                window.open(url, '_blank');
+            }
+        };
         const editArea = infoBox.querySelector('.direct-dl-edit');
         infoBox.insertBefore(dlBtn, editArea);
     }
