@@ -5911,7 +5911,7 @@ async function convertLinkProxy() {
         });
         const data = await res.json();
         if (data.success) {
-            const proxyUrl = data.url || (WORKER_BASE + '/proxy/' + data.id);
+            const proxyUrl = WORKER_BASE + '/proxy/' + data.id;
             output.textContent = proxyUrl;
             resultBox.style.display = 'block';
             showToast('✅ 转换成功！');
@@ -5971,10 +5971,10 @@ async function loadSavedProxyLinks() {
                     <div style="flex:1;min-width:0;">
                         <div style="font-size:12px;font-weight:bold;color:#33691e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.filename || '未命名')}</div>
                         <div style="font-size:11px;color:#78909c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.url.substring(0,60))}${l.url.length>60?'...':''}</div>
-                        <div style="font-size:10px;color:#558b2f;font-family:monospace;">${WORKER_BASE}/proxy/${l.slug}/${l.id}/${l.sig}</div>
+                        <div style="font-size:10px;color:#558b2f;font-family:monospace;">${WORKER_BASE}/proxy/${l.id}</div>
                     </div>
                     <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
-                        <button onclick="navigator.clipboard.writeText('${WORKER_BASE}/proxy/${l.slug}/${l.id}/${l.sig}');showToast('✅ 已复制');" style="background:#66bb6a;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;">复制</button>
+                        <button onclick="navigator.clipboard.writeText('${WORKER_BASE}/proxy/${l.id}');showToast('✅ 已复制');" style="background:#66bb6a;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;">复制</button>
                         <button onclick="deleteProxyLink('${l.id}')" style="background:#ffebee;color:#e53935;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;">删除</button>
                     </div>
                 </div>
