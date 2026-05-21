@@ -5856,6 +5856,14 @@ async function submitGhdlVerify() {
     var btn = document.getElementById('ghdlSubmitBtn');
     if (btn) { btn.textContent = '验证中...'; btn.disabled = true; }
 
+    // ⚠️ 必须在 fetch 之前同步打开空白窗口，否则浏览器会拦截弹窗
+    var newWindow = window.open('about:blank', '_blank');
+    if (!newWindow) {
+        showGhdlError('弹窗被浏览器拦截，请点击地址栏的「允许弹窗」后重试');
+        if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
+        return;
+    }
+
     try {
         var res = await fetch(WORKER_BASE + '/api/ghdl/auth', {
             method: 'POST',
@@ -5870,6 +5878,7 @@ async function submitGhdlVerify() {
         });
         var data = await res.json();
         if (!data.success) {
+            newWindow.close(); // 关闭预开的空白窗口
             if (data.needCoins) { showGhdlError('小鱼干不足！下载需要1条小鱼干。'); }
             else { showGhdlError(data.error || '验证失败'); }
             if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
@@ -5881,7 +5890,7 @@ async function submitGhdlVerify() {
 
         var realUrl = data.githubUrl || _ghdlSession.githubUrl;
         var dlUrl = WORKER_BASE + '/ghdl/' + data.token + '?url=' + encodeURIComponent(realUrl) + '&filename=' + encodeURIComponent(_ghdlSession.filename || 'download');
-        window.open(dlUrl, '_blank');
+        newWindow.location.href = dlUrl;
 
         setTimeout(function() {
             var modal = document.getElementById('ghdlModal');
