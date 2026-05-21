@@ -5742,7 +5742,7 @@ function getUserToken() {
     } catch(e) { return ''; }
 }
 
-// ── 检查下载次数限制（24小时4次）──
+// ── 预检下载次数限制（24小时10次，不扣次数）──
 async function checkDownloadLimit() {
     const userToken = getUserToken();
     if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return false; }
@@ -5751,7 +5751,7 @@ async function checkDownloadLimit() {
         const res = await fetch(WORKER_BASE + '/api/download/check', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userToken })
+            body: JSON.stringify({ userToken, action: 'check' })
         });
         const data = await res.json();
         if (!data.success) {
@@ -5763,6 +5763,46 @@ async function checkDownloadLimit() {
         showToast('❌ 下载次数检查失败');
         return false;
     }
+}
+
+// ── 真正扣除下载次数（确认能下载时才调用）──
+async function consumeDownloadLimit() {
+    const userToken = getUserToken();
+    if (!userToken) return false;
+    try {
+        const res = await fetch(WORKER_BASE + '/api/download/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userToken, action: 'consume' })
+        });
+        const data = await res.json();
+        return data.success || false;
+    } catch(e) { return false; }
+}
+
+// ── 全屏iframe打开下载页（兼容APK套壳，替代window.open）──
+function openDownloadPage(url) {
+    // 如果支持多窗口且不是APK套壳，尝试新窗口
+    var newWindow = null;
+    try { newWindow = window.open(url, '_blank'); } catch(e) {}
+    if (newWindow) return;
+
+    // APK套壳或弹窗被拦截：用全屏iframe模拟新页面
+    var iframe = document.createElement('iframe');
+    iframe.src = url;
+    iframe.id = '_dl_iframe_' + Date.now();
+    iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:99999;background:#fff;';
+    // 双击iframe顶部可关闭（返回原页面）
+    var closeBar = document.createElement('div');
+    closeBar.style.cssText = 'position:fixed;top:0;left:0;right:0;height:36px;background:rgba(255,102,153,0.92);z-index:100000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:bold;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);';
+    closeBar.textContent = '↓ 点击此处关闭下载页并返回';
+    closeBar.onclick = function() {
+        var existing = document.getElementById(iframe.id);
+        if (existing) existing.remove();
+        closeBar.remove();
+    };
+    document.body.appendChild(closeBar);
+    document.body.appendChild(iframe);
 }
 
 function openSecureDownloadFlow(githubUrl, filename) {
@@ -5856,16 +5896,6 @@ async function submitGhdlVerify() {
     var btn = document.getElementById('ghdlSubmitBtn');
     if (btn) { btn.textContent = '验证中...'; btn.disabled = true; }
 
-    // ⚠️ 必须在 fetch 之前同步打开窗口，否则 await 后浏览器/WebView 会拦截弹窗
-    var newWindow = null;
-    try { newWindow = window.open('about:blank', '_blank'); } catch(e) {}
-    if (newWindow) {
-        try {
-            newWindow.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>准备下载...</title><style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;background:linear-gradient(135deg,#fce4ec,#f8bbd0);}img{width:120px;height:120px;border-radius:16px;margin-bottom:20px;box-shadow:0 8px 24px rgba(233,30,99,0.2);}.title{font-size:18px;font-weight:bold;color:#e91e63;margin-bottom:8px;}.tip{font-size:13px;color:#888;}</style></head><body><img src="' + DEFAULT_AVATAR + '" onerror="this.style.display=\'none\'"><div class="title">正在准备下载...</div><div class="tip">请稍候，正在连接下载服务器</div></body></html>');
-            newWindow.document.close();
-        } catch(e) {}
-    }
-
     try {
         var res = await fetch(WORKER_BASE + '/api/ghdl/auth', {
             method: 'POST',
@@ -5880,7 +5910,6 @@ async function submitGhdlVerify() {
         });
         var data = await res.json();
         if (!data.success) {
-            if (newWindow) { try { newWindow.close(); } catch(e) {} }
             if (data.needCoins) { showGhdlError('小鱼干不足！下载需要1条小鱼干。'); }
             else { showGhdlError(data.error || '验证失败'); }
             if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
@@ -5893,12 +5922,11 @@ async function submitGhdlVerify() {
         var realUrl = data.githubUrl || _ghdlSession.githubUrl;
         var dlUrl = WORKER_BASE + '/ghdl/' + data.token + '?url=' + encodeURIComponent(realUrl) + '&filename=' + encodeURIComponent(_ghdlSession.filename || 'download');
 
-        if (newWindow) {
-            newWindow.location.href = dlUrl;
-        } else {
-            window.location.href = dlUrl;
-            return;
-        }
+        // 先扣除下载次数，确认扣成功后再打开下载页
+        await consumeDownloadLimit();
+
+        // 用 iframe 方式打开下载页（最兼容APK套壳）
+        openDownloadPage(dlUrl);
 
         setTimeout(function() {
             var modal = document.getElementById('ghdlModal');
@@ -5906,7 +5934,6 @@ async function submitGhdlVerify() {
             if (typeof refreshCurrentUser === 'function') refreshCurrentUser();
         }, 800);
     } catch(e) {
-        if (newWindow) { try { newWindow.close(); } catch(e2) {} }
         if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
         showGhdlError('网络错误：' + e.message);
     }
@@ -7383,7 +7410,9 @@ function addLinkJumpButtons() {
                 dlBtn.disabled = true;
                 try {
                     await requestTurnstileToken();
-                    openDlWait(savedUrl);
+                    // 验证通过后扣次数，再用iframe打开（兼容APK套壳）
+                    await consumeDownloadLimit();
+                    openDownloadPage(savedUrl);
                 } catch(err) {
                     if (err.message !== '取消') showToast('❌ 验证失败，请重试');
                 } finally {
@@ -7422,7 +7451,8 @@ function updateDirectDl(input) {
                 openSecureDownloadFlow(url, card.title || 'GitHub资源');
                 return;
             }
-            openDlWait(url);
+            // 非GitHub链接：先扣次数，再用iframe打开（兼容APK套壳）
+            consumeDownloadLimit().then(function() { openDownloadPage(url); });
         };
         const editArea = infoBox.querySelector('.direct-dl-edit');
         infoBox.insertBefore(dlBtn, editArea);
@@ -7943,7 +7973,8 @@ function renderLinkItems(container, items) {
                 openSecureDownloadFlow(url, label || drive.name);
                 return;
             }
-            window.open(url, '_blank');
+            // 非GitHub链接：先扣次数，再用iframe打开（兼容APK套壳）
+            consumeDownloadLimit().then(function() { openDownloadPage(url); });
         });
         itemDiv.appendChild(openBtn);
 
