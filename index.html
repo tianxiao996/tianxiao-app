@@ -8914,7 +8914,7 @@ async function addHFLink() {
         });
         const data = await res.json();
         if (data.success) {
-            _hfCurrentUrl = `https://tianxiao.us.kg/d/${data.id}`;
+            _hfCurrentUrl = `${WORKER_BASE}/proxy/${data.id}`;
             document.getElementById('hfResultUrl').textContent = _hfCurrentUrl;
             document.getElementById('hfResult').classList.add('show');
             filenameInput.value = '';
