@@ -5734,6 +5734,29 @@ async function deleteAdminAvatar(avatarId) {
 
 let _ghdlSession = null;
 
+// ── 检查下载次数限制（24小时4次）──
+async function checkDownloadLimit() {
+    const userToken = sessionStorage.getItem('userToken') || localStorage.getItem('userToken');
+    if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return false; }
+
+    try {
+        const res = await fetch(WORKER_BASE + '/api/download/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userToken })
+        });
+        const data = await res.json();
+        if (!data.success) {
+            showToast('❌ ' + (data.error || '下载次数已达上限'));
+            return false;
+        }
+        return true;
+    } catch(e) {
+        showToast('❌ 下载次数检查失败');
+        return false;
+    }
+}
+
 function openSecureDownloadFlow(githubUrl, filename) {
     const userToken = sessionStorage.getItem('userToken') || localStorage.getItem('userToken');
     if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return; }
@@ -5911,7 +5934,7 @@ async function convertLinkProxy() {
         });
         const data = await res.json();
         if (data.success) {
-            const proxyUrl = WORKER_BASE + '/proxy/' + data.id;
+            const proxyUrl = data.url || (WORKER_BASE + '/proxy/' + data.id);
             output.textContent = proxyUrl;
             resultBox.style.display = 'block';
             showToast('✅ 转换成功！');
@@ -5971,10 +5994,10 @@ async function loadSavedProxyLinks() {
                     <div style="flex:1;min-width:0;">
                         <div style="font-size:12px;font-weight:bold;color:#33691e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.filename || '未命名')}</div>
                         <div style="font-size:11px;color:#78909c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.url.substring(0,60))}${l.url.length>60?'...':''}</div>
-                        <div style="font-size:10px;color:#558b2f;font-family:monospace;">${WORKER_BASE}/proxy/${l.id}</div>
+                        <div style="font-size:10px;color:#558b2f;font-family:monospace;">${WORKER_BASE}/proxy/${l.slug}/${l.id}/${l.sig}</div>
                     </div>
                     <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
-                        <button onclick="navigator.clipboard.writeText('${WORKER_BASE}/proxy/${l.id}');showToast('✅ 已复制');" style="background:#66bb6a;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;">复制</button>
+                        <button onclick="navigator.clipboard.writeText('${WORKER_BASE}/proxy/${l.slug}/${l.id}/${l.sig}');showToast('✅ 已复制');" style="background:#66bb6a;color:#fff;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;">复制</button>
                         <button onclick="deleteProxyLink('${l.id}')" style="background:#ffebee;color:#e53935;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;">删除</button>
                     </div>
                 </div>
@@ -7322,6 +7345,12 @@ function addLinkJumpButtons() {
             dlBtn.textContent = '⬇️ 直接下载';
             dlBtn.onclick = async function(e) {
                 e.stopPropagation();
+                // 🔒 必须登录
+                const userToken = sessionStorage.getItem('userToken') || localStorage.getItem('userToken');
+                if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return; }
+                // 🔒 检查24小时下载次数（限4次）
+                const canDownload = await checkDownloadLimit();
+                if (!canDownload) return;
                 // 🔒 GitHub链接或短链走安全下载流程
                 if (savedUrl.includes('github.com') || savedUrl.includes('raw.githubusercontent.com') || savedUrl.startsWith('/dl/')) {
                     openSecureDownloadFlow(savedUrl, card.title || 'GitHub资源');
@@ -7360,8 +7389,14 @@ function updateDirectDl(input) {
         const dlBtn = document.createElement('button');
         dlBtn.className = 'direct-dl-btn';
         dlBtn.textContent = '⬇️ 直接下载';
-        dlBtn.onclick = function(e) {
+        dlBtn.onclick = async function(e) {
             e.stopPropagation();
+            // 🔒 必须登录
+            const userToken = sessionStorage.getItem('userToken') || localStorage.getItem('userToken');
+            if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return; }
+            // 🔒 检查24小时下载次数（限4次）
+            const canDownload = await checkDownloadLimit();
+            if (!canDownload) return;
             // 🔒 GitHub链接或短链走安全下载流程
             if (url.includes('github.com') || url.includes('raw.githubusercontent.com') || url.startsWith('/dl/')) {
                 openSecureDownloadFlow(url, card.title || 'GitHub资源');
@@ -7879,7 +7914,13 @@ function renderLinkItems(container, items) {
         const openBtn = document.createElement('button');
         openBtn.style.cssText = `width:100%; padding:12px; border:none; border-radius:8px; background:${drive.color}; color:#fff; font-size:14px; font-weight:bold; cursor:pointer; margin-bottom:8px; touch-action:manipulation;`;
         openBtn.textContent = drive.icon + ' 打开 ' + drive.name;
-        openBtn.addEventListener('click', () => {
+        openBtn.addEventListener('click', async () => {
+            // 🔒 必须登录
+            const userToken = sessionStorage.getItem('userToken') || localStorage.getItem('userToken');
+            if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return; }
+            // 🔒 检查24小时下载次数（限4次）
+            const canDownload = await checkDownloadLimit();
+            if (!canDownload) return;
             // 🔒 GitHub链接或短链走安全下载流程
             if (url.includes('github.com') || url.includes('raw.githubusercontent.com') || url.startsWith('/dl/')) {
                 openSecureDownloadFlow(url, label || drive.name);
