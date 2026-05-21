@@ -3181,6 +3181,21 @@ function __safeFixDeleteImage(card){
             <div class="sl-result-url" id="slResultUrl"></div>
             <button class="sl-result-copy" onclick="copyShortlink()">📋 复制短链（粘贴到卡片链接里）</button>
         </div>
+
+        <!-- HF文件直链区域 -->
+        <div style="border-top:1px dashed #ce93d8;margin:12px 0 10px 0;"></div>
+        <div class="sl-title">☁️ HF文件直链（私有仓库，隐藏真实地址）</div>
+        <div class="sl-input-row">
+            <input type="text" id="hfInputFilename" placeholder="文件名，如：game_v1.0.zip">
+        </div>
+        <div class="sl-input-row">
+            <input type="text" id="hfInputLabel" placeholder="备注（可选）">
+        </div>
+        <button class="sl-btn sl-btn-add" style="background:#2196f3;" onclick="addHFLink()">☁️ 生成HF直链</button>
+        <div class="sl-result" id="hfResult">
+            <div class="sl-result-url" id="hfResultUrl"></div>
+            <button class="sl-result-copy" onclick="copyHFLink()">📋 复制直链（粘贴到卡片直链里）</button>
+        </div>
     </div>
 
     <div class="grid" id="box"></div>
@@ -5716,149 +5731,6 @@ async function deleteAdminAvatar(avatarId) {
 // ════════════════════════════════════════════
 // 🔗 链接代理面板功能
 // ════════════════════════════════════════════
-// GitHub下载保护系统 —— 前端弹窗
-// ════════════════════════════════════════════
-
-let _ghdlSession = null;
-
-function openSecureDownloadFlow(githubUrl, filename) {
-    const userToken = sessionStorage.getItem('userToken') || localStorage.getItem('userToken');
-    if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return; }
-
-    const userInfo = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
-    if ((userInfo.fishCoins || 0) < 1) { showToast('❌ 小鱼干不足（需要1条）'); return; }
-
-    const modal = document.createElement('div');
-    modal.id = 'ghdlModal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;';
-    modal.innerHTML =
-        '<div style="max-width:420px;width:92%;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.4);overflow:hidden;" onclick="event.stopPropagation()">' +
-        '<div style="background:linear-gradient(135deg,#ff6699,#e91e63);padding:20px;text-align:center;color:#fff;">' +
-        '<div style="font-size:36px;margin-bottom:6px;">🔒</div>' +
-        '<div style="font-size:17px;font-weight:bold;">安全下载验证</div>' +
-        '<div style="font-size:12px;opacity:0.85;margin-top:4px;">' + (filename || 'GitHub资源') + '</div></div>' +
-        '<div style="padding:20px;">' +
-        '<div id="ghdlStep1"><div style="font-size:14px;color:#555;margin-bottom:12px;text-align:center;">为防止自动化批量下载，请完成以下验证</div>' +
-        '<div style="margin-bottom:12px;padding:10px;background:#fff3e0;border-radius:8px;font-size:12px;color:#e65100;text-align:center;">💡 下载将消耗 <b>1条小鱼干</b>（当前余额：' + (userInfo.fishCoins || 0) + '条）</div>' +
-        '<div style="display:flex;justify-content:center;margin-bottom:16px;"><div id="ghdlTurnstileBox" style="min-height:65px;"></div></div>' +
-        '<button onclick="document.getElementById(\'ghdlModal\').remove()" class="modal-btn btn-cancel" style="width:100%;">取消</button></div>' +
-        '<div id="ghdlStep2" style="display:none;"><div style="font-size:14px;color:#555;margin-bottom:16px;text-align:center;">请回答下面的算术题</div>' +
-        '<div style="text-align:center;margin-bottom:16px;"><div id="ghdlQuestion" style="font-size:28px;font-weight:bold;color:#ff6699;font-family:monospace;background:#fce4ec;padding:16px 24px;border-radius:12px;display:inline-block;"></div></div>' +
-        '<input type="text" id="ghdlAnswer" placeholder="输入答案" style="width:100%;padding:14px;border:2px solid #fce4ec;border-radius:12px;font-size:18px;text-align:center;box-sizing:border-box;margin-bottom:16px;outline:none;" onkeydown="if(event.key===\'Enter\')submitGhdlVerify()">' +
-        '<button onclick="submitGhdlVerify()" id="ghdlSubmitBtn" class="modal-btn" style="width:100%;background:linear-gradient(135deg,#ff6699,#e91e63);margin-bottom:10px;">验证并下载</button>' +
-        '<button onclick="document.getElementById(\'ghdlModal\').remove()" class="modal-btn btn-cancel" style="width:100%;">取消</button></div>' +
-        '<div id="ghdlStep3" style="display:none;text-align:center;padding:20px;"><div style="font-size:36px;margin-bottom:12px;">✅</div>' +
-        '<div style="font-size:16px;font-weight:bold;color:#28a745;margin-bottom:8px;">验证通过！</div>' +
-        '<div style="font-size:13px;color:#888;">正在打开安全下载页面...</div></div>' +
-        '<div id="ghdlError" style="display:none;text-align:center;padding:10px 0;"><div style="font-size:36px;margin-bottom:8px;">❌</div>' +
-        '<div id="ghdlErrorText" style="font-size:14px;color:#e53935;margin-bottom:16px;"></div>' +
-        '<button onclick="document.getElementById(\'ghdlModal\').remove()" class="modal-btn btn-cancel" style="width:100%;">关闭</button></div>' +
-        '</div></div>';
-    document.body.appendChild(modal);
-    modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
-
-    const captcha = createGhdlCaptcha();
-    _ghdlSession = { githubUrl: githubUrl, filename: filename, userToken: userToken, captcha: captcha };
-    setTimeout(function() { renderGhdlTurnstile(); }, 100);
-}
-
-function createGhdlCaptcha() {
-    var ops = [
-        { sym: '+', fn: function(a,b){ return a+b; } },
-        { sym: '-', fn: function(a,b){ return a-b; } },
-        { sym: '\u00d7', fn: function(a,b){ return a*b; } },
-    ];
-    var op = ops[Math.floor(Math.random() * ops.length)];
-    var a = Math.floor(Math.random() * 50) + 1;
-    var b = Math.floor(Math.random() * 50) + 1;
-    if (op.sym === '-' && a < b) { var t = a; a = b; b = t; }
-    if (op.sym === '\u00d7') { a = Math.floor(Math.random() * 12) + 2; b = Math.floor(Math.random() * 12) + 2; }
-    return { question: a + ' ' + op.sym + ' ' + b + ' = ?', answer: String(op.fn(a,b)) };
-}
-
-function renderGhdlTurnstile() {
-    var container = document.getElementById('ghdlTurnstileBox');
-    if (!container || !window.turnstile) {
-        if (container) container.innerHTML = '<div style="color:#999;font-size:12px;">⏳ 加载中...</div>';
-        setTimeout(renderGhdlTurnstile, 500); return;
-    }
-    container.innerHTML = '';
-    var el = document.createElement('div');
-    container.appendChild(el);
-    window.turnstile.render(el, {
-        sitekey: TURNSTILE_SITE_KEY,
-        callback: function(token) { onGhdlTurnstileSuccess(token); },
-        'error-callback': function() { showGhdlError('验证加载失败'); },
-        'expired-callback': function() { window.turnstile.reset(el); },
-        theme: 'light', size: 'normal',
-    });
-}
-
-function onGhdlTurnstileSuccess(turnstileToken) {
-    if (!_ghdlSession) return;
-    _ghdlSession.turnstileToken = turnstileToken;
-    document.getElementById('ghdlStep1').style.display = 'none';
-    document.getElementById('ghdlStep2').style.display = 'block';
-    document.getElementById('ghdlQuestion').textContent = _ghdlSession.captcha.question;
-    setTimeout(function() { document.getElementById('ghdlAnswer').focus(); }, 100);
-}
-
-async function submitGhdlVerify() {
-    if (!_ghdlSession) return;
-    var answer = document.getElementById('ghdlAnswer').value.trim();
-    if (!answer) { showToast('请输入答案'); return; }
-    if (answer !== _ghdlSession.captcha.answer) { showToast('答案错误，请重新计算'); return; }
-
-    var btn = document.getElementById('ghdlSubmitBtn');
-    if (btn) { btn.textContent = '验证中...'; btn.disabled = true; }
-
-    try {
-        var res = await fetch(WORKER_BASE + '/api/ghdl/auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                turnstileToken: _ghdlSession.turnstileToken,
-                userToken: _ghdlSession.userToken,
-                captchaAnswer: answer,
-                captchaQuestion: _ghdlSession.captcha.question,
-                githubUrl: _ghdlSession.githubUrl,
-            })
-        });
-        var data = await res.json();
-        if (!data.success) {
-            if (data.needCoins) { showGhdlError('小鱼干不足！下载需要1条小鱼干。'); }
-            else { showGhdlError(data.error || '验证失败'); }
-            if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
-            return;
-        }
-
-        document.getElementById('ghdlStep2').style.display = 'none';
-        document.getElementById('ghdlStep3').style.display = 'block';
-
-        var realUrl = data.githubUrl || _ghdlSession.githubUrl;
-        var dlUrl = WORKER_BASE + '/ghdl/' + data.token + '?url=' + encodeURIComponent(realUrl) + '&filename=' + encodeURIComponent(_ghdlSession.filename || 'download');
-        window.open(dlUrl, '_blank');
-
-        setTimeout(function() {
-            var modal = document.getElementById('ghdlModal');
-            if (modal) modal.remove();
-            if (typeof refreshCurrentUser === 'function') refreshCurrentUser();
-        }, 800);
-    } catch(e) {
-        if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
-        showGhdlError('网络错误：' + e.message);
-    }
-}
-
-function showGhdlError(msg) {
-    document.getElementById('ghdlStep1').style.display = 'none';
-    document.getElementById('ghdlStep2').style.display = 'none';
-    document.getElementById('ghdlStep3').style.display = 'none';
-    document.getElementById('ghdlError').style.display = 'block';
-    document.getElementById('ghdlErrorText').textContent = msg;
-}
-
-// ════════════════════════════════════════════
 
 // ── 打开/关闭链接代理面板 ──
 function openLinkProxyPanel() {
@@ -7307,17 +7179,11 @@ function addLinkJumpButtons() {
             dlBtn.textContent = '⬇️ 直接下载';
             dlBtn.onclick = async function(e) {
                 e.stopPropagation();
-                // 🔒 GitHub链接或短链走安全下载流程
-                if (savedUrl.includes('github.com') || savedUrl.includes('raw.githubusercontent.com') || savedUrl.startsWith('/dl/')) {
-                    openSecureDownloadFlow(savedUrl, card.title || 'GitHub资源');
-                    return;
-                }
-                // 非GitHub：原流程
                 dlBtn.textContent = '⏳ 验证中...';
                 dlBtn.disabled = true;
                 try {
                     await requestTurnstileToken();
-                    window.open(savedUrl, '_blank');
+                    openDlWait(savedUrl);
                 } catch(err) {
                     if (err.message !== '取消') showToast('❌ 验证失败，请重试');
                 } finally {
@@ -7346,15 +7212,7 @@ function updateDirectDl(input) {
         const dlBtn = document.createElement('button');
         dlBtn.className = 'direct-dl-btn';
         dlBtn.textContent = '⬇️ 直接下载';
-        dlBtn.onclick = function(e) {
-            e.stopPropagation();
-            // 🔒 GitHub链接或短链走安全下载流程
-            if (url.includes('github.com') || url.includes('raw.githubusercontent.com') || url.startsWith('/dl/')) {
-                openSecureDownloadFlow(url, card.title || 'GitHub资源');
-                return;
-            }
-            window.open(url, '_blank');
-        };
+        dlBtn.onclick = () => openDlWait(url);
         const editArea = infoBox.querySelector('.direct-dl-edit');
         infoBox.insertBefore(dlBtn, editArea);
     }
@@ -7865,14 +7723,7 @@ function renderLinkItems(container, items) {
         const openBtn = document.createElement('button');
         openBtn.style.cssText = `width:100%; padding:12px; border:none; border-radius:8px; background:${drive.color}; color:#fff; font-size:14px; font-weight:bold; cursor:pointer; margin-bottom:8px; touch-action:manipulation;`;
         openBtn.textContent = drive.icon + ' 打开 ' + drive.name;
-        openBtn.addEventListener('click', () => {
-            // 🔒 GitHub链接走安全下载流程
-            if (url.includes('github.com') || url.includes('raw.githubusercontent.com') || url.startsWith('/dl/')) {
-                openSecureDownloadFlow(url, label || drive.name);
-                return;
-            }
-            window.open(url, '_blank');
-        });
+        openBtn.addEventListener('click', () => window.open(url, '_blank'));
         itemDiv.appendChild(openBtn);
 
         const copyBtn = document.createElement('button');
@@ -8487,6 +8338,21 @@ function createServiceWorkerBlob() {
   <h2>此页面坏掉了</h2>
   <p>请稍后重试</p>
   <button onclick="location.reload()">重新加载</button>
+
+<!-- ⬇️ 下载等待页 -->
+<div id="downloadWaitPage" style="display:none;position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#ffb3cc 0%,#fce8f0 100%);display:none;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:24px;padding:40px 32px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(255,102,153,0.2);">
+        <div style="font-size:22px;font-weight:900;color:#ff6699;margin-bottom:8px;">正在下载中，不要着急起飞</div>
+        <div style="font-size:13px;color:#aaa;margin-bottom:20px;">即将自动开始下载...</div>
+        <img src="./avatar.png" alt="" style="width:140px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:20px;">
+        <div style="background:#f0f0f0;border-radius:99px;height:8px;overflow:hidden;margin-bottom:12px;">
+            <div id="dlWaitBar" style="height:100%;width:0%;background:linear-gradient(90deg,#ff6699,#ffb3cc);border-radius:99px;transition:width 0.3s;"></div>
+        </div>
+        <div style="font-size:12px;color:#aaa;margin-bottom:16px;">如未自动下载，请点击下方链接</div>
+        <a id="dlWaitManual" href="#" style="color:#ff6699;font-size:14px;font-weight:bold;text-decoration:underline;" onclick="closeDlWait()">点击手动下载</a>
+    </div>
+</div>
+
 </body>
 </html>\`;
 
@@ -8984,6 +8850,98 @@ async function deleteShortlink(code) {
         if (data.success) { showToast('✅ 已删除'); }
         else alert('删除失败：' + data.error);
     } catch(e) { alert('网络错误：' + e.message); }
+}
+
+// ⬇️ 下载等待页
+function openDlWait(url) {
+    const page = document.getElementById('downloadWaitPage');
+    const bar = document.getElementById('dlWaitBar');
+    const manual = document.getElementById('dlWaitManual');
+    if (!page) { window.open(url, '_blank'); return; }
+
+    manual.href = url;
+    manual.onclick = function(e) { e.preventDefault(); closeDlWait(); window.open(url, '_blank'); };
+    page.style.display = 'flex';
+    bar.style.width = '0%';
+
+    // 进度条动画
+    let pct = 0;
+    const timer = setInterval(() => {
+        pct += Math.random() * 15;
+        if (pct >= 95) { pct = 95; clearInterval(timer); }
+        bar.style.width = pct + '%';
+    }, 200);
+
+    // 3秒后自动触发下载并关闭页面
+    setTimeout(() => {
+        bar.style.width = '100%';
+        clearInterval(timer);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(closeDlWait, 1500);
+    }, 3000);
+}
+
+function closeDlWait() {
+    const page = document.getElementById('downloadWaitPage');
+    if (page) page.style.display = 'none';
+}
+
+// ☁️ HF文件直链系统
+let _hfCurrentUrl = '';
+
+async function addHFLink() {
+    const filenameInput = document.getElementById('hfInputFilename');
+    const filename = filenameInput.value.trim();
+    if (!filename) { alert('请填写文件名！'); return; }
+
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { alert('请先登录管理员！'); return; }
+
+    const btn = document.querySelector('[onclick="addHFLink()"]');
+    btn.textContent = '⏳ 生成中...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${WORKER_BASE}/api/admin/proxy-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ url: filename, filename })
+        });
+        const data = await res.json();
+        if (data.success) {
+            _hfCurrentUrl = `https://tianxiao.us.kg/d/${data.id}`;
+            document.getElementById('hfResultUrl').textContent = _hfCurrentUrl;
+            document.getElementById('hfResult').classList.add('show');
+            filenameInput.value = '';
+        } else {
+            alert('❌ 生成失败：' + (data.error || '未知错误'));
+        }
+    } catch(e) {
+        alert('❌ 网络错误：' + e.message);
+    } finally {
+        btn.textContent = '☁️ 生成HF直链';
+        btn.disabled = false;
+    }
+}
+
+function copyHFLink() {
+    if (!_hfCurrentUrl) return;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(_hfCurrentUrl).then(() => showToast('✅ 直链已复制！'));
+    } else {
+        const ta = document.createElement('textarea');
+        ta.value = _hfCurrentUrl;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('✅ 直链已复制！');
+    }
 }
 
 function copyText(text) {
