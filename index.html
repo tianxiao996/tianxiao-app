@@ -5734,9 +5734,17 @@ async function deleteAdminAvatar(avatarId) {
 
 let _ghdlSession = null;
 
+// ── 获取用户Token（从tx_user解析sessionToken）──
+function getUserToken() {
+    try {
+        const userData = JSON.parse(localStorage.getItem('tx_user') || '{}');
+        return userData.sessionToken || '';
+    } catch(e) { return ''; }
+}
+
 // ── 检查下载次数限制（24小时4次）──
 async function checkDownloadLimit() {
-    const userToken = sessionStorage.getItem('userToken') || localStorage.getItem('userToken');
+    const userToken = getUserToken();
     if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return false; }
 
     try {
@@ -5758,10 +5766,10 @@ async function checkDownloadLimit() {
 }
 
 function openSecureDownloadFlow(githubUrl, filename) {
-    const userToken = sessionStorage.getItem('userToken') || localStorage.getItem('userToken');
+    const userToken = getUserToken();
     if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return; }
 
-    const userInfo = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+    const userInfo = JSON.parse(localStorage.getItem('tx_user') || '{}');
     if ((userInfo.fishCoins || 0) < 1) { showToast('❌ 小鱼干不足（需要1条）'); return; }
 
     const modal = document.createElement('div');
@@ -7345,10 +7353,7 @@ function addLinkJumpButtons() {
             dlBtn.textContent = '⬇️ 直接下载';
             dlBtn.onclick = async function(e) {
                 e.stopPropagation();
-                // 🔒 必须登录
-                const userToken = sessionStorage.getItem('userToken') || localStorage.getItem('userToken');
-                if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return; }
-                // 🔒 检查24小时下载次数（限4次）
+                // 🔒 必须登录 + 检查24小时下载次数（限4次）
                 const canDownload = await checkDownloadLimit();
                 if (!canDownload) return;
                 // 🔒 GitHub链接或短链走安全下载流程
@@ -7391,10 +7396,7 @@ function updateDirectDl(input) {
         dlBtn.textContent = '⬇️ 直接下载';
         dlBtn.onclick = async function(e) {
             e.stopPropagation();
-            // 🔒 必须登录
-            const userToken = sessionStorage.getItem('userToken') || localStorage.getItem('userToken');
-            if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return; }
-            // 🔒 检查24小时下载次数（限4次）
+            // 🔒 必须登录 + 检查24小时下载次数（限4次）
             const canDownload = await checkDownloadLimit();
             if (!canDownload) return;
             // 🔒 GitHub链接或短链走安全下载流程
@@ -7915,10 +7917,7 @@ function renderLinkItems(container, items) {
         openBtn.style.cssText = `width:100%; padding:12px; border:none; border-radius:8px; background:${drive.color}; color:#fff; font-size:14px; font-weight:bold; cursor:pointer; margin-bottom:8px; touch-action:manipulation;`;
         openBtn.textContent = drive.icon + ' 打开 ' + drive.name;
         openBtn.addEventListener('click', async () => {
-            // 🔒 必须登录
-            const userToken = sessionStorage.getItem('userToken') || localStorage.getItem('userToken');
-            if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return; }
-            // 🔒 检查24小时下载次数（限4次）
+            // 🔒 必须登录 + 检查24小时下载次数（限4次）
             const canDownload = await checkDownloadLimit();
             if (!canDownload) return;
             // 🔒 GitHub链接或短链走安全下载流程
