@@ -5780,29 +5780,21 @@ async function consumeDownloadLimit() {
     } catch(e) { return false; }
 }
 
-// ── 全屏iframe打开下载页（兼容APK套壳，替代window.open）──
+// ── 打开下载页（简单可靠，兼容APK套壳）──
 function openDownloadPage(url) {
-    // 如果支持多窗口且不是APK套壳，尝试新窗口
+    // 方式1：window.open（APK WebView配置支持多窗口时可用）
     var newWindow = null;
     try { newWindow = window.open(url, '_blank'); } catch(e) {}
     if (newWindow) return;
 
-    // APK套壳或弹窗被拦截：用全屏iframe模拟新页面
-    var iframe = document.createElement('iframe');
-    iframe.src = url;
-    iframe.id = '_dl_iframe_' + Date.now();
-    iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:99999;background:#fff;';
-    // 双击iframe顶部可关闭（返回原页面）
-    var closeBar = document.createElement('div');
-    closeBar.style.cssText = 'position:fixed;top:0;left:0;right:0;height:36px;background:rgba(255,102,153,0.92);z-index:100000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:bold;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);';
-    closeBar.textContent = '↓ 点击此处关闭下载页并返回';
-    closeBar.onclick = function() {
-        var existing = document.getElementById(iframe.id);
-        if (existing) existing.remove();
-        closeBar.remove();
-    };
-    document.body.appendChild(closeBar);
-    document.body.appendChild(iframe);
+    // 方式2：创建a标签并点击（绕过部分弹窗拦截）
+    var a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
 
 function openSecureDownloadFlow(githubUrl, filename) {
@@ -5920,13 +5912,17 @@ async function submitGhdlVerify() {
         document.getElementById('ghdlStep3').style.display = 'block';
 
         var realUrl = data.githubUrl || _ghdlSession.githubUrl;
-        var dlUrl = WORKER_BASE + '/ghdl/' + data.token + '?url=' + encodeURIComponent(realUrl) + '&filename=' + encodeURIComponent(_ghdlSession.filename || 'download');
 
         // 先扣除下载次数，确认扣成功后再打开下载页
         await consumeDownloadLimit();
 
-        // 用 iframe 方式打开下载页（最兼容APK套壳）
-        openDownloadPage(dlUrl);
+        // GitHub链接走/ghdl/:token安全下载页，非GitHub链接直接window.open
+        if (data.isGitHub) {
+            var dlUrl = WORKER_BASE + '/ghdl/' + data.token + '?url=' + encodeURIComponent(realUrl) + '&filename=' + encodeURIComponent(_ghdlSession.filename || 'download');
+            openDownloadPage(dlUrl);
+        } else {
+            openDownloadPage(realUrl);
+        }
 
         setTimeout(function() {
             var modal = document.getElementById('ghdlModal');
@@ -7398,27 +7394,11 @@ function addLinkJumpButtons() {
             dlBtn.textContent = '⬇️ 直接下载';
             dlBtn.onclick = async function(e) {
                 e.stopPropagation();
-                // 🔒 必须登录 + 检查24小时下载次数（限4次）
+                // 🔒 必须登录 + 检查24小时下载次数（限10次）
                 const canDownload = await checkDownloadLimit();
                 if (!canDownload) return;
-                // 🔒 GitHub链接或短链走安全下载流程
-                if (savedUrl.includes('github.com') || savedUrl.includes('raw.githubusercontent.com') || savedUrl.startsWith('/dl/')) {
-                    openSecureDownloadFlow(savedUrl, card.title || 'GitHub资源');
-                    return;
-                }
-                dlBtn.textContent = '⏳ 验证中...';
-                dlBtn.disabled = true;
-                try {
-                    await requestTurnstileToken();
-                    // 验证通过后扣次数，再用iframe打开（兼容APK套壳）
-                    await consumeDownloadLimit();
-                    openDownloadPage(savedUrl);
-                } catch(err) {
-                    if (err.message !== '取消') showToast('❌ 验证失败，请重试');
-                } finally {
-                    dlBtn.textContent = '⬇️ 直接下载';
-                    dlBtn.disabled = false;
-                }
+                // 🔒 统一走安全下载验证流程
+                openSecureDownloadFlow(savedUrl, card.title || '资源下载');
             };
             infoBox.insertBefore(dlBtn, editArea);
         }
@@ -7443,16 +7423,11 @@ function updateDirectDl(input) {
         dlBtn.textContent = '⬇️ 直接下载';
         dlBtn.onclick = async function(e) {
             e.stopPropagation();
-            // 🔒 必须登录 + 检查24小时下载次数（限4次）
+            // 🔒 必须登录 + 检查24小时下载次数（限10次）
             const canDownload = await checkDownloadLimit();
             if (!canDownload) return;
-            // 🔒 GitHub链接或短链走安全下载流程
-            if (url.includes('github.com') || url.includes('raw.githubusercontent.com') || url.startsWith('/dl/')) {
-                openSecureDownloadFlow(url, card.title || 'GitHub资源');
-                return;
-            }
-            // 非GitHub链接：先扣次数，再用iframe打开（兼容APK套壳）
-            consumeDownloadLimit().then(function() { openDownloadPage(url); });
+            // 🔒 统一走安全下载验证流程
+            openSecureDownloadFlow(url, card.title || '资源下载');
         };
         const editArea = infoBox.querySelector('.direct-dl-edit');
         infoBox.insertBefore(dlBtn, editArea);
@@ -7965,16 +7940,11 @@ function renderLinkItems(container, items) {
         openBtn.style.cssText = `width:100%; padding:12px; border:none; border-radius:8px; background:${drive.color}; color:#fff; font-size:14px; font-weight:bold; cursor:pointer; margin-bottom:8px; touch-action:manipulation;`;
         openBtn.textContent = drive.icon + ' 打开 ' + drive.name;
         openBtn.addEventListener('click', async () => {
-            // 🔒 必须登录 + 检查24小时下载次数（限4次）
+            // 🔒 必须登录 + 检查24小时下载次数（限10次）
             const canDownload = await checkDownloadLimit();
             if (!canDownload) return;
-            // 🔒 GitHub链接或短链走安全下载流程
-            if (url.includes('github.com') || url.includes('raw.githubusercontent.com') || url.startsWith('/dl/')) {
-                openSecureDownloadFlow(url, label || drive.name);
-                return;
-            }
-            // 非GitHub链接：先扣次数，再用iframe打开（兼容APK套壳）
-            consumeDownloadLimit().then(function() { openDownloadPage(url); });
+            // 🔒 统一走安全下载验证流程
+            openSecureDownloadFlow(url, label || drive.name);
         });
         itemDiv.appendChild(openBtn);
 
