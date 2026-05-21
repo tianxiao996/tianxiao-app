@@ -5734,42 +5734,11 @@ async function deleteAdminAvatar(avatarId) {
 
 let _ghdlSession = null;
 
-// ── 获取用户Token（从tx_user解析sessionToken）──
-function getUserToken() {
-    try {
-        const userData = JSON.parse(localStorage.getItem('tx_user') || '{}');
-        return userData.sessionToken || '';
-    } catch(e) { return ''; }
-}
-
-// ── 检查下载次数限制（24小时4次）──
-async function checkDownloadLimit() {
-    const userToken = getUserToken();
-    if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return false; }
-
-    try {
-        const res = await fetch(WORKER_BASE + '/api/download/check', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userToken })
-        });
-        const data = await res.json();
-        if (!data.success) {
-            showToast('❌ ' + (data.error || '下载次数已达上限'));
-            return false;
-        }
-        return true;
-    } catch(e) {
-        showToast('❌ 下载次数检查失败');
-        return false;
-    }
-}
-
 function openSecureDownloadFlow(githubUrl, filename) {
-    const userToken = getUserToken();
+    const userToken = sessionStorage.getItem('userToken') || localStorage.getItem('userToken');
     if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return; }
 
-    const userInfo = JSON.parse(localStorage.getItem('tx_user') || '{}');
+    const userInfo = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
     if ((userInfo.fishCoins || 0) < 1) { showToast('❌ 小鱼干不足（需要1条）'); return; }
 
     const modal = document.createElement('div');
@@ -7353,9 +7322,6 @@ function addLinkJumpButtons() {
             dlBtn.textContent = '⬇️ 直接下载';
             dlBtn.onclick = async function(e) {
                 e.stopPropagation();
-                // 🔒 必须登录 + 检查24小时下载次数（限4次）
-                const canDownload = await checkDownloadLimit();
-                if (!canDownload) return;
                 // 🔒 GitHub链接或短链走安全下载流程
                 if (savedUrl.includes('github.com') || savedUrl.includes('raw.githubusercontent.com') || savedUrl.startsWith('/dl/')) {
                     openSecureDownloadFlow(savedUrl, card.title || 'GitHub资源');
@@ -7394,11 +7360,8 @@ function updateDirectDl(input) {
         const dlBtn = document.createElement('button');
         dlBtn.className = 'direct-dl-btn';
         dlBtn.textContent = '⬇️ 直接下载';
-        dlBtn.onclick = async function(e) {
+        dlBtn.onclick = function(e) {
             e.stopPropagation();
-            // 🔒 必须登录 + 检查24小时下载次数（限4次）
-            const canDownload = await checkDownloadLimit();
-            if (!canDownload) return;
             // 🔒 GitHub链接或短链走安全下载流程
             if (url.includes('github.com') || url.includes('raw.githubusercontent.com') || url.startsWith('/dl/')) {
                 openSecureDownloadFlow(url, card.title || 'GitHub资源');
@@ -7916,10 +7879,7 @@ function renderLinkItems(container, items) {
         const openBtn = document.createElement('button');
         openBtn.style.cssText = `width:100%; padding:12px; border:none; border-radius:8px; background:${drive.color}; color:#fff; font-size:14px; font-weight:bold; cursor:pointer; margin-bottom:8px; touch-action:manipulation;`;
         openBtn.textContent = drive.icon + ' 打开 ' + drive.name;
-        openBtn.addEventListener('click', async () => {
-            // 🔒 必须登录 + 检查24小时下载次数（限4次）
-            const canDownload = await checkDownloadLimit();
-            if (!canDownload) return;
+        openBtn.addEventListener('click', () => {
             // 🔒 GitHub链接或短链走安全下载流程
             if (url.includes('github.com') || url.includes('raw.githubusercontent.com') || url.startsWith('/dl/')) {
                 openSecureDownloadFlow(url, label || drive.name);
