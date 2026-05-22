@@ -3128,10 +3128,10 @@ function __safeFixDeleteImage(card){
                 <button onclick="loadSavedProxyLinks()" style="background:#66bb6a; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer;">🔄 刷新</button>
             </div>
             <!-- 批量操作栏 -->
-            <div id="proxyBatchBar" style="display:none; align-items:center; gap:8px; margin-bottom:8px; padding:6px 8px; background:#fff3e0; border-radius:6px;">
+            <div id="proxyBatchBar" style="display:flex; align-items:center; gap:8px; margin-bottom:8px; padding:6px 8px; background:#fff3e0; border-radius:6px;">
                 <input type="checkbox" id="proxySelectAll" onchange="toggleProxySelectAll(this)" style="cursor:pointer;">
                 <label for="proxySelectAll" style="font-size:12px; color:#e65100; cursor:pointer;">全选</label>
-                <button onclick="batchDeleteProxyLinks()" style="margin-left:auto; background:#e53935; color:#fff; border:none; border-radius:4px; padding:4px 12px; font-size:11px; cursor:pointer;">🗑️ 批量删除</button>
+                <button id="proxyBatchDeleteBtn" onclick="batchDeleteProxyLinks()" style="margin-left:auto; background:#e53935; color:#fff; border:none; border-radius:4px; padding:4px 12px; font-size:11px; cursor:pointer;">🗑️ 批量删除</button>
             </div>
             <div id="savedProxyLinksList" style="display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto;">
                 <div style="font-size:12px; color:#aaa; text-align:center; padding:10px;">点击刷新查看</div>
@@ -6146,17 +6146,14 @@ async function loadSavedProxyLinks() {
     const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
     if (!token) return;
     const listEl = document.getElementById('savedProxyLinksList');
-    const batchBar = document.getElementById('proxyBatchBar');
     if (!listEl) return;
     listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:10px;">加载中...</div>';
-    if (batchBar) batchBar.style.display = 'none';
     try {
         const res = await fetch(WORKER_BASE + '/api/admin/proxy-links', {
             headers: { 'Authorization': 'Bearer ' + token }
         });
         const data = await res.json();
         if (data.success && data.links && data.links.length > 0) {
-            if (batchBar) batchBar.style.display = 'flex';
             listEl.innerHTML = data.links.map(l => `
                 <div style="display:flex;align-items:center;gap:8px;background:#f9fbe7;border-radius:8px;padding:8px 10px;border:1px solid #c8e6c9;">
                     <input type="checkbox" class="proxy-cb" value="${l.id}" style="cursor:pointer;flex-shrink:0;">
