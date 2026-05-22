@@ -2961,6 +2961,7 @@ function __safeFixDeleteImage(card){
         <button onclick="openAvatarShopPage()" style="background:#e91e63!important;">🎨 装扮商店</button>
         <button onclick="openMailManagePanel()" style="background:#ff5722!important;">📧 发邮件</button>
         <button onclick="openLinkProxyPanel()" style="background:#4caf50!important;">🔗 链接代理</button>
+        <button onclick="openProxyManagePanel()" style="background:#795548!important;">📋 管理代理链接</button>
         <button id="adminAuditBtn" onclick="toggleAdminAuditMode()" style="background:#ff5722!important;">💬 审核评论</button>
         <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button>
         </div>
@@ -3083,6 +3084,23 @@ function __safeFixDeleteImage(card){
         <div id="adminMailList" style="max-height:200px;overflow-y:auto;"></div>
     </div>
 
+    <!-- 📋 代理链接批量管理面板（管理员）— 独立面板，管理所有已保存的代理链接 -->
+    <div id="proxyManagePanel" style="display:none; background:#efebe9; border:1px dashed #795548; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:600px;">
+        <div style="font-size:13px; font-weight:bold; color:#5d4037; margin-bottom:10px;">📋 代理链接批量管理</div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; padding:8px 10px; background:#fff3e0; border-radius:8px; border:1px solid #ffe082;">
+            <input type="checkbox" id="proxyManageSelectAll" onchange="toggleProxyManageSelectAll(this)" style="cursor:pointer; width:16px; height:16px;">
+            <label for="proxyManageSelectAll" style="font-size:12px; color:#e65100; cursor:pointer; font-weight:bold;">全选</label>
+            <span id="proxyManageCount" style="font-size:11px; color:#888; margin-left:4px;">(0/0)</span>
+            <button onclick="batchDeleteProxyManage()" style="margin-left:auto; background:#e53935; color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:12px; cursor:pointer; font-weight:bold;">🗑️ 批量删除</button>
+        </div>
+        <div id="proxyManageList" style="display:flex; flex-direction:column; gap:6px; max-height:400px; overflow-y:auto;">
+            <div style="font-size:12px; color:#aaa; text-align:center; padding:20px;">点击刷新按钮加载列表</div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+            <button onclick="loadProxyManageList()" style="flex:1; background:#795548; color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; font-weight:bold;">🔄 刷新列表</button>
+        </div>
+    </div>
+
     <!-- 🔗 链接代理面板（管理员）— 将GitHub等链接转换为你的域名代理链接，抹除源站痕迹 -->
     <div id="linkProxyPanel" style="display:none; background:#e8f5e9; border:1px dashed #4caf50; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:600px;">
         <div style="font-size:13px; font-weight:bold; color:#2e7d32; margin-bottom:10px;">🔗 链接代理转换（隐藏真实来源）</div>
@@ -3121,22 +3139,6 @@ function __safeFixDeleteImage(card){
             </div>
         </div>
 
-        <!-- 已保存的代理链接列表 -->
-        <div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #a5d6a7; margin-top:10px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                <div style="font-size:12px; font-weight:bold; color:#2e7d32;">📋 已保存的代理链接</div>
-                <button onclick="loadSavedProxyLinks()" style="background:#66bb6a; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer;">🔄 刷新</button>
-            </div>
-            <!-- 批量操作栏 -->
-            <div id="proxyBatchBar" style="display:flex; align-items:center; gap:8px; margin-bottom:8px; padding:6px 8px; background:#fff3e0; border-radius:6px;">
-                <input type="checkbox" id="proxySelectAll" onchange="toggleProxySelectAll(this)" style="cursor:pointer;">
-                <label for="proxySelectAll" style="font-size:12px; color:#e65100; cursor:pointer;">全选</label>
-                <button id="proxyBatchDeleteBtn" onclick="batchDeleteProxyLinks()" style="margin-left:auto; background:#e53935; color:#fff; border:none; border-radius:4px; padding:4px 12px; font-size:11px; cursor:pointer;">🗑️ 批量删除</button>
-            </div>
-            <div id="savedProxyLinksList" style="display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto;">
-                <div style="font-size:12px; color:#aaa; text-align:center; padding:10px;">点击刷新查看</div>
-            </div>
-        </div>
     </div>
 
 </header>
@@ -5341,6 +5343,8 @@ function exitAdmin() {
     const mp = document.getElementById("mailManagePanel"); if(mp) mp.style.display = "none";
     // 🐛 Bug修复：隐藏链接代理面板
     const lpp = document.getElementById("linkProxyPanel"); if(lpp) lpp.style.display = "none";
+    // 隐藏代理链接管理面板
+    const pmp = document.getElementById("proxyManagePanel"); if(pmp) pmp.style.display = "none";
     updateSidebarAdminUI();
     
     // 🔒 清除 Token
@@ -5974,25 +5978,19 @@ async function submitGhdlVerify() {
             return;
         }
 
-        // GitHub链接走/ghdl/:token安全下载页
-        // 非GitHub原始链接 → 生成30分钟临时直链 /px/<token> 再下载
-        if (data.isGitHub) {
-            var dlUrl = WORKER_BASE + '/ghdl/' + data.token + '?url=' + encodeURIComponent(realUrl) + '&filename=' + encodeURIComponent(_ghdlSession.filename || 'download');
-            openDownloadPage(dlUrl);
+        // 所有链接统一生成30分钟临时直链 /px/<token>
+        var tempRes = await fetch(WORKER_BASE + '/api/proxy/temp-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: realUrl, filename: _ghdlSession.filename || 'download' })
+        });
+        var tempData = await tempRes.json();
+        if (tempData.success && tempData.tempUrl) {
+            openDownloadPage(tempData.tempUrl);
         } else {
-            var tempRes = await fetch(WORKER_BASE + '/api/proxy/temp-link', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: realUrl, filename: _ghdlSession.filename || 'download' })
-            });
-            var tempData = await tempRes.json();
-            if (tempData.success && tempData.tempUrl) {
-                openDownloadPage(tempData.tempUrl);
-            } else {
-                showGhdlError('临时直链生成失败：' + (tempData.error || '未知错误'));
-                if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
-                return;
-            }
+            showGhdlError('直链生成失败：' + (tempData.error || '未知错误'));
+            if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
+            return;
         }
 
         setTimeout(function() {
@@ -6027,9 +6025,91 @@ function openLinkProxyPanel() {
     if (auditPanel) auditPanel.style.display = 'none';
     panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     if (panel.style.display === 'block') {
-        loadSavedProxyLinks();
         document.getElementById('linkProxyInput').focus();
     }
+}
+
+// ════════════════════════════════════════════
+// 📋 代理链接批量管理面板（独立）
+// ════════════════════════════════════════════
+
+// ── 打开/关闭代理链接管理面板 ──
+function openProxyManagePanel() {
+    const panel = document.getElementById('proxyManagePanel');
+    const linkPanel = document.getElementById('linkProxyPanel');
+    const mailPanel = document.getElementById('mailManagePanel');
+    const auditPanel = document.getElementById('adminAuditPanel');
+    if (linkPanel) linkPanel.style.display = 'none';
+    if (mailPanel) mailPanel.style.display = 'none';
+    if (auditPanel) auditPanel.style.display = 'none';
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    if (panel.style.display === 'block') loadProxyManageList();
+}
+
+// ── 加载代理链接列表到管理面板 ──
+async function loadProxyManageList() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) return;
+    const listEl = document.getElementById('proxyManageList');
+    const countEl = document.getElementById('proxyManageCount');
+    if (!listEl) return;
+    listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:20px;">加载中...</div>';
+    if (countEl) countEl.textContent = '(0/0)';
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/proxy-links', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.success && data.links && data.links.length > 0) {
+            if (countEl) countEl.textContent = '(0/' + data.links.length + ')';
+            listEl.innerHTML = data.links.map((l, idx) => `
+                <div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:8px;padding:10px;border:1px solid #d7ccc8;">
+                    <input type="checkbox" class="proxy-manage-cb" value="${l.id}" data-idx="${idx}" onchange="updateProxyManageCount()" style="cursor:pointer;flex-shrink:0;width:16px;height:16px;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:12px;font-weight:bold;color:#5d4037;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.filename || '未命名')}</div>
+                        <div style="font-size:11px;color:#8d6e63;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.url.substring(0,70))}${l.url.length>70?'...':''}</div>
+                        <div style="font-size:10px;color:#795548;font-family:monospace;">${WORKER_BASE}/proxy/${l.slug}/${l.id}/${l.sig}</div>
+                    </div>
+                    <button onclick="deleteProxyLink('${l.id}')" style="background:#ffebee;color:#e53935;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;flex-shrink:0;">删除</button>
+                </div>
+            `).join('');
+        } else {
+            listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:20px;">暂无代理链接</div>';
+        }
+    } catch(e) { listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:20px;">加载失败</div>'; }
+}
+
+// ── 更新选中计数 ──
+function updateProxyManageCount() {
+    const checked = document.querySelectorAll('.proxy-manage-cb:checked').length;
+    const total = document.querySelectorAll('.proxy-manage-cb').length;
+    const countEl = document.getElementById('proxyManageCount');
+    if (countEl) countEl.textContent = '(' + checked + '/' + total + ')';
+}
+
+// ── 代理管理面板全选/取消全选 ──
+function toggleProxyManageSelectAll(cb) {
+    document.querySelectorAll('.proxy-manage-cb').forEach(el => el.checked = cb.checked);
+    updateProxyManageCount();
+}
+
+// ── 批量删除代理链接（管理面板）──
+async function batchDeleteProxyManage() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('请先登录管理员'); return; }
+    const checked = Array.from(document.querySelectorAll('.proxy-manage-cb:checked')).map(cb => cb.value);
+    if (checked.length === 0) { showToast('请先勾选要删除的链接'); return; }
+    if (!confirm('确定删除选中的 ' + checked.length + ' 条代理链接？')) return;
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/proxy-links/batch-delete', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: checked })
+        });
+        const data = await res.json();
+        if (data.success) { showToast('✅ 已删除 ' + data.deleted + ' 条'); loadProxyManageList(); }
+        else { showToast('❌ ' + (data.error || '删除失败')); }
+    } catch(e) { showToast('❌ 网络错误'); }
 }
 
 // ── 生成30分钟临时直链 ──
@@ -6103,7 +6183,7 @@ async function convertLinkProxy() {
             output.textContent = proxyUrl;
             resultBox.style.display = 'block';
             showToast('✅ 转换成功！');
-            loadSavedProxyLinks();
+            loadProxyManageList();
         } else {
             showToast('❌ ' + (data.error || '转换失败'));
         }
