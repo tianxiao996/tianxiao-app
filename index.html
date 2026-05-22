@@ -5771,8 +5771,16 @@ function getUserToken() {
     } catch(e) { return ''; }
 }
 
+// ── 判断当前是否管理员模式 ──
+function isAdminMode() {
+    return !!(adminToken || sessionStorage.getItem('ADMIN_TOKEN'));
+}
+
 // ── 预检下载次数限制（24小时10次，不扣次数）──
 async function checkDownloadLimit() {
+    // 管理员模式跳过登录和次数检查
+    if (isAdminMode()) return true;
+
     const userToken = getUserToken();
     if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return false; }
 
@@ -5827,27 +5835,37 @@ function openDownloadPage(url) {
 }
 
 async function openSecureDownloadFlow(githubUrl, filename) {
+    const admin = isAdminMode();
     const userToken = getUserToken();
-    if (!userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return; }
 
-    // 优先从已加载的用户主页缓存读取小鱼干，避免额外请求
-    var fishCoins = 0;
-    if (_userHomeData && _userHomeData.fishCoins !== undefined) {
-        fishCoins = _userHomeData.fishCoins;
-    } else {
-        // 缓存未命中，调用后端接口获取
-        try {
-            var res = await fetch(WORKER_BASE + '/api/user/home', {
-                headers: { 'Authorization': 'Bearer ' + userToken }
-            });
-            var userData = await res.json();
-            if (userData.success) {
-                fishCoins = userData.fishCoins || 0;
-                _userHomeData = userData; // 更新缓存
-            }
-        } catch(e) {}
+    // 普通用户必须登录
+    if (!admin && !userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return; }
+
+    // 普通用户检查小鱼干
+    if (!admin) {
+        var fishCoins = 0;
+        if (_userHomeData && _userHomeData.fishCoins !== undefined) {
+            fishCoins = _userHomeData.fishCoins;
+        } else {
+            try {
+                var res = await fetch(WORKER_BASE + '/api/user/home', {
+                    headers: { 'Authorization': 'Bearer ' + userToken }
+                });
+                var userData = await res.json();
+                if (userData.success) {
+                    fishCoins = userData.fishCoins || 0;
+                    _userHomeData = userData;
+                }
+            } catch(e) {}
+        }
+        if (fishCoins < 1) { showToast('❌ 小鱼干不足（需要1条，当前' + fishCoins + '条）'); return; }
     }
-    if (fishCoins < 1) { showToast('❌ 小鱼干不足（需要1条，当前' + fishCoins + '条）'); return; }
+
+    // 弹窗标题和提示根据模式切换
+    var titleText = admin ? '管理员下载验证' : '安全下载验证';
+    var titleIcon = admin ? '⚡' : '🔒';
+    var tipText = admin ? '管理员模式：请完成人机验证即可下载' : '为防止自动化批量下载，请完成以下验证';
+    var coinLine = admin ? '' : '<div style="margin-bottom:12px;padding:10px;background:#fff3e0;border-radius:8px;font-size:12px;color:#e65100;text-align:center;">💡 下载将消耗 <b>1条小鱼干</b>（当前余额：' + (_userHomeData?.fishCoins || 0) + '条）</div>';
 
     const modal = document.createElement('div');
     modal.id = 'ghdlModal';
@@ -5855,12 +5873,12 @@ async function openSecureDownloadFlow(githubUrl, filename) {
     modal.innerHTML =
         '<div style="max-width:420px;width:92%;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.4);overflow:hidden;" onclick="event.stopPropagation()">' +
         '<div style="background:linear-gradient(135deg,#ff6699,#e91e63);padding:20px;text-align:center;color:#fff;">' +
-        '<div style="font-size:36px;margin-bottom:6px;">🔒</div>' +
-        '<div style="font-size:17px;font-weight:bold;">安全下载验证</div>' +
+        '<div style="font-size:36px;margin-bottom:6px;">' + titleIcon + '</div>' +
+        '<div style="font-size:17px;font-weight:bold;">' + titleText + '</div>' +
         '<div style="font-size:12px;opacity:0.85;margin-top:4px;">' + (filename || '资源下载') + '</div></div>' +
         '<div style="padding:20px;">' +
-        '<div id="ghdlStep1"><div style="font-size:14px;color:#555;margin-bottom:12px;text-align:center;">为防止自动化批量下载，请完成以下验证</div>' +
-        '<div style="margin-bottom:12px;padding:10px;background:#fff3e0;border-radius:8px;font-size:12px;color:#e65100;text-align:center;">💡 下载将消耗 <b>1条小鱼干</b>（当前余额：' + fishCoins + '条）</div>' +
+        '<div id="ghdlStep1"><div style="font-size:14px;color:#555;margin-bottom:12px;text-align:center;">' + tipText + '</div>' +
+        coinLine +
         '<div style="display:flex;justify-content:center;margin-bottom:16px;"><div id="ghdlTurnstileBox" style="min-height:65px;"></div></div>' +
         '<button onclick="document.getElementById(\'ghdlModal\').remove()" class="modal-btn btn-cancel" style="width:100%;">取消</button></div>' +
         '<div id="ghdlStep2" style="display:none;"><div style="font-size:14px;color:#555;margin-bottom:16px;text-align:center;">请回答下面的算术题</div>' +
@@ -5870,7 +5888,7 @@ async function openSecureDownloadFlow(githubUrl, filename) {
         '<button onclick="document.getElementById(\'ghdlModal\').remove()" class="modal-btn btn-cancel" style="width:100%;">取消</button></div>' +
         '<div id="ghdlStep3" style="display:none;text-align:center;padding:20px;"><div style="font-size:36px;margin-bottom:12px;">✅</div>' +
         '<div style="font-size:16px;font-weight:bold;color:#28a745;margin-bottom:8px;">验证通过！</div>' +
-        '<div style="font-size:13px;color:#888;">正在打开安全下载页面...</div></div>' +
+        '<div style="font-size:13px;color:#888;">正在打开下载页面...</div></div>' +
         '<div id="ghdlError" style="display:none;text-align:center;padding:10px 0;"><div style="font-size:36px;margin-bottom:8px;">❌</div>' +
         '<div id="ghdlErrorText" style="font-size:14px;color:#e53935;margin-bottom:16px;"></div>' +
         '<button onclick="document.getElementById(\'ghdlModal\').remove()" class="modal-btn btn-cancel" style="width:100%;">关闭</button></div>' +
@@ -5879,7 +5897,7 @@ async function openSecureDownloadFlow(githubUrl, filename) {
     modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
 
     const captcha = createGhdlCaptcha();
-    _ghdlSession = { githubUrl: githubUrl, filename: filename, userToken: userToken, captcha: captcha };
+    _ghdlSession = { githubUrl: githubUrl, filename: filename, userToken: userToken || '', captcha: captcha, isAdmin: admin };
     setTimeout(function() { renderGhdlTurnstile(); }, 100);
 }
 
@@ -5945,6 +5963,38 @@ async function submitGhdlVerify() {
     var btn = document.getElementById('ghdlSubmitBtn');
     if (btn) { btn.textContent = '验证中...'; btn.disabled = true; }
 
+    // 管理员模式：跳过后端验证和扣次数，直接生成临时直链
+    if (_ghdlSession.isAdmin) {
+        document.getElementById('ghdlStep2').style.display = 'none';
+        document.getElementById('ghdlStep3').style.display = 'block';
+        var adminUrl = _ghdlSession.githubUrl;
+        try {
+            var tempRes = await fetch(WORKER_BASE + '/api/proxy/temp-link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: adminUrl, filename: _ghdlSession.filename || 'download' })
+            });
+            var tempData = await tempRes.json();
+            if (tempData.success && tempData.tempUrl) {
+                openDownloadPage(tempData.tempUrl);
+            } else {
+                showGhdlError('直链生成失败：' + (tempData.error || '未知错误'));
+                if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
+                return;
+            }
+        } catch(e) {
+            showGhdlError('网络错误：' + e.message);
+            if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
+            return;
+        }
+        setTimeout(function() {
+            var modal = document.getElementById('ghdlModal');
+            if (modal) modal.remove();
+        }, 800);
+        return;
+    }
+
+    // 普通用户模式：走完整后端验证
     try {
         var res = await fetch(WORKER_BASE + '/api/ghdl/auth', {
             method: 'POST',
@@ -6047,36 +6097,38 @@ function openProxyManagePanel() {
 }
 
 // ── 加载代理链接列表到管理面板 ──
-async function loadProxyManageList() {
-    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
-    if (!token) return;
+// 从 cards 数组中筛选有直链框链接（directLink）的卡片，而非代理链接
+function loadProxyManageList() {
     const listEl = document.getElementById('proxyManageList');
     const countEl = document.getElementById('proxyManageCount');
     if (!listEl) return;
-    listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:20px;">加载中...</div>';
-    if (countEl) countEl.textContent = '(0/0)';
-    try {
-        const res = await fetch(WORKER_BASE + '/api/admin/proxy-links', {
-            headers: { 'Authorization': 'Bearer ' + token }
-        });
-        const data = await res.json();
-        if (data.success && data.links && data.links.length > 0) {
-            if (countEl) countEl.textContent = '(0/' + data.links.length + ')';
-            listEl.innerHTML = data.links.map((l, idx) => `
-                <div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:8px;padding:10px;border:1px solid #d7ccc8;">
-                    <input type="checkbox" class="proxy-manage-cb" value="${l.id}" data-idx="${idx}" onchange="updateProxyManageCount()" style="cursor:pointer;flex-shrink:0;width:16px;height:16px;">
-                    <div style="flex:1;min-width:0;">
-                        <div style="font-size:12px;font-weight:bold;color:#5d4037;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.filename || '未命名')}</div>
-                        <div style="font-size:11px;color:#8d6e63;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.url.substring(0,70))}${l.url.length>70?'...':''}</div>
-                        <div style="font-size:10px;color:#795548;font-family:monospace;">${WORKER_BASE}/proxy/${l.slug}/${l.id}/${l.sig}</div>
-                    </div>
-                    <button onclick="deleteProxyLink('${l.id}')" style="background:#ffebee;color:#e53935;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;flex-shrink:0;">删除</button>
+    // 筛选有 directLink 的卡片
+    const linkedCards = (cards || []).map((c, idx) => ({ ...c, _idx: idx })).filter(c => c.directLink && c.directLink.trim());
+    if (countEl) countEl.textContent = '(0/' + linkedCards.length + ')';
+    if (linkedCards.length > 0) {
+        listEl.innerHTML = linkedCards.map((c, i) => `
+            <div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:8px;padding:10px;border:1px solid #d7ccc8;">
+                <input type="checkbox" class="proxy-manage-cb" value="${c._idx}" data-idx="${i}" onchange="updateProxyManageCount()" style="cursor:pointer;flex-shrink:0;width:16px;height:16px;">
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:12px;font-weight:bold;color:#5d4037;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.title || '未命名')}</div>
+                    <div style="font-size:11px;color:#8d6e63;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.directLink.substring(0,70))}${c.directLink.length>70?'...':''}</div>
                 </div>
-            `).join('');
-        } else {
-            listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:20px;">暂无代理链接</div>';
-        }
-    } catch(e) { listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:20px;">加载失败</div>'; }
+                <button onclick="removeCardDirectLink(${c._idx})" style="background:#ffebee;color:#e53935;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;flex-shrink:0;">删除</button>
+            </div>
+        `).join('');
+    } else {
+        listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:20px;">暂无直链框链接</div>';
+    }
+}
+
+// ── 删除单个卡片的直链 ──
+function removeCardDirectLink(idx) {
+    if (!confirm('确定删除「' + (cards[idx]?.title || '未命名') + '」的直链？')) return;
+    cards[idx].directLink = '';
+    saveCards();
+    renderCards();
+    loadProxyManageList();
+    showToast('✅ 已删除');
 }
 
 // ── 更新选中计数 ──
@@ -6093,23 +6145,19 @@ function toggleProxyManageSelectAll(cb) {
     updateProxyManageCount();
 }
 
-// ── 批量删除代理链接（管理面板）──
-async function batchDeleteProxyManage() {
-    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
-    if (!token) { showToast('请先登录管理员'); return; }
-    const checked = Array.from(document.querySelectorAll('.proxy-manage-cb:checked')).map(cb => cb.value);
+// ── 批量删除直链框链接（管理面板）──
+function batchDeleteProxyManage() {
+    const checked = Array.from(document.querySelectorAll('.proxy-manage-cb:checked')).map(cb => parseInt(cb.value));
     if (checked.length === 0) { showToast('请先勾选要删除的链接'); return; }
-    if (!confirm('确定删除选中的 ' + checked.length + ' 条代理链接？')) return;
-    try {
-        const res = await fetch(WORKER_BASE + '/api/admin/proxy-links/batch-delete', {
-            method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids: checked })
-        });
-        const data = await res.json();
-        if (data.success) { showToast('✅ 已删除 ' + data.deleted + ' 条'); loadProxyManageList(); }
-        else { showToast('❌ ' + (data.error || '删除失败')); }
-    } catch(e) { showToast('❌ 网络错误'); }
+    if (!confirm('确定清空选中的 ' + checked.length + ' 个卡片的直链？')) return;
+    let removed = 0;
+    checked.forEach(idx => {
+        if (cards[idx]) { cards[idx].directLink = ''; removed++; }
+    });
+    saveCards();
+    renderCards();
+    loadProxyManageList();
+    showToast('✅ 已清空 ' + removed + ' 个直链');
 }
 
 // ── 生成30分钟临时直链 ──
