@@ -5107,13 +5107,23 @@ function handleScroll() {
 
 function goTop() { document.getElementById("mainScroll").scrollTo({ top: 0, behavior: 'smooth' }); }
 
-function openLogin() {
+async function openLogin() {
     if (isEditMode) return;
     const lockMsg = checkLocked();
     if (lockMsg) {
         alert(`🔒 ${lockMsg}`);
         return;
     }
+    // Step 1: Cloudflare Turnstile 人机验证
+    showToast('⏳ 正在完成人机验证...');
+    try {
+        await requestTurnstileToken(30000);
+        showToast('✅ 验证通过');
+    } catch(e) {
+        showToast('❌ ' + e.message);
+        return;
+    }
+    // Step 2: 显示密码输入框
     document.getElementById("loginModal").style.display = "flex";
 }
 function closeLogin() { document.getElementById("loginModal").style.display = "none"; document.getElementById("passInput").value = ""; }
@@ -5961,13 +5971,11 @@ async function submitGhdlVerify() {
     var answer = document.getElementById('ghdlAnswer').value.trim();
     if (!answer) { showToast('请输入答案'); return; }
     if (answer !== _ghdlSession.captcha.answer) {
-        showToast('❌ 答案错误');
-        // 答案错误：只刷新算术题，不需要重新做人机验证
-        var captcha = createGhdlCaptcha();
-        _ghdlSession.captcha = captcha;
-        document.getElementById('ghdlQuestion').textContent = captcha.question;
-        document.getElementById('ghdlAnswer').value = '';
-        document.getElementById('ghdlAnswer').focus();
+        showToast('❌ 答案错误，请重新验证');
+        // 答案错误：关闭弹窗，需要重新点击下载，从头做人机验证+算术题
+        var modal = document.getElementById('ghdlModal');
+        if (modal) modal.remove();
+        _ghdlSession = null;
         return;
     }
 
