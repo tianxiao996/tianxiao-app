@@ -3102,11 +3102,36 @@ function __safeFixDeleteImage(card){
                 </div>
             </div>
         </div>
+        <!-- ⏱️ 临时直链生成工具 -->
+        <div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #a5d6a7; margin-top:10px;">
+            <div style="font-size:12px; font-weight:bold; color:#e65100; margin-bottom:8px;">⏱️ 临时直链生成（30分钟有效期）</div>
+            <div style="font-size:11px; color:#666; margin-bottom:8px;">输入原始链接，生成30分钟有效的临时下载直链（无需保存到数据库）</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                <input type="text" id="tempLinkInput" placeholder="粘贴原始链接（如 https://huggingface.co/...）" style="border:1px solid #ffcc80;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;font-family:inherit;">
+                <input type="text" id="tempLinkName" placeholder="文件名（可选）" style="border:1px solid #ffcc80;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;font-family:inherit;">
+                <button onclick="generateTempProxyLink()" style="background:#ff9800;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;">⏱️ 生成30分钟临时直链</button>
+            </div>
+            <div id="tempLinkResult" style="display:none; margin-top:10px; padding:10px; background:#fff8e1; border-radius:8px; border:1px solid #ffe082;">
+                <div style="font-size:11px; color:#e65100; font-weight:bold; margin-bottom:4px;">✅ 临时直链已生成（30分钟内有效）：</div>
+                <div id="tempLinkOutput" style="font-size:12px; color:#e65100; word-break:break-all; background:#fff; padding:6px 8px; border-radius:4px; border:1px solid #ffcc80; font-family:monospace;"></div>
+                <div style="display:flex; gap:6px; margin-top:8px;">
+                    <button onclick="copyTempLink()" style="flex:1; background:#ffa726;color:#fff;border:none;border-radius:6px;padding:6px;font-size:12px;cursor:pointer;">📋 复制链接</button>
+                    <button onclick="useTempLinkInCard()" style="flex:1; background:#42a5f5;color:#fff;border:none;border-radius:6px;padding:6px;font-size:12px;cursor:pointer;">📥 填入当前卡片下载框</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 已保存的代理链接列表 -->
         <div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #a5d6a7; margin-top:10px;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
                 <div style="font-size:12px; font-weight:bold; color:#2e7d32;">📋 已保存的代理链接</div>
                 <button onclick="loadSavedProxyLinks()" style="background:#66bb6a; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer;">🔄 刷新</button>
+            </div>
+            <!-- 批量操作栏 -->
+            <div id="proxyBatchBar" style="display:none; align-items:center; gap:8px; margin-bottom:8px; padding:6px 8px; background:#fff3e0; border-radius:6px;">
+                <input type="checkbox" id="proxySelectAll" onchange="toggleProxySelectAll(this)" style="cursor:pointer;">
+                <label for="proxySelectAll" style="font-size:12px; color:#e65100; cursor:pointer;">全选</label>
+                <button onclick="batchDeleteProxyLinks()" style="margin-left:auto; background:#e53935; color:#fff; border:none; border-radius:4px; padding:4px 12px; font-size:11px; cursor:pointer;">🗑️ 批量删除</button>
             </div>
             <div id="savedProxyLinksList" style="display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto;">
                 <div style="font-size:12px; color:#aaa; text-align:center; padding:10px;">点击刷新查看</div>
@@ -5949,12 +5974,25 @@ async function submitGhdlVerify() {
             return;
         }
 
-        // GitHub链接走/ghdl/:token安全下载页，非GitHub链接直接window.open
+        // GitHub链接走/ghdl/:token安全下载页
+        // 非GitHub原始链接 → 生成30分钟临时直链 /px/<token> 再下载
         if (data.isGitHub) {
             var dlUrl = WORKER_BASE + '/ghdl/' + data.token + '?url=' + encodeURIComponent(realUrl) + '&filename=' + encodeURIComponent(_ghdlSession.filename || 'download');
             openDownloadPage(dlUrl);
         } else {
-            openDownloadPage(realUrl);
+            var tempRes = await fetch(WORKER_BASE + '/api/proxy/temp-link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: realUrl, filename: _ghdlSession.filename || 'download' })
+            });
+            var tempData = await tempRes.json();
+            if (tempData.success && tempData.tempUrl) {
+                openDownloadPage(tempData.tempUrl);
+            } else {
+                showGhdlError('临时直链生成失败：' + (tempData.error || '未知错误'));
+                if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
+                return;
+            }
         }
 
         setTimeout(function() {
@@ -5991,6 +6029,51 @@ function openLinkProxyPanel() {
     if (panel.style.display === 'block') {
         loadSavedProxyLinks();
         document.getElementById('linkProxyInput').focus();
+    }
+}
+
+// ── 生成30分钟临时直链 ──
+async function generateTempProxyLink() {
+    const input = document.getElementById('tempLinkInput');
+    const nameInput = document.getElementById('tempLinkName');
+    const resultBox = document.getElementById('tempLinkResult');
+    const output = document.getElementById('tempLinkOutput');
+    const url = input.value.trim();
+    if (!url) { showToast('请输入原始链接'); return; }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) { showToast('链接必须以 http:// 或 https:// 开头'); return; }
+    try {
+        const res = await fetch(WORKER_BASE + '/api/proxy/temp-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, filename: nameInput.value.trim() || '' })
+        });
+        const data = await res.json();
+        if (data.success && data.tempUrl) {
+            output.textContent = data.tempUrl;
+            resultBox.style.display = 'block';
+            showToast('✅ 临时直链已生成，30分钟内有效');
+        } else {
+            showToast('❌ ' + (data.error || '生成失败'));
+        }
+    } catch(e) { showToast('❌ 网络错误'); }
+}
+
+// ── 复制临时直链 ──
+function copyTempLink() {
+    const text = document.getElementById('tempLinkOutput').textContent;
+    if (text) navigator.clipboard.writeText(text).then(() => showToast('✅ 已复制'));
+}
+
+// ── 将临时直链填入当前卡片的下载框 ──
+function useTempLinkInCard() {
+    const text = document.getElementById('tempLinkOutput').textContent;
+    if (!text) return;
+    if (window._currentCardIndex !== undefined && cards[window._currentCardIndex]) {
+        cards[window._currentCardIndex].directLink = text;
+        renderCards();
+        showToast('✅ 已填入下载框');
+    } else {
+        showToast('⚠️ 请先在管理员模式下点击卡片编辑按钮');
     }
 }
 
@@ -6063,16 +6146,20 @@ async function loadSavedProxyLinks() {
     const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
     if (!token) return;
     const listEl = document.getElementById('savedProxyLinksList');
+    const batchBar = document.getElementById('proxyBatchBar');
     if (!listEl) return;
     listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:10px;">加载中...</div>';
+    if (batchBar) batchBar.style.display = 'none';
     try {
         const res = await fetch(WORKER_BASE + '/api/admin/proxy-links', {
             headers: { 'Authorization': 'Bearer ' + token }
         });
         const data = await res.json();
         if (data.success && data.links && data.links.length > 0) {
+            if (batchBar) batchBar.style.display = 'flex';
             listEl.innerHTML = data.links.map(l => `
                 <div style="display:flex;align-items:center;gap:8px;background:#f9fbe7;border-radius:8px;padding:8px 10px;border:1px solid #c8e6c9;">
+                    <input type="checkbox" class="proxy-cb" value="${l.id}" style="cursor:pointer;flex-shrink:0;">
                     <div style="flex:1;min-width:0;">
                         <div style="font-size:12px;font-weight:bold;color:#33691e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.filename || '未命名')}</div>
                         <div style="font-size:11px;color:#78909c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.url.substring(0,60))}${l.url.length>60?'...':''}</div>
@@ -6088,6 +6175,30 @@ async function loadSavedProxyLinks() {
             listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:10px;">暂无保存的代理链接</div>';
         }
     } catch(e) { listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:10px;">加载失败</div>'; }
+}
+
+// ── 代理链接全选/取消全选 ──
+function toggleProxySelectAll(cb) {
+    document.querySelectorAll('.proxy-cb').forEach(el => el.checked = cb.checked);
+}
+
+// ── 批量删除代理链接 ──
+async function batchDeleteProxyLinks() {
+    const token = adminToken || sessionStorage.getItem('ADMIN_TOKEN');
+    if (!token) { showToast('请先登录管理员'); return; }
+    const checked = Array.from(document.querySelectorAll('.proxy-cb:checked')).map(cb => cb.value);
+    if (checked.length === 0) { showToast('请先勾选要删除的链接'); return; }
+    if (!confirm('确定删除选中的 ' + checked.length + ' 条代理链接？')) return;
+    try {
+        const res = await fetch(WORKER_BASE + '/api/admin/proxy-links/batch-delete', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: checked })
+        });
+        const data = await res.json();
+        if (data.success) { showToast('✅ 已删除 ' + data.deleted + ' 条'); loadSavedProxyLinks(); }
+        else { showToast('❌ ' + (data.error || '删除失败')); }
+    } catch(e) { showToast('❌ 网络错误'); }
 }
 
 // ── 删除代理链接 ──
