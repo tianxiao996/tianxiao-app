@@ -6105,13 +6105,12 @@ function openLinkProxyPanel() {
 
 // ── 打开/关闭代理链接管理面板 ──
 function openProxyManagePanel() {
-    const panel = document.getElementById('proxyManagePanel');
-    const linkPanel = document.getElementById('linkProxyPanel');
-    const mailPanel = document.getElementById('mailManagePanel');
-    const auditPanel = document.getElementById('adminAuditPanel');
+    var panel = document.getElementById('proxyManagePanel');
+    if (!panel) { showToast('面板不存在'); return; }
+    var linkPanel = document.getElementById('linkProxyPanel');
+    var mailPanel = document.getElementById('mailManagePanel');
     if (linkPanel) linkPanel.style.display = 'none';
     if (mailPanel) mailPanel.style.display = 'none';
-    if (auditPanel) auditPanel.style.display = 'none';
     panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     if (panel.style.display === 'block') loadProxyManageList();
 }
