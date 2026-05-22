@@ -5995,7 +5995,8 @@ async function submitGhdlVerify() {
             });
             var tempData = await tempRes.json();
             if (tempData.success && tempData.tempUrl) {
-                openDownloadPage(tempData.tempUrl);
+                // 用同源代理链接触发下载，同时把30分钟短链展示给用户
+                openDlWait(tempData.tempUrl + '?raw=1', tempData.tempUrl);
             } else {
                 showGhdlError('直链生成失败：' + (tempData.error || '未知错误'));
                 if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
@@ -6055,7 +6056,8 @@ async function submitGhdlVerify() {
         });
         var tempData = await tempRes.json();
         if (tempData.success && tempData.tempUrl) {
-            openDownloadPage(tempData.tempUrl);
+            // 用同源代理链接触发下载，同时把30分钟短链展示给用户
+            openDlWait(tempData.tempUrl + '?raw=1', tempData.tempUrl);
         } else {
             showGhdlError('直链生成失败：' + (tempData.error || '未知错误'));
             if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
@@ -8895,16 +8897,24 @@ function createServiceWorkerBlob() {
   <button onclick="location.reload()">重新加载</button>
 
 <!-- ⬇️ 下载等待页 -->
-<div id="downloadWaitPage" style="display:none;position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#ffb3cc 0%,#fce8f0 100%);display:none;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:24px;padding:40px 32px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(255,102,153,0.2);">
+<div id="downloadWaitPage" style="display:none;position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#ffb3cc 0%,#fce8f0 100%);align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:24px;padding:36px 28px;max-width:360px;width:92%;text-align:center;box-shadow:0 8px 40px rgba(255,102,153,0.2);">
         <div style="font-size:22px;font-weight:900;color:#ff6699;margin-bottom:8px;">正在下载中，不要着急起飞</div>
-        <div style="font-size:13px;color:#aaa;margin-bottom:20px;">即将自动开始下载...</div>
-        <img src="./avatar.png" alt="" style="width:140px;height:140px;object-fit:cover;border-radius:12px;margin-bottom:20px;">
-        <div style="background:#f0f0f0;border-radius:99px;height:8px;overflow:hidden;margin-bottom:12px;">
+        <div style="font-size:13px;color:#aaa;margin-bottom:16px;">即将自动开始下载...</div>
+        <img src="./avatar.png" alt="" style="width:120px;height:120px;object-fit:cover;border-radius:12px;margin-bottom:16px;">
+        <div style="background:#f0f0f0;border-radius:99px;height:8px;overflow:hidden;margin-bottom:10px;">
             <div id="dlWaitBar" style="height:100%;width:0%;background:linear-gradient(90deg,#ff6699,#ffb3cc);border-radius:99px;transition:width 0.3s;"></div>
         </div>
-        <div style="font-size:12px;color:#aaa;margin-bottom:16px;">如未自动下载，请点击下方链接</div>
-        <a id="dlWaitManual" href="#" style="color:#ff6699;font-size:14px;font-weight:bold;text-decoration:underline;" onclick="closeDlWait()">点击手动下载</a>
+        <!-- 30分钟短链展示区 -->
+        <div id="dlShortLinkWrap" style="display:none;margin:10px 0 12px;background:#fce8f0;border-radius:10px;padding:8px 10px;border:1px solid #ffb3cc;">
+            <div style="font-size:11px;color:#999;margin-bottom:5px;">⏱️ 30分钟有效短链（可复制分享）</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span id="dlShortLinkText" style="font-size:11px;color:#e0336b;word-break:break-all;flex:1;text-align:left;line-height:1.4;"></span>
+                <button onclick="copyDlShortLink()" style="flex-shrink:0;background:#ff6699;color:#fff;border:none;border-radius:6px;padding:5px 9px;font-size:11px;cursor:pointer;touch-action:manipulation;">复制</button>
+            </div>
+        </div>
+        <div style="font-size:12px;color:#aaa;margin-bottom:10px;">如未自动下载，请点击下方链接</div>
+        <a id="dlWaitManual" href="#" style="color:#ff6699;font-size:14px;font-weight:bold;text-decoration:underline;">点击手动下载</a>
     </div>
 </div>
 
@@ -9408,14 +9418,30 @@ async function deleteShortlink(code) {
 }
 
 // ⬇️ 下载等待页
-function openDlWait(url) {
+// dlUrl: 实际下载地址（/px/<token>?raw=1，同源，无弹窗拦截）
+// shortUrl: 可选，展示给用户的30分钟短链（/px/<token>，不含?raw=1）
+function openDlWait(dlUrl, shortUrl) {
     const page = document.getElementById('downloadWaitPage');
     const bar = document.getElementById('dlWaitBar');
     const manual = document.getElementById('dlWaitManual');
-    if (!page) { window.open(url, '_blank'); return; }
+    if (!page) { window.open(dlUrl, '_blank'); return; }
 
-    manual.href = url;
-    manual.onclick = function(e) { e.preventDefault(); closeDlWait(); window.open(url, '_blank'); };
+    // ── 短链展示区 ──
+    const shortWrap = document.getElementById('dlShortLinkWrap');
+    const shortText = document.getElementById('dlShortLinkText');
+    if (shortUrl && shortWrap && shortText) {
+        shortText.textContent = shortUrl;
+        shortWrap.style.display = 'block';
+        page._dlShortUrl = shortUrl; // 供 copyDlShortLink() 读取
+    } else if (shortWrap) {
+        shortWrap.style.display = 'none';
+        page._dlShortUrl = '';
+    }
+
+    // 手动下载链接直接指向同源代理下载地址
+    manual.href = dlUrl;
+    manual.onclick = function() { setTimeout(closeDlWait, 400); }; // 点后关闭浮层
+
     page.style.display = 'flex';
     bar.style.width = '0%';
 
@@ -9427,18 +9453,46 @@ function openDlWait(url) {
         bar.style.width = pct + '%';
     }, 200);
 
-    // 3秒后自动触发下载并关闭页面
+    // ⚡ 1.5秒后自动触发下载
+    // 使用同源 /px/<token>?raw=1，a.download + a.click() 不受弹窗拦截限制
     setTimeout(() => {
         bar.style.width = '100%';
         clearInterval(timer);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = '';
+        a.href = dlUrl;
+        a.download = ''; // 让浏览器用服务器 Content-Disposition 的文件名
         document.body.appendChild(a);
-        a.click();
+        try { a.click(); } catch(e) {}
         document.body.removeChild(a);
-        setTimeout(closeDlWait, 1500);
-    }, 3000);
+        setTimeout(closeDlWait, 2500);
+    }, 1500);
+}
+
+// 复制短链到剪贴板
+function copyDlShortLink() {
+    const page = document.getElementById('downloadWaitPage');
+    const url = page && page._dlShortUrl;
+    if (!url) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url)
+            .then(() => showToast('✅ 短链已复制！'))
+            .catch(() => _copyDlShortLinkFallback(url));
+    } else {
+        _copyDlShortLinkFallback(url);
+    }
+}
+function _copyDlShortLinkFallback(url) {
+    const el = document.getElementById('dlShortLinkText');
+    if (el) {
+        try {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        } catch(e) {}
+    }
+    showToast('请手动长按复制短链');
 }
 
 function closeDlWait() {
