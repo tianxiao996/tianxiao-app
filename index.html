@@ -5835,8 +5835,10 @@ function openDownloadPage(url) {
 }
 
 async function openSecureDownloadFlow(githubUrl, filename) {
-    const admin = isAdminMode();
-    const userToken = getUserToken();
+    // 🐛 调试日志
+    var admin = isAdminMode();
+    var userToken = getUserToken();
+    console.log('[DL] admin=' + admin + ', hasToken=' + !!userToken + ', url=' + githubUrl.substring(0,50));
 
     // 普通用户必须登录
     if (!admin && !userToken) { showToast('❌ 请先登录'); setTimeout(() => openAuthModal(), 800); return; }
@@ -5880,7 +5882,7 @@ async function openSecureDownloadFlow(githubUrl, filename) {
         '<div style="padding:20px;">' +
         '<div id="ghdlStep1"><div style="font-size:14px;color:#555;margin-bottom:12px;text-align:center;">' + tipText + '</div>' +
         coinLine +
-        '<div style="display:flex;justify-content:center;margin-bottom:16px;"><div id="ghdlTurnstileBox" style="min-height:65px;"></div></div>' +
+        '<div style="display:flex;justify-content:center;margin-bottom:16px;min-height:80px;align-items:center;"><div id="ghdlTurnstileBox" style="width:100%;min-height:80px;display:flex;align-items:center;justify-content:center;"></div></div>' +
         '<button onclick="document.getElementById(\'ghdlModal\').remove()" class="modal-btn btn-cancel" style="width:100%;">取消</button></div>' +
         '<div id="ghdlStep2" style="display:none;"><div style="font-size:14px;color:#555;margin-bottom:16px;text-align:center;">请回答下面的算术题</div>' +
         '<div style="text-align:center;margin-bottom:16px;"><div id="ghdlQuestion" style="font-size:28px;font-weight:bold;color:#ff6699;font-family:monospace;background:#fce4ec;padding:16px 24px;border-radius:12px;display:inline-block;"></div></div>' +
@@ -5918,9 +5920,10 @@ function createGhdlCaptcha() {
 
 function renderGhdlTurnstile() {
     var container = document.getElementById('ghdlTurnstileBox');
-    if (!container || !window.turnstile) {
-        if (container) container.innerHTML = '<div style="color:#999;font-size:12px;">⏳ 加载中...</div>';
-        setTimeout(renderGhdlTurnstile, 500); return;
+    if (!container) { setTimeout(renderGhdlTurnstile, 500); return; }
+    if (!window.turnstile) {
+        container.innerHTML = '<div style="color:#999;font-size:14px;text-align:center;padding:20px;">⏳ 人机验证加载中...<br><span style="font-size:11px;color:#bbb;">请确保网络连接正常</span></div>';
+        setTimeout(renderGhdlTurnstile, 1000); return;
     }
     container.innerHTML = '';
     var el = document.createElement('div');
@@ -5965,6 +5968,7 @@ async function submitGhdlVerify() {
     if (btn) { btn.textContent = '验证中...'; btn.disabled = true; }
 
     // 管理员模式：跳过后端验证和扣次数，直接生成临时直链
+    console.log('[DL] submitGhdlVerify: isAdmin=' + _ghdlSession.isAdmin + ', hasAnswer=' + !!answer);
     if (_ghdlSession.isAdmin) {
         document.getElementById('ghdlStep2').style.display = 'none';
         document.getElementById('ghdlStep3').style.display = 'block';
@@ -6100,27 +6104,29 @@ function openProxyManagePanel() {
 // ── 加载代理链接列表到管理面板 ──
 // 从 DOM 的 dataset.directDownload 读取直链（卡片数据存储在 DOM 中，无全局 cards 数组）
 function loadProxyManageList() {
-    const listEl = document.getElementById('proxyManageList');
-    const countEl = document.getElementById('proxyManageCount');
+    var listEl = document.getElementById('proxyManageList');
+    var countEl = document.getElementById('proxyManageCount');
     if (!listEl) return;
     // 从 DOM 中收集有直链的卡片
-    const allCards = document.querySelectorAll('#box .card');
-    const linkedCards = [];
+    var allCards = document.querySelectorAll('#box .card');
+    var linkedCards = [];
+    var noLinkCards = [];
     allCards.forEach(function(card, idx) {
         var directUrl = (card.dataset.directDownload || '').trim();
+        var titleEl = card.querySelector('.g-name');
+        var title = titleEl ? titleEl.textContent.trim() : ('卡片' + (idx + 1));
         if (directUrl) {
-            var titleEl = card.querySelector('.g-name');
-            linkedCards.push({
-                idx: idx,
-                title: titleEl ? titleEl.textContent.trim() : ('卡片' + (idx + 1)),
-                url: directUrl
-            });
+            linkedCards.push({ idx: idx, title: title, url: directUrl });
+        } else {
+            noLinkCards.push({ idx: idx, title: title });
         }
     });
     if (countEl) countEl.textContent = '(0/' + linkedCards.length + ')';
+    // 构建HTML：先显示有直链的，再显示无直链的（灰色）
+    var html = '';
     if (linkedCards.length > 0) {
-        listEl.innerHTML = linkedCards.map(function(c, i) {
-            return '<div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:8px;padding:10px;border:1px solid #d7ccc8;">' +
+        html += linkedCards.map(function(c, i) {
+            return '<div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:8px;padding:10px;border:1px solid #d7ccc8;margin-bottom:6px;">' +
                 '<input type="checkbox" class="proxy-manage-cb" value="' + c.idx + '" data-idx="' + i + '" onchange="updateProxyManageCount()" style="cursor:pointer;flex-shrink:0;width:16px;height:16px;">' +
                 '<div style="flex:1;min-width:0;">' +
                     '<div style="font-size:12px;font-weight:bold;color:#5d4037;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(c.title) + '</div>' +
@@ -6129,9 +6135,23 @@ function loadProxyManageList() {
                 '<button onclick="removeCardDirectLink(' + c.idx + ')" style="background:#ffebee;color:#e53935;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;flex-shrink:0;">删除</button>' +
             '</div>';
         }).join('');
-    } else {
-        listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:20px;">暂无直链框链接<br><span style="font-size:11px;color:#ccc;">在卡片直接下载框填入链接后会显示在这里</span></div>';
     }
+    // 显示无直链的卡片（灰色，提示用户）
+    if (noLinkCards.length > 0) {
+        html += '<div style="font-size:11px;color:#aaa;text-align:center;padding:8px;margin-top:4px;">以下 ' + noLinkCards.length + ' 张卡片无直链</div>';
+        html += noLinkCards.slice(0, 10).map(function(c) {
+            return '<div style="display:flex;align-items:center;gap:8px;background:#f5f5f5;border-radius:8px;padding:8px 10px;border:1px solid #e0e0e0;margin-bottom:4px;opacity:0.7;">' +
+                '<div style="flex:1;min-width:0;font-size:11px;color:#999;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(c.title) + '</div>' +
+            '</div>';
+        }).join('');
+        if (noLinkCards.length > 10) {
+            html += '<div style="font-size:11px;color:#ccc;text-align:center;padding:4px;">... 还有 ' + (noLinkCards.length - 10) + ' 张</div>';
+        }
+    }
+    if (!html) {
+        html = '<div style="font-size:12px;color:#aaa;text-align:center;padding:20px;">暂无卡片</div>';
+    }
+    listEl.innerHTML = html;
 }
 
 // ── 删除单个卡片的直链 ──
