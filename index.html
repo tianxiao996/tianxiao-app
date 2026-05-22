@@ -5672,7 +5672,7 @@ async function loadAvatarShopPage() {
             if (owned.length > 0 && ownedGrid && ownedTitle) {
                 ownedTitle.style.display = '';
                 ownedGrid.innerHTML = owned.map(a => `
-                    <div class="user-avatar-item ${a.url === _userHomeData?.avatar ? 'avatar-current' : ''}" onclick="setCurrentAvatar('${a.id}', '${escapeHtml(a.url)}')">
+                    <div class="user-avatar-item ${a.url === ((_userHomeData && _userHomeData.avatar) || '') ? 'avatar-current' : ''}" onclick="setCurrentAvatar('${a.id}', '${escapeHtml(a.url)}')">
                         <img class="avatar-img" src="${escapeHtml(a.url)}" alt="" onerror="this.src='./avatar.png'">
                         <div class="avatar-name">${escapeHtml(a.name)}</div>
                         <div class="avatar-owned">已拥有</div>
@@ -5865,7 +5865,8 @@ async function openSecureDownloadFlow(githubUrl, filename) {
     var titleText = admin ? '管理员下载验证' : '安全下载验证';
     var titleIcon = admin ? '⚡' : '🔒';
     var tipText = admin ? '管理员模式：请完成人机验证即可下载' : '为防止自动化批量下载，请完成以下验证';
-    var coinLine = admin ? '' : '<div style="margin-bottom:12px;padding:10px;background:#fff3e0;border-radius:8px;font-size:12px;color:#e65100;text-align:center;">💡 下载将消耗 <b>1条小鱼干</b>（当前余额：' + (_userHomeData?.fishCoins || 0) + '条）</div>';
+    var fishCoinCount = (_userHomeData && _userHomeData.fishCoins) || 0;
+    var coinLine = admin ? '' : '<div style="margin-bottom:12px;padding:10px;background:#fff3e0;border-radius:8px;font-size:12px;color:#e65100;text-align:center;">💡 下载将消耗 <b>1条小鱼干</b>（当前余额：' + fishCoinCount + '条）</div>';
 
     const modal = document.createElement('div');
     modal.id = 'ghdlModal';
@@ -6097,65 +6098,92 @@ function openProxyManagePanel() {
 }
 
 // ── 加载代理链接列表到管理面板 ──
-// 从 cards 数组中筛选有直链框链接（directLink）的卡片，而非代理链接
+// 从 DOM 的 dataset.directDownload 读取直链（卡片数据存储在 DOM 中，无全局 cards 数组）
 function loadProxyManageList() {
     const listEl = document.getElementById('proxyManageList');
     const countEl = document.getElementById('proxyManageCount');
     if (!listEl) return;
-    // 筛选有 directLink 的卡片
-    const linkedCards = (cards || []).map((c, idx) => ({ ...c, _idx: idx })).filter(c => c.directLink && c.directLink.trim());
+    // 从 DOM 中收集有直链的卡片
+    const allCards = document.querySelectorAll('#box .card');
+    const linkedCards = [];
+    allCards.forEach(function(card, idx) {
+        var directUrl = (card.dataset.directDownload || '').trim();
+        if (directUrl) {
+            var titleEl = card.querySelector('.g-name');
+            linkedCards.push({
+                idx: idx,
+                title: titleEl ? titleEl.textContent.trim() : ('卡片' + (idx + 1)),
+                url: directUrl
+            });
+        }
+    });
     if (countEl) countEl.textContent = '(0/' + linkedCards.length + ')';
     if (linkedCards.length > 0) {
-        listEl.innerHTML = linkedCards.map((c, i) => `
-            <div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:8px;padding:10px;border:1px solid #d7ccc8;">
-                <input type="checkbox" class="proxy-manage-cb" value="${c._idx}" data-idx="${i}" onchange="updateProxyManageCount()" style="cursor:pointer;flex-shrink:0;width:16px;height:16px;">
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:12px;font-weight:bold;color:#5d4037;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.title || '未命名')}</div>
-                    <div style="font-size:11px;color:#8d6e63;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.directLink.substring(0,70))}${c.directLink.length>70?'...':''}</div>
-                </div>
-                <button onclick="removeCardDirectLink(${c._idx})" style="background:#ffebee;color:#e53935;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;flex-shrink:0;">删除</button>
-            </div>
-        `).join('');
+        listEl.innerHTML = linkedCards.map(function(c, i) {
+            return '<div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:8px;padding:10px;border:1px solid #d7ccc8;">' +
+                '<input type="checkbox" class="proxy-manage-cb" value="' + c.idx + '" data-idx="' + i + '" onchange="updateProxyManageCount()" style="cursor:pointer;flex-shrink:0;width:16px;height:16px;">' +
+                '<div style="flex:1;min-width:0;">' +
+                    '<div style="font-size:12px;font-weight:bold;color:#5d4037;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(c.title) + '</div>' +
+                    '<div style="font-size:11px;color:#8d6e63;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(c.url.substring(0,70)) + (c.url.length>70?'...':'') + '</div>' +
+                '</div>' +
+                '<button onclick="removeCardDirectLink(' + c.idx + ')" style="background:#ffebee;color:#e53935;border:none;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;flex-shrink:0;">删除</button>' +
+            '</div>';
+        }).join('');
     } else {
-        listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:20px;">暂无直链框链接</div>';
+        listEl.innerHTML = '<div style="font-size:12px;color:#aaa;text-align:center;padding:20px;">暂无直链框链接<br><span style="font-size:11px;color:#ccc;">在卡片直接下载框填入链接后会显示在这里</span></div>';
     }
 }
 
 // ── 删除单个卡片的直链 ──
-function removeCardDirectLink(idx) {
-    if (!confirm('确定删除「' + (cards[idx]?.title || '未命名') + '」的直链？')) return;
-    cards[idx].directLink = '';
-    saveCards();
-    renderCards();
+function removeCardDirectLink(cardIdx) {
+    var allCards = document.querySelectorAll('#box .card');
+    var card = allCards[cardIdx];
+    if (!card) { showToast('卡片不存在'); return; }
+    var titleEl = card.querySelector('.g-name');
+    var title = titleEl ? titleEl.textContent.trim() : '未命名';
+    if (!confirm('确定删除「' + title + '」的直链？')) return;
+    card.dataset.directDownload = '';
+    // 同步清空输入框
+    var input = card.querySelector('.direct-dl-input');
+    if (input) input.value = '';
+    autoSave();
+    addLinkJumpButtons();
     loadProxyManageList();
     showToast('✅ 已删除');
 }
 
 // ── 更新选中计数 ──
 function updateProxyManageCount() {
-    const checked = document.querySelectorAll('.proxy-manage-cb:checked').length;
-    const total = document.querySelectorAll('.proxy-manage-cb').length;
-    const countEl = document.getElementById('proxyManageCount');
+    var checked = document.querySelectorAll('.proxy-manage-cb:checked').length;
+    var total = document.querySelectorAll('.proxy-manage-cb').length;
+    var countEl = document.getElementById('proxyManageCount');
     if (countEl) countEl.textContent = '(' + checked + '/' + total + ')';
 }
 
 // ── 代理管理面板全选/取消全选 ──
 function toggleProxyManageSelectAll(cb) {
-    document.querySelectorAll('.proxy-manage-cb').forEach(el => el.checked = cb.checked);
+    document.querySelectorAll('.proxy-manage-cb').forEach(function(el) { el.checked = cb.checked; });
     updateProxyManageCount();
 }
 
 // ── 批量删除直链框链接（管理面板）──
 function batchDeleteProxyManage() {
-    const checked = Array.from(document.querySelectorAll('.proxy-manage-cb:checked')).map(cb => parseInt(cb.value));
+    var checked = Array.from(document.querySelectorAll('.proxy-manage-cb:checked')).map(function(cb) { return parseInt(cb.value); });
     if (checked.length === 0) { showToast('请先勾选要删除的链接'); return; }
     if (!confirm('确定清空选中的 ' + checked.length + ' 个卡片的直链？')) return;
-    let removed = 0;
-    checked.forEach(idx => {
-        if (cards[idx]) { cards[idx].directLink = ''; removed++; }
+    var allCards = document.querySelectorAll('#box .card');
+    var removed = 0;
+    checked.forEach(function(cardIdx) {
+        var card = allCards[cardIdx];
+        if (card) {
+            card.dataset.directDownload = '';
+            var input = card.querySelector('.direct-dl-input');
+            if (input) input.value = '';
+            removed++;
+        }
     });
-    saveCards();
-    renderCards();
+    autoSave();
+    addLinkJumpButtons();
     loadProxyManageList();
     showToast('✅ 已清空 ' + removed + ' 个直链');
 }
@@ -7490,8 +7518,9 @@ function addLinkJumpButtons() {
         const oldActions = wrap ? wrap.querySelector('.link-actions') : null;
         if (oldActions) oldActions.remove();
 
-        // 没有 cardId 且没有链接文本就跳过
-        if (!cardId && !linkText) return;
+        // 没有 cardId 且没有链接文本且没有直链就跳过
+        var hasDirectDl = !!(card.dataset.directDownload || '').trim();
+        if (!cardId && !linkText && !hasDirectDl) return;
 
         // ── 统一生成按钮区 ──
         if (wrap) {
@@ -12163,7 +12192,7 @@ async function loadAvatarShop() {
             if (owned.length > 0) {
                 myBox.style.display = 'block';
                 myGrid.innerHTML = owned.map(a => `
-                    <div class="user-avatar-item ${a.url === _userHomeData?.avatar ? 'avatar-current' : ''}" onclick="setCurrentAvatar('${a.id}', '${escapeHtml(a.url)}')">
+                    <div class="user-avatar-item ${a.url === ((_userHomeData && _userHomeData.avatar) || '') ? 'avatar-current' : ''}" onclick="setCurrentAvatar('${a.id}', '${escapeHtml(a.url)}')">
                         <img class="avatar-img" src="${escapeHtml(a.url)}" alt="" onerror="this.src='./avatar.png'">
                         <div class="avatar-name">${escapeHtml(a.name)}</div>
                         <div class="avatar-owned">已拥有</div>
