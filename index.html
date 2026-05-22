@@ -5930,7 +5930,12 @@ async function submitGhdlVerify() {
         var realUrl = data.githubUrl || _ghdlSession.githubUrl;
 
         // 先扣除下载次数，确认扣成功后再打开下载页
-        await consumeDownloadLimit();
+        var consumed = await consumeDownloadLimit();
+        if (!consumed) {
+            showGhdlError('下载次数扣除失败，请重试');
+            if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
+            return;
+        }
 
         // GitHub链接走/ghdl/:token安全下载页，非GitHub链接直接window.open
         if (data.isGitHub) {
