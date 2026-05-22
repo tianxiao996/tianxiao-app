@@ -5899,7 +5899,19 @@ async function submitGhdlVerify() {
     if (!_ghdlSession) return;
     var answer = document.getElementById('ghdlAnswer').value.trim();
     if (!answer) { showToast('请输入答案'); return; }
-    if (answer !== _ghdlSession.captcha.answer) { showToast('答案错误，请重新计算'); return; }
+    if (answer !== _ghdlSession.captcha.answer) {
+        showToast('❌ 答案错误，请重新验证');
+        // 答案错误：刷新验证码，回到第一步人机验证
+        var captcha = createGhdlCaptcha();
+        _ghdlSession.captcha = captcha;
+        _ghdlSession.turnstileToken = null; // 清除旧的Turnstile token
+        document.getElementById('ghdlStep2').style.display = 'none';
+        document.getElementById('ghdlAnswer').value = '';
+        // 重新渲染Turnstile（回到Step1）
+        document.getElementById('ghdlStep1').style.display = 'block';
+        setTimeout(function() { renderGhdlTurnstile(); }, 100);
+        return;
+    }
 
     var btn = document.getElementById('ghdlSubmitBtn');
     if (btn) { btn.textContent = '验证中...'; btn.disabled = true; }
