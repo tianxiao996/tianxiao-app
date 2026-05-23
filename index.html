@@ -9636,6 +9636,18 @@ function openCardDetail(card) {
     try {
 _cardDetailSource = card;
 
+    // ═══════════════════════════════════════════
+    // 第1步：立即显示下载页 + 全屏加载画面
+    // ═══════════════════════════════════════════
+    const page = document.getElementById('cardDetailPage');
+    const loadLayer = document.getElementById('detailLoading');
+    history.pushState({ page: 'cardDetail' }, '');
+    page.style.display = 'flex';
+    if (loadLayer) loadLayer.classList.remove('hidden');
+    const bodyEl = document.getElementById('cardDetailBody');
+    if (bodyEl) bodyEl.scrollTop = 0;
+    requestAnimationFrame(() => page.style.transform = 'translateX(0)');
+
     // ── 读取卡片数据 ──
     const sliderBox   = card.querySelector('.slider-box');
     const infoBox     = card.querySelector('.info-box');
@@ -9799,19 +9811,7 @@ _cardDetailSource = card;
         body.appendChild(btnWrap);
     }
 
-    // ── 显示下载页 + 全屏加载画面 ──
-    const page = document.getElementById('cardDetailPage');
-    const loadLayer = document.getElementById('detailLoading');
-    // 先显示页面（此时 loadLayer 未隐藏，全屏加载画面可见）
-    history.pushState({ page: 'cardDetail' }, '');
-    page.style.display = 'flex';
-    if (loadLayer) loadLayer.classList.remove('hidden');
-    // 确保每次打开都从顶部开始
-    const bodyEl = document.getElementById('cardDetailBody');
-    if (bodyEl) bodyEl.scrollTop = 0;
-    requestAnimationFrame(() => page.style.transform = 'translateX(0)');
-
-    // ── 背景图预加载 ──
+    // ── 背景图预加载（在已显示的页面中后台加载）──
     const bgImg = new Image();
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     bgImg.src = isDark ? 'images/detail_bg_night.jpg' : 'images/detail_bg.jpg';
