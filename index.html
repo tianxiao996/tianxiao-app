@@ -2786,6 +2786,36 @@ window._checkAdminMode = function() {
     font-size: 13px; color: var(--text);
     line-height: 1.5; word-break: break-word;
 }
+/* 移动端评论折叠（超过5行） */
+.comment-content-folded {
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    position: relative;
+}
+.comment-content-folded::after {
+    content: '';
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 100%; height: 1.5em;
+    background: linear-gradient(transparent, var(--glass-bg, rgba(255,255,255,0.9)));
+    pointer-events: none;
+}
+.comment-unfold-btn {
+    display: none;
+    font-size: 12px;
+    color: var(--primary);
+    cursor: pointer;
+    margin-top: 2px;
+    font-weight: bold;
+}
+@media (min-width: 769px) {
+    /* 电脑版不折叠 */
+    .comment-content-folded { display: block; -webkit-line-clamp: unset; overflow: visible; }
+    .comment-content-folded::after { display: none; }
+    .comment-unfold-btn { display: none !important; }
+}
 .comment-reply-to {
     color: var(--primary);
     font-weight: bold;
@@ -13084,6 +13114,9 @@ function injectCommentSection(cardId) {
     body.appendChild(section);
 
     loadComments(cardId);
+
+    // 初始化评论懒加载滚动监听
+    _initCommentLazyLoad();
 }
 
 // 切换评论排序（前端瞬间切换，不重新请求API）
@@ -13148,7 +13181,70 @@ async function loadComments(cardId) {
     }
 }
 
-// ── 渲染评论列表（前端排序，瞬间切换）──
+// ── 构建单个父评论的HTML ──
+function _buildParentCommentHtml(parent, replies) {
+    const parentAvatar = parent.avatar && parent.avatar !== './avatar.png' ? parent.avatar : null;
+    const pLv = LEVEL_CONFIG[(parent.level || 1) - 1] || LEVEL_CONFIG[0];
+    const childReplies = replies
+        .filter(r => r.replyTo === parent.id)
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    const pid = escapeHtml(parent.id || '');
+
+    let html = `<div class="comment-thread">
+        <div class="comment-item" data-comment-id="${escapeHtml(parent.id||'')}" data-comment-user="${escapeHtml(parent.userId)}">
+            ${parentAvatar
+                ? `<img class="comment-avatar" src="${escapeHtml(parentAvatar)}" alt="" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=\\'comment-avatar-text\\'>人类</div>')">`
+                : `<div class="comment-avatar-text">人类</div>`
+            }
+            <div class="comment-body">
+                <div class="comment-item-header">
+                    <span class="comment-username" onclick="openBanModal('${escapeHtml(parent.userId)}','${escapeHtml(parent.username)}')" style="cursor:pointer;">${escapeHtml(parent.username)}</span>
+                    <span class="comment-level" style="color:${pLv.color};background:${pLv.bg};">${pLv.name}</span>
+                    ${parent.score ? `<span class="comment-score-display">${'⭐'.repeat(Math.round(parent.score))} ${parent.score}分</span>` : ''}
+                    <span class="comment-time">${formatTime(parent.createdAt)}</span>
+                    ${isEditMode ? `<span style="margin-left:auto;font-size:12px;color:#ff4466;cursor:pointer;padding:2px 6px;" onclick="event.stopPropagation();deleteComment('${escapeHtml(currentCommentCardId)}','${escapeHtml(parent.id || '')}')">🗑️</span>` : ''}
+                </div>
+                <div class="comment-content comment-content-folded" id="cc_${pid}" data-folded="1">${escapeHtml(parent.comment)}</div>
+                <div class="comment-unfold-btn" id="uf_${pid}" onclick="toggleCommentFold('${pid}')">展开</div>
+                <div class="comment-actions">
+                    <span class="comment-action-btn ${parent.userLiked ? 'liked' : ''}" data-likes="${parent.likes || 0}" data-liked="${parent.userLiked ? '1' : '0'}" onclick="toggleCommentLike('${escapeHtml(parent.id||'')}', this)">
+                        ${parent.userLiked ? '❤️' : '🤍'} ${parent.likes || 0}
+                    </span>
+                    <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(parent.id||'')}','${escapeHtml(parent.username)}','${escapeHtml(parent.id||'')}','${escapeHtml(parent.userId)}')">回复</span>
+                </div>
+            </div>
+        </div>`;
+
+    // B站风格回复块（带分页）
+    if (childReplies.length > 0) {
+        const FOLD = 2;
+        const visible = childReplies.slice(0, FOLD);
+        const hidden  = childReplies.slice(FOLD);
+        const hasMore = hidden.length > 0;
+
+        if (hasMore) {
+            hidden._parentRef = parent;
+            _replyCache[pid] = hidden;
+            _replyPageState[pid] = 1;
+        }
+
+        html += `<div class="comment-reply-list" id="replyList_${pid}">`;
+        html += visible.map(r => _renderReplyItem(r, parent, pid)).join('');
+        if (hasMore) {
+            html += `<div id="more_${pid}" style="display:none;"></div>`;
+            html += `<div id="replyNav_${pid}" style="display:none;align-items:center;justify-content:center;padding:6px 0;font-size:11px;gap:2px;flex-wrap:wrap;"></div>`;
+            html += `<div class="comment-reply-expand-row" id="expandBtn_${pid}" onclick="toggleMoreReplies('${pid}',${childReplies.length},this)">
+                共${childReplies.length}条回复 <span style="font-size:11px;">▼</span>
+            </div>`;
+        }
+        html += `</div>`;
+    }
+
+    html += `</div>`;
+    return html;
+}
+
+// ── 渲染评论列表（支持懒加载，每批20条）──
 function renderCommentList(comments, cardId) {
     const listEl = document.getElementById('commentList');
     if (!listEl) return;
@@ -13158,7 +13254,7 @@ function renderCommentList(comments, cardId) {
         return;
     }
 
-    // ── 排序：热度（点赞数降序）或时间（最早在前）──
+    // 排序
     const sorted = [...comments];
     if (_commentSortMode === 'hot') {
         sorted.sort((a, b) => (b.likes || 0) - (a.likes || 0));
@@ -13166,96 +13262,83 @@ function renderCommentList(comments, cardId) {
         sorted.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     }
 
-    // ── 分离父评论和回复（兼容 replyTo 为空字符串的老数据）──
+    // 分离父评论和回复
     const parents = sorted.filter(c => !c.replyTo || c.replyTo === '');
-    const replies = sorted.filter(c =>  c.replyTo && c.replyTo !== '');
+    const replies = sorted.filter(c => c.replyTo && c.replyTo !== '');
 
-    // ── 构建树状结构 ──
-    listEl.innerHTML = parents.map(parent => {
-            const parentAvatar = parent.avatar && parent.avatar !== './avatar.png' ? parent.avatar : null;
-            const pLv = LEVEL_CONFIG[(parent.level || 1) - 1] || LEVEL_CONFIG[0];
+    // 构建所有父评论HTML片段
+    _commentBatches = parents.map(p => _buildParentCommentHtml(p, replies));
+    _commentCurrentBatch = 0;
+    _commentAllLoaded = false;
+    _commentLazyLoading = false;
 
-            // 该父评论的所有回复（按时间升序）
-            const childReplies = replies
-                .filter(r => r.replyTo === parent.id)
-                .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    // 清空容器并渲染第一批
+    listEl.innerHTML = '';
+    _appendCommentBatch();
+}
 
-            // ── 父评论 HTML ──
-            let html = `<div class="comment-thread">
-                <div class="comment-item" data-comment-id="${escapeHtml(parent.id||'')}" data-comment-user="${escapeHtml(parent.userId)}">
-                    ${parentAvatar
-                        ? `<img class="comment-avatar" src="${escapeHtml(parentAvatar)}" alt="" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=\\'comment-avatar-text\\'>人类</div>')">`
-                        : `<div class="comment-avatar-text">人类</div>`
-                    }
-                    <div class="comment-body">
-                        <div class="comment-item-header">
-                            <span class="comment-username" onclick="openBanModal('${escapeHtml(parent.userId)}','${escapeHtml(parent.username)}')" style="cursor:pointer;">${escapeHtml(parent.username)}</span>
-                            <span class="comment-level" style="color:${pLv.color};background:${pLv.bg};">${pLv.name}</span>
-                            ${parent.score ? `<span class="comment-score-display">${'⭐'.repeat(Math.round(parent.score))} ${parent.score}分</span>` : ''}
-                            <span class="comment-time">${formatTime(parent.createdAt)}</span>
-                            ${isEditMode ? `<span style="margin-left:auto;font-size:12px;color:#ff4466;cursor:pointer;padding:2px 6px;" onclick="event.stopPropagation();deleteComment('${escapeHtml(currentCommentCardId)}','${escapeHtml(parent.id || '')}')">🗑️</span>` : ''}
-                        </div>
-                        <div class="comment-content">${escapeHtml(parent.comment)}</div>
-                        <div class="comment-actions">
-                            <span class="comment-action-btn ${parent.userLiked ? 'liked' : ''}" data-likes="${parent.likes || 0}" data-liked="${parent.userLiked ? '1' : '0'}" onclick="toggleCommentLike('${escapeHtml(parent.id||'')}', this)">
-                                ${parent.userLiked ? '❤️' : '🤍'} ${parent.likes || 0}
-                            </span>
-                            <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(parent.id||'')}','${escapeHtml(parent.username)}','${escapeHtml(parent.id||'')}','${escapeHtml(parent.userId)}')">回复</span>
-                        </div>
-                    </div>
-                </div>`;
+// ── 追加下一批评论 ──
+function _appendCommentBatch() {
+    if (_commentAllLoaded || _commentLazyLoading) return;
+    _commentLazyLoading = true;
 
-            // ── B站风格回复块 ──
-            if (childReplies.length > 0) {
-                const FOLD = 2;
-                const visible = childReplies.slice(0, FOLD);
-                const hidden  = childReplies.slice(FOLD);
-                const hasMore = hidden.length > 0;
-                const pid = escapeHtml(parent.id || '');
+    const listEl = document.getElementById('commentList');
+    if (!listEl) return;
 
-                const renderReply = (r) => {
-                    const rAvatar = r.avatar && r.avatar !== './avatar.png' ? r.avatar : null;
-                    const rLv = LEVEL_CONFIG[(r.level || 1) - 1] || LEVEL_CONFIG[0];
-                    // 只有回复对象不是楼主时才显示"回复 @xxx"
-                    const atHtml = (r.replyToUser && r.replyToUser !== parent.username)
-                        ? `<span class="rp-at">回复 @${escapeHtml(r.replyToUser)}</span> `
-                        : '';
-                    return `<div class="comment-reply-item" data-comment-id="${escapeHtml(r.id||'')}" data-comment-user="${escapeHtml(r.userId)}">
-                        ${rAvatar
-                            ? `<img class="comment-avatar-small" src="${escapeHtml(rAvatar)}" alt="" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=\\'comment-avatar-text-small\\'>人类</div>')">`
-                            : `<div class="comment-avatar-text-small">人类</div>`
-                        }
-                        <div class="comment-reply-body">
-                            <div class="comment-reply-inline">
-                                <span class="rp-name" onclick="openBanModal('${escapeHtml(r.userId)}','${escapeHtml(r.username)}')">${escapeHtml(r.username)}</span><span class="comment-level" style="color:${rLv.color};background:${rLv.bg};">${rLv.name}</span> ${atHtml}${escapeHtml(r.comment)}
-                            </div>
-                            <div class="comment-reply-meta">
-                                <span class="comment-action-btn ${r.userLiked ? 'liked' : ''}" data-likes="${r.likes || 0}" data-liked="${r.userLiked ? '1' : '0'}" onclick="toggleCommentLike('${escapeHtml(r.id||'')}', this)">
-                                    ${r.userLiked ? '❤️' : '🤍'} ${r.likes || 0}
-                                </span>
-                                <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(parent.id||'')}','${escapeHtml(r.username)}','${escapeHtml(parent.id||'')}','${escapeHtml(r.userId)}')">回复</span>
-                                ${isEditMode ? `<span style="font-size:12px;color:#ff4466;cursor:pointer;" onclick="event.stopPropagation();deleteComment('${escapeHtml(currentCommentCardId)}','${escapeHtml(r.id || '')}')">🗑️</span>` : ''}
-                            </div>
-                        </div>
-                    </div>`;
-                };
+    // 移除已有的"加载更多"提示
+    const existingLoader = document.getElementById('commentLoadMore');
+    if (existingLoader) existingLoader.remove();
 
-                html += `<div class="comment-reply-list" id="replyList_${pid}">`;
-                html += visible.map(renderReply).join('');
-                if (hasMore) {
-                    html += `<div id="more_${pid}" style="display:none;">`;
-                    html += hidden.map(renderReply).join('');
-                    html += `</div>`;
-                    html += `<div class="comment-reply-expand-row" id="expandBtn_${pid}" onclick="toggleMoreReplies('${pid}',${childReplies.length},this)">
-                        共${childReplies.length}条回复 <span style="font-size:11px;">▼</span>
-                    </div>`;
-                }
-                html += `</div>`;
-            }
+    const start = _commentCurrentBatch * COMMENT_BATCH_SIZE;
+    const end = start + COMMENT_BATCH_SIZE;
+    const batch = _commentBatches.slice(start, end);
 
-            html += `</div>`; // .comment-thread
-            return html;
-        }).join('');
+    if (batch.length === 0) {
+        _commentAllLoaded = true;
+        _commentLazyLoading = false;
+        return;
+    }
+
+    // 追加到容器
+    const frag = document.createElement('div');
+    frag.innerHTML = batch.join('');
+    while (frag.firstChild) {
+        listEl.appendChild(frag.firstChild);
+    }
+
+    _commentCurrentBatch++;
+
+    // 检查是否还有更多
+    if (end < _commentBatches.length) {
+        // 添加"加载更多"提示
+        const loader = document.createElement('div');
+        loader.id = 'commentLoadMore';
+        loader.style.cssText = 'text-align:center;padding:12px 0;font-size:12px;color:#aaa;';
+        loader.innerHTML = '下滑加载更多 ↓';
+        listEl.appendChild(loader);
+    } else {
+        _commentAllLoaded = true;
+    }
+
+    _commentLazyLoading = false;
+
+    // 初始化新渲染评论的折叠检测
+    initCommentFold();
+}
+
+// ── 详情页评论滚动监听（懒加载触发）──
+function _initCommentLazyLoad() {
+    const body = document.getElementById('cardDetailBody');
+    if (!body || body._commentLazyBound) return;
+    body._commentLazyBound = true;
+    body.addEventListener('scroll', () => {
+        if (_commentAllLoaded || _commentLazyLoading) return;
+        const scrollBottom = body.scrollTop + body.clientHeight;
+        const threshold = body.scrollHeight - 200;
+        if (scrollBottom >= threshold) {
+            _appendCommentBatch();
+        }
+    }, { passive: true });
 }
 
 
@@ -13314,7 +13397,7 @@ function renderCommentInput(cardId, hasCommented) {
             <div id="replyTargetBox" style="display:none;margin-bottom:6px;font-size:12px;color:var(--primary);background:var(--pixel-soft);border-radius:8px;padding:6px 10px;">
                 回复 <b id="replyTargetName"></b> <span style="color:#aaa;cursor:pointer;" onclick="cancelReply()">取消</span>
             </div>
-            <textarea class="comment-textarea" id="commentText" placeholder="分享你的游戏体验..." maxlength="500" oninput="_updateCommentBtnText()"></textarea>
+            <textarea class="comment-textarea" id="commentText" placeholder="分享你的游戏体验..." maxlength="300" oninput="_updateCommentBtnText()"></textarea>
             ${scoreRowHtml}
             <div class="comment-submit-row">
                 <span id="commentWaitHint" style="font-size:11px;color:#aaa;margin-right:8px;display:none;"></span>
@@ -13349,15 +13432,161 @@ function _updateCommentBtnText() {
     }
 }
 
-// ── 展开/收起更多回复 ──
+// ── 评论懒加载常量 ──
+const COMMENT_BATCH_SIZE = 20;
+let _commentBatches = [];    // 分批存储的父评论数组
+let _commentCurrentBatch = 0;// 当前已加载的批次数
+let _commentLazyLoading = false;
+let _commentAllLoaded = false;
+
+// ── 回复分页常量 & 缓存 ──
+const REPLY_PAGE_SIZE = 10;
+let _replyCache = {};       // { parentId: [replies] }
+let _replyPageState = {};   // { parentId: currentPage }
+
+// ── 渲染单条回复的HTML ──
+function _renderReplyItem(r, parent, parentId) {
+    const rAvatar = r.avatar && r.avatar !== './avatar.png' ? r.avatar : null;
+    const rLv = LEVEL_CONFIG[(r.level || 1) - 1] || LEVEL_CONFIG[0];
+    const atHtml = (r.replyToUser && r.replyToUser !== parent.username)
+        ? `<span class="rp-at">回复 @${escapeHtml(r.replyToUser)}</span> `
+        : '';
+    return `<div class="comment-reply-item" data-comment-id="${escapeHtml(r.id||'')}" data-comment-user="${escapeHtml(r.userId)}">
+        ${rAvatar
+            ? `<img class="comment-avatar-small" src="${escapeHtml(rAvatar)}" alt="" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=\\'comment-avatar-text-small\\'>人类</div>')">`
+            : `<div class="comment-avatar-text-small">人类</div>`
+        }
+        <div class="comment-reply-body">
+            <div class="comment-reply-inline">
+                <span class="rp-name" onclick="openBanModal('${escapeHtml(r.userId)}','${escapeHtml(r.username)}')">${escapeHtml(r.username)}</span><span class="comment-level" style="color:${rLv.color};background:${rLv.bg};">${rLv.name}</span> ${atHtml}${escapeHtml(r.comment)}
+            </div>
+            <div class="comment-reply-meta">
+                <span class="comment-action-btn ${r.userLiked ? 'liked' : ''}" data-likes="${r.likes || 0}" data-liked="${r.userLiked ? '1' : '0'}" onclick="toggleCommentLike('${escapeHtml(r.id||'')}', this)">
+                    ${r.userLiked ? '❤️' : '🤍'} ${r.likes || 0}
+                </span>
+                <span class="comment-action-btn" onclick="replyToComment('${escapeHtml(parentId||'')}','${escapeHtml(r.username)}','${escapeHtml(parentId||'')}','${escapeHtml(r.userId)}')">回复</span>
+                ${isEditMode ? `<span style="font-size:12px;color:#ff4466;cursor:pointer;" onclick="event.stopPropagation();deleteComment('${escapeHtml(currentCommentCardId)}','${escapeHtml(r.id || '')}')">🗑️</span>` : ''}
+            </div>
+        </div>
+    </div>`;
+}
+
+// ── 渲染回复分页内容 ──
+function _renderReplyPage(parentId, page) {
+    const replies = _replyCache[parentId];
+    if (!replies) return;
+    const container = document.getElementById(`more_${parentId}`);
+    if (!container) return;
+    const parent = replies._parentRef;
+    const start = (page - 1) * REPLY_PAGE_SIZE;
+    const pageReplies = replies.slice(start, start + REPLY_PAGE_SIZE);
+    container.innerHTML = pageReplies.map(r => _renderReplyItem(r, parent, parentId)).join('');
+    _replyPageState[parentId] = page;
+    _renderReplyPagination(parentId, page);
+}
+
+// ── 渲染回复分页导航 ──
+function _renderReplyPagination(parentId, currentPage) {
+    const replies = _replyCache[parentId];
+    if (!replies) return;
+    const navEl = document.getElementById(`replyNav_${parentId}`);
+    if (!navEl) return;
+    const totalPages = Math.ceil(replies.length / REPLY_PAGE_SIZE);
+    if (totalPages <= 1) { navEl.innerHTML = ''; return; }
+    let html = `<span style="color:#aaa;margin-right:6px;">共${totalPages}页</span>`;
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === currentPage) {
+            html += `<span style="color:var(--primary);font-weight:bold;margin:0 4px;">${i}</span>`;
+        } else {
+            html += `<span style="color:#aaa;cursor:pointer;margin:0 4px;" onclick="changeReplyPage('${parentId}',${i})">${i}</span>`;
+        }
+    }
+    if (currentPage < totalPages) {
+        html += `<span style="color:#aaa;cursor:pointer;margin-left:6px;" onclick="changeReplyPage('${parentId}',${currentPage + 1})">下一页</span>`;
+    }
+    html += `<span style="color:#aaa;cursor:pointer;margin-left:8px;" onclick="collapseReplies('${parentId}')">收起</span>`;
+    navEl.innerHTML = html;
+}
+
+// ── 切换回复页码 ──
+function changeReplyPage(parentId, page) {
+    _renderReplyPage(parentId, page);
+}
+
+// ── 收起回复 ──
+function collapseReplies(parentId) {
+    const moreEl = document.getElementById(`more_${parentId}`);
+    const navEl = document.getElementById(`replyNav_${parentId}`);
+    const btnEl = document.getElementById(`expandBtn_${parentId}`);
+    const total = (_replyCache[parentId] || []).length + 2;
+    if (moreEl) moreEl.style.display = 'none';
+    if (navEl) navEl.style.display = 'none';
+    if (btnEl) {
+        btnEl.style.display = 'block';
+        btnEl.innerHTML = `共${total}条回复 <span style="font-size:11px;">▼</span>`;
+    }
+}
+
+// ── 展开/收起更多回复（带分页）──
 function toggleMoreReplies(parentId, total, btn) {
     const moreEl = document.getElementById(`more_${parentId}`);
+    const navEl = document.getElementById(`replyNav_${parentId}`);
     if (!moreEl) return;
     const isHidden = moreEl.style.display === 'none';
-    moreEl.style.display = isHidden ? 'block' : 'none';
-    btn.innerHTML = isHidden
-        ? `收起回复 <span style="font-size:11px;">▲</span>`
-        : `共${total}条回复 <span style="font-size:11px;">▼</span>`;
+    if (isHidden) {
+        // 展开：显示第一页
+        const page = _replyPageState[parentId] || 1;
+        _renderReplyPage(parentId, page);
+        moreEl.style.display = 'block';
+        if (navEl) navEl.style.display = 'flex';
+        btnEl = btn;
+        btn.style.display = 'none';
+    } else {
+        collapseReplies(parentId);
+    }
+}
+
+// ── 评论内容折叠/展开（仅移动端）──
+function toggleCommentFold(parentId) {
+    const contentEl = document.getElementById(`cc_${parentId}`);
+    const btnEl = document.getElementById(`uf_${parentId}`);
+    if (!contentEl || !btnEl) return;
+    const isFolded = contentEl.dataset.folded === '1';
+    if (isFolded) {
+        contentEl.classList.remove('comment-content-folded');
+        contentEl.dataset.folded = '0';
+        btnEl.textContent = '收起';
+    } else {
+        contentEl.classList.add('comment-content-folded');
+        contentEl.dataset.folded = '1';
+        btnEl.textContent = '展开';
+        // 收起时滚动回评论顶部
+        contentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+// ── 初始化评论折叠检测（仅移动端）──
+function initCommentFold() {
+    // 电脑版不处理
+    if (window.innerWidth > 768) return;
+    requestAnimationFrame(() => {
+        document.querySelectorAll('.comment-content-folded').forEach(el => {
+            const parentId = el.id.replace('cc_', '');
+            const btnEl = document.getElementById(`uf_${parentId}`);
+            if (!btnEl) return;
+            // 检测实际内容高度是否超过5行
+            const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || (13 * 1.5);
+            const maxHeight = lineHeight * 5;
+            if (el.scrollHeight > maxHeight + 2) {
+                btnEl.style.display = 'block';
+            } else {
+                // 不够5行，不需要折叠
+                el.classList.remove('comment-content-folded');
+                el.dataset.folded = '0';
+                btnEl.style.display = 'none';
+            }
+        });
+    });
 }
 
 // ── 回复评论 ──
@@ -13423,7 +13652,7 @@ function replyToComment(rootParentId, username, _unused, replyToUserId) {
     replyBox.style.cssText = 'margin:6px 14px 10px 50px;';
     replyBox.innerHTML = `
         <div style="font-size:11px;color:var(--primary);margin-bottom:4px;">回复 @${escapeHtml(username)}</div>
-        <textarea class="reply-textarea" placeholder="写下你的回复..." maxlength="500" rows="2"></textarea>
+        <textarea class="reply-textarea" placeholder="写下你的回复..." maxlength="300" rows="2"></textarea>
         <div style="display:flex;gap:6px;margin-top:6px;">
             <button onclick="submitReply('${escapeHtml(rootParentId)}','${escapeHtml(username)}','${escapeHtml(replyToUserId||'')}',this)" style="flex:1;padding:6px 12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:bold;cursor:pointer;">发送</button>
             <button onclick="this.closest('.reply-input-box').remove()" style="padding:6px 12px;background:#eee;color:#666;border:none;border-radius:8px;font-size:12px;cursor:pointer;">取消</button>
