@@ -3501,10 +3501,8 @@ let _cloudLoadDone = false; // 🌀 云端加载完成标志
 
 // ===== Cloudflare Worker API =====
 // ── Worker 域名配置 ──
-// 默认与当前页面同域名（支持换域名零改动）
-// 如果前端和Worker分离部署（如前端在a.com，Worker在api.a.com），请改为：
-// const WORKER_BASE = 'https://api.xxx.com';
-const WORKER_BASE = location.origin;
+// ⚠️ 换域名时只需要改这一行！
+const WORKER_BASE = "https://api.tianxiao.us.kg";
 const WORKER_API = WORKER_BASE + '/api/data';
 // ===================================
 
