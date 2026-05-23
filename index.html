@@ -5831,19 +5831,9 @@ async function consumeDownloadLimit() {
 
 // ── 打开下载页（简单可靠，兼容APK套壳）──
 function openDownloadPage(url) {
-    // 方式1：window.open（APK WebView配置支持多窗口时可用）
-    var newWindow = null;
-    try { newWindow = window.open(url, '_blank'); } catch(e) {}
-    if (newWindow) return;
-
-    // 方式2：创建a标签并点击（绕过部分弹窗拦截）
-    var a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    // APK WebView：直接导航到短链等待页面（最可靠）
+    // 短链页面会显示少女等待图，然后点击下载触发302重定向到CDN
+    window.location.href = url;
 }
 
 async function openSecureDownloadFlow(githubUrl, filename) {
@@ -5997,7 +5987,7 @@ async function submitGhdlVerify() {
             });
             var tempData = await tempRes.json();
             if (tempData.success && tempData.path) {
-                openDownloadPage(location.origin + tempData.path);
+                openDownloadPage(WORKER_BASE + tempData.path);
             } else {
                 showGhdlError('直链生成失败：' + (tempData.error || '未知错误'));
                 if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
@@ -6057,7 +6047,7 @@ async function submitGhdlVerify() {
         });
         var tempData = await tempRes.json();
         if (tempData.success && tempData.path) {
-            openDownloadPage(location.origin + tempData.path);
+            openDownloadPage(WORKER_BASE + tempData.path);
         } else {
             showGhdlError('直链生成失败：' + (tempData.error || '未知错误'));
             if (btn) { btn.textContent = '验证并下载'; btn.disabled = false; }
@@ -6241,7 +6231,7 @@ async function generateTempProxyLink() {
         });
         const data = await res.json();
         if (data.success && data.path) {
-            output.textContent = location.origin + data.path;
+            output.textContent = WORKER_BASE + data.path;
             resultBox.style.display = 'block';
             showToast('✅ 临时直链已生成，30分钟内有效');
         } else {
