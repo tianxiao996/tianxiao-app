@@ -9799,32 +9799,33 @@ _cardDetailSource = card;
         body.appendChild(btnWrap);
     }
 
-    // ── 背景图预加载（先加载背景图，再显示页面）──
+    // ── 显示下载页 + 全屏加载画面 ──
     const page = document.getElementById('cardDetailPage');
     const loadLayer = document.getElementById('detailLoading');
+    // 先显示页面（此时 loadLayer 未隐藏，全屏加载画面可见）
+    history.pushState({ page: 'cardDetail' }, '');
+    page.style.display = 'flex';
     if (loadLayer) loadLayer.classList.remove('hidden');
+    // 确保每次打开都从顶部开始
+    const bodyEl = document.getElementById('cardDetailBody');
+    if (bodyEl) bodyEl.scrollTop = 0;
+    requestAnimationFrame(() => page.style.transform = 'translateX(0)');
 
+    // ── 背景图预加载 ──
     const bgImg = new Image();
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     bgImg.src = isDark ? 'images/detail_bg_night.jpg' : 'images/detail_bg.jpg';
 
     let bgLoaded = false;
-    const showPage = () => {
+    const onBgReady = () => {
         if (bgLoaded) return;
         bgLoaded = true;
         if (loadLayer) loadLayer.classList.add('hidden');
-        // 背景图加载完（或超时）后才显示页面并启动滑入动画
-        history.pushState({ page: 'cardDetail' }, '');
-        page.style.display = 'flex';
-        // 确保每次打开都从顶部开始
-        const bodyEl = document.getElementById('cardDetailBody');
-        if (bodyEl) bodyEl.scrollTop = 0;
-        requestAnimationFrame(() => page.style.transform = 'translateX(0)');
     };
 
-    bgImg.onload = bgImg.onerror = showPage;
+    bgImg.onload = bgImg.onerror = onBgReady;
     // 3秒强制超时，避免图片加载卡住
-    setTimeout(showPage, 3000);
+    setTimeout(onBgReady, 3000);
 
     // 注入评论区
     injectCommentSection(card.dataset.cardId || '');
