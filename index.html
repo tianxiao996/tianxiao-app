@@ -8570,13 +8570,19 @@ function randomGame() {
     const name = pick.querySelector('.g-name');
     const title = name ? name.textContent.trim() : '未知游戏';
 
-    // 找出这张卡片在第几页
-    const filtered = gameCards; // 全部分类下所有卡片
-    const idx = filtered.indexOf(pick);
-    const targetPage = Math.floor(idx / PAGE_SIZE) + 1;
-
     // 记住卡片ID，refreshUI 后用 ID 重新找（避免 DOM 引用失效）
     const pickId = pick.dataset.cardId;
+
+    // 🐛 Bug修复：refreshUI 内部会对卡片做置顶排序，但 gameCards 是 DOM 原始顺序
+    // 两者不一致导致页码错位。这里用与 refreshUI 相同的排序逻辑计算正确页码
+    const sorted = [...gameCards].sort((a, b) => {
+        const aP = a.classList.contains('is-pinned');
+        const bP = b.classList.contains('is-pinned');
+        if (aP && bP) return (b.dataset.pinTime || 0) - (a.dataset.pinTime || 0);
+        return bP - aP;
+    });
+    const idx = sorted.indexOf(pick);
+    const targetPage = Math.floor(idx / PAGE_SIZE) + 1;
 
     // 跳转到对应页，让 refreshUI 正确渲染
     refreshUI(targetPage);
@@ -9793,16 +9799,8 @@ _cardDetailSource = card;
         body.appendChild(btnWrap);
     }
 
-    // ── 显示详情页（右侧滑入）+ 压入 history 防返回键退出 ──
-    history.pushState({ page: 'cardDetail' }, '');
+    // ── 背景图预加载（先加载背景图，再显示页面）──
     const page = document.getElementById('cardDetailPage');
-    page.style.display = 'flex';
-    // 确保每次打开都从顶部开始
-    const bodyEl = document.getElementById('cardDetailBody');
-    if (bodyEl) bodyEl.scrollTop = 0;
-
-    // ── 背景图加载等待 ──
-    const dbl   = document.getElementById('detailBgLayer');
     const loadLayer = document.getElementById('detailLoading');
     if (loadLayer) loadLayer.classList.remove('hidden');
 
@@ -9811,17 +9809,22 @@ _cardDetailSource = card;
     bgImg.src = isDark ? 'images/detail_bg_night.jpg' : 'images/detail_bg.jpg';
 
     let bgLoaded = false;
-    const hideLoading = () => {
+    const showPage = () => {
         if (bgLoaded) return;
         bgLoaded = true;
         if (loadLayer) loadLayer.classList.add('hidden');
+        // 背景图加载完（或超时）后才显示页面并启动滑入动画
+        history.pushState({ page: 'cardDetail' }, '');
+        page.style.display = 'flex';
+        // 确保每次打开都从顶部开始
+        const bodyEl = document.getElementById('cardDetailBody');
+        if (bodyEl) bodyEl.scrollTop = 0;
+        requestAnimationFrame(() => page.style.transform = 'translateX(0)');
     };
 
-    bgImg.onload = bgImg.onerror = hideLoading;
+    bgImg.onload = bgImg.onerror = showPage;
     // 3秒强制超时，避免图片加载卡住
-    setTimeout(hideLoading, 3000);
-
-    requestAnimationFrame(() => page.style.transform = 'translateX(0)');
+    setTimeout(showPage, 3000);
 
     // 注入评论区
     injectCommentSection(card.dataset.cardId || '');
