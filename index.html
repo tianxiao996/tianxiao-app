@@ -12,6 +12,63 @@
     <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIuWkqeesuOOBrue6geWvhuWfuuWcsyIsCiAgInNob3J0X25hbWUiOiAi5aSp56yY5Z+65ZywIiwKICAic3RhcnRfdXJsIjogIi4vIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZmZmZmZmIiwKICAidGhlbWVfY29sb3IiOiAiI2ZmNjY5OSIsCiAgImRlc2NyaXB0aW9uIjogIuWkqeesuOOBrue6geWvhuWfuuWcsyAtIOa4uOaIj+S4k+WxnuWIhuS6q+W5s+WPsCIsCiAgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0IiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCNGJXeHVjejBpYUhSMGNEb3ZMM2QzZHk1M015NXZjbWN2TWpBd01DOXpkbWNpSUhkcFpIUm9QU0l4TWpnaUlHaGxhV2RvZEQwaU1USTRJajQ4Y21WamRDQjNhV1IwYUQwaU1USTRJaUJvWldsbmFIUTlJakV5T0NJZ2NuZzlJakl3SWlCbWFXeHNQU0lqWm1ZMk5qazVJaTgrUEM5eVpXTjBQangwWlhoMElIZzlJall5SWlCNVBTSTJOQ0lnWm05dWRDMXphWHBsUFNJME1DSWdabWxzYkQwaUkyWm1abVptWmlJK/CfjIY8TDNSbGVIUStQQzl6ZG1jKyIsCiAgICAgICJzaXplcyI6ICIxMjh4MTI4IiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNrYWJsZSIKICAgIH0KICBdCn0=">
     <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4Ij48cmVjdCB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgcng9IjIwIiBmaWxsPSIjZmY2Njk5Ii8+PHRleHQgeD0iNjQiIHk9IjcwIiBmb250LXNpemU9IjUwIiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIj7wn4yGPC90ZXh0Pjwvc3ZnPg==">
     <title>天笑の窝</title>
+    <!-- 🛡️ 防开发者工具检测 -->
+<script>
+// 🛡️ 防开发者工具检测
+// 每次检测时动态检查管理员状态（支持登录后实时切换）
+window._checkAdminMode = function() {
+    try {
+        var admT = sessionStorage.getItem('ADMIN_TOKEN') || localStorage.getItem('ADMIN_TOKEN') || '';
+        return admT.length > 5;
+    } catch(e) { return false; }
+};
+(function() {
+    'use strict';
+    // debugger断点检测（动态检查管理员模式）
+    setInterval(function() {
+        if (window._checkAdminMode()) return;
+        var t = performance.now();
+        debugger;
+        if (performance.now() - t > 250) {
+            try { document.head.innerHTML = ''; document.body.innerHTML = ''; document.documentElement.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;'; } catch(e) {}
+        }
+    }, 1000);
+    // console.log属性陷阱
+    try {
+        var _img = new Image();
+        Object.defineProperty(_img, 'id', {
+            get: function() {
+                if (window._checkAdminMode()) return '';
+                try { document.head.innerHTML = ''; document.body.innerHTML = ''; document.documentElement.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;'; } catch(e) {}
+                return '';
+            }
+        });
+        console.log('%c', _img);
+        console.clear = function() {
+            if (window._checkAdminMode()) return;
+            try { document.head.innerHTML = ''; document.body.innerHTML = ''; document.documentElement.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;'; } catch(e) {}
+        };
+    } catch(e) {}
+    // 快捷键/F12拦截
+    document.addEventListener('keydown', function(e) {
+        if (window._checkAdminMode()) return;
+        if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || (e.ctrlKey && e.keyCode === 85)) {
+            e.preventDefault();
+            try { document.head.innerHTML = ''; document.body.innerHTML = ''; document.documentElement.style.cssText = 'background:#000;margin:0;padding:0;overflow:hidden;'; } catch(e) {}
+            return false;
+        }
+    }, true);
+    // 禁用右键
+    document.addEventListener('contextmenu', function(e) {
+        if (window._checkAdminMode()) return;
+        e.preventDefault(); return false;
+    }, true);
+    // 无限debugger干扰（非管理员模式）
+    setInterval(function() {
+        if (!window._checkAdminMode()) debugger;
+    }, 300);
+})();
+</script>
     <style>
         /* ============================================================
            🌸 像素二次元主题 - 天笑の窝
