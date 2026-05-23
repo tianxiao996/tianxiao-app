@@ -2593,7 +2593,7 @@ window._checkAdminMode = function() {
     font-weight: bold; flex-shrink: 0;
 }
 .score-stars {
-    display: flex; gap: 3px;
+    display: flex; gap: 3px; align-items: center; height: 28px;
 }
 .score-star {
     font-size: 20px; cursor: pointer;
@@ -13307,7 +13307,7 @@ function renderCommentInput(cardId, hasCommented) {
             <div id="replyTargetBox" style="display:none;margin-bottom:6px;font-size:12px;color:var(--primary);background:var(--pixel-soft);border-radius:8px;padding:6px 10px;">
                 回复 <b id="replyTargetName"></b> <span style="color:#aaa;cursor:pointer;" onclick="cancelReply()">取消</span>
             </div>
-            <textarea class="comment-textarea" id="commentText" placeholder="分享你的游戏体验..." maxlength="500"></textarea>
+            <textarea class="comment-textarea" id="commentText" placeholder="分享你的游戏体验..." maxlength="500" oninput="_updateCommentBtnText()"></textarea>
             ${scoreRowHtml}
             <div class="comment-submit-row">
                 <span id="commentWaitHint" style="font-size:11px;color:#aaa;margin-right:8px;display:none;"></span>
@@ -13326,6 +13326,20 @@ function setScore(score) {
     });
     const scoreVal = document.getElementById('scoreValue');
     if (scoreVal) scoreVal.textContent = `${score}分`;
+    _updateCommentBtnText();
+}
+
+// 根据评论内容和评分状态更新按钮文字
+function _updateCommentBtnText() {
+    const btn = document.getElementById('commentSubmitBtn');
+    if (!btn) return;
+    const comment = document.getElementById('commentText')?.value.trim() || '';
+    const hasScore = (currentCommentScore || 0) > 0;
+    if (!comment && hasScore) {
+        btn.textContent = '提交评分';
+    } else {
+        btn.textContent = '发表评论';
+    }
 }
 
 // ── 展开/收起更多回复 ──
@@ -13487,17 +13501,18 @@ function toggleReplies(el) {
 
 // 提交评论
 async function submitComment(cardId) {
-    const comment = document.getElementById('commentText')?.value.trim();
-    if (!comment) { showToast('请填写评论内容'); return; }
+    const comment = document.getElementById('commentText')?.value.trim() || '';
+    // 检查评分（如果有评分区域且不是回复模式）
+    const hasScoreStars = document.getElementById('scoreStars');
+    const effectiveScore = (!hasScoreStars || _replyToId) ? 0 : (currentCommentScore || 0);
+    // 评论和评分至少填一个
+    if (!comment && effectiveScore === 0) { showToast('请填写评论内容或评分'); return; }
     if (!currentUser) { showToast('请先登录'); openUserModal(); return; }
 
     const btn = document.getElementById('commentSubmitBtn');
     if (btn) { btn.disabled = true; btn.textContent = '发送中...'; }
 
     try {
-        // 如果没有评分区域（已评过分），强制score=0
-        const hasScoreStars = document.getElementById('scoreStars');
-        const effectiveScore = (!hasScoreStars || _replyToId) ? 0 : (currentCommentScore || 0);
         const body = { cardId, comment, score: effectiveScore, replyTo: _replyToId, replyToUser: _replyToUser, replyToUserId: _replyToUserId || null };
 
         const res = await fetch(`${USER_API}/api/comment`, {
