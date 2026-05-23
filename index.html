@@ -11326,6 +11326,29 @@ function closeNavPanel() {
     </div>
 </div>
 
+<!-- 邮件详情弹窗 -->
+<div id="mailDetailModal" class="user-home-overlay" style="z-index:10001;display:none;opacity:0;transition:opacity 0.2s;">
+    <div class="user-home-box" style="max-width:380px;max-height:85vh;display:flex;flex-direction:column;">
+        <!-- 弹窗头部 -->
+        <div class="user-home-header" style="margin-bottom:0;padding-bottom:8px;border-bottom:1.5px solid var(--pixel-soft);display:flex;align-items:center;justify-content:space-between;">
+            <div style="width:36px;"></div>
+            <div style="display:flex;align-items:center;gap:6px;flex:1;justify-content:center;overflow:hidden;">
+                <div class="user-home-name" id="mailDetailTitle" style="margin-bottom:0;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">邮件标题</div>
+            </div>
+            <div class="fullpage-back-btn" onclick="closeMailDetail()" style="transform:rotate(0deg);font-size:18px;width:36px;text-align:center;">✕</div>
+        </div>
+        <!-- 弹窗内容 -->
+        <div id="mailDetailBody" style="flex:1;overflow-y:auto;padding:12px 0;">
+            <div class="user-fav-empty">加载中...</div>
+        </div>
+        <!-- 弹窗底部按钮 -->
+        <div id="mailDetailFooter" style="display:flex;gap:10px;padding-top:12px;border-top:1.5px solid var(--pixel-soft);display:none;">
+            <button onclick="deleteCurrentMail()" style="flex:1;background:#f5f5f5;color:#999;border:none;border-radius:10px;padding:10px 0;font-size:13px;cursor:pointer;font-weight:bold;">删除</button>
+            <button id="mailClaimBtn" onclick="claimCurrentMail()" style="flex:1;background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;border:none;border-radius:10px;padding:10px 0;font-size:13px;cursor:pointer;font-weight:bold;">领取</button>
+        </div>
+    </div>
+</div>
+
 <!-- 管理员封号弹窗 -->
 <div id="banModal" class="user-modal-overlay">
     <div class="user-modal-box" style="max-width:320px;">
@@ -11745,6 +11768,11 @@ function switchMailTab(tab) {
     else loadReplies();
 }
 
+// 邮件数据缓存（id -> mailData），供弹窗使用
+let _mailDataCache = {};
+// 当前正在查看的邮件ID
+let _currentMailId = null;
+
 async function loadMails() {
     if (!currentUser) return;
     try {
@@ -11754,35 +11782,28 @@ async function loadMails() {
         const data = await res.json();
         const listEl = document.getElementById('mailList');
         if (!listEl) return;
+        // 清空并重建缓存
+        _mailDataCache = {};
         if (!data.mails || data.mails.length === 0) {
             listEl.innerHTML = '<div class="user-fav-empty">暂无邮件</div>';
         } else {
-            listEl.innerHTML = data.mails.map(m => `
-                <div style="background:${m.read ? 'var(--pixel-soft)' : '#fff'};border-radius:10px;padding:10px 12px;border:1.5px solid ${m.read ? 'var(--border)' : 'var(--primary-light)'};margin-bottom:8px;cursor:pointer;transition:all 0.15s;" onclick="readMail('${escapeHtml(m.id)}', this)">
-                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-                        <span style="font-size:12px;font-weight:bold;color:var(--text);${m.read ? '' : 'font-weight:bold;'}">${m.read ? '📭' : '🔴'} ${escapeHtml(m.title)}</span>
-                        <span style="font-size:10px;color:#aaa;margin-left:auto;">${formatTime(m.createdAt)}</span>
+            listEl.innerHTML = data.mails.map(m => {
+                _mailDataCache[m.id] = m;
+                const hasReward = (m.fishReward && m.fishReward > 0) || m.avatarRewardUrl;
+                return `
+                <div style="background:${m.read ? 'var(--pixel-soft)' : '#fff'};border-radius:10px;padding:10px 12px;border:1.5px solid ${m.read ? 'var(--border)' : 'var(--primary-light)'};margin-bottom:8px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:8px;" onclick="openMailDetail('${escapeHtml(m.id)}')">
+                    <div style="font-size:22px;flex-shrink:0;">${m.read ? '📭' : (hasReward ? '🎁' : '🔴')}</div>
+                    <div style="flex:1;min-width:0;overflow:hidden;">
+                        <div style="display:flex;align-items:center;gap:4px;">
+                            <span style="font-size:13px;font-weight:bold;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${m.read ? '' : 'color:var(--primary);'}">${escapeHtml(m.title)}</span>
+                            ${hasReward ? '<span style="color:#ff9800;font-size:10px;flex-shrink:0;">有奖励</span>' : ''}
+                        </div>
+                        <div style="font-size:10px;color:#aaa;margin-top:2px;">${formatTime(m.createdAt)} ${m.expireAt ? '· ' + formatExpireTime(m.expireAt) : ''}</div>
                     </div>
-                    <div class="mail-content" style="font-size:12px;color:#888;line-height:1.5;display:none;margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);">
-                        ${escapeHtml(m.content)}<br>
-                        ${m.fishReward ? `<span style="color:#ff9800;font-weight:bold;">🐟 +${m.fishReward} 小鱼干</span><br>` : ''}
-                        ${m.avatarRewardUrl ? `
-                        <div style="display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px;background:linear-gradient(135deg,#fff8f0,#ffe8f0);border-radius:10px;border:1px solid #ffb3cc;">
-                            <img src="${escapeHtml(m.avatarRewardUrl)}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #ff9800;box-shadow:0 0 6px rgba(255,152,0,0.35);flex-shrink:0;" onerror="this.style.display='none'">
-                            <div style="flex:1;min-width:0;">
-                                <div style="font-size:11px;color:#ff9800;font-weight:bold;">🎁 限定头像奖励</div>
-                                <div style="font-size:12px;color:var(--text);font-weight:bold;">${escapeHtml(m.avatarRewardName || '限定头像')}</div>
-                                <div style="font-size:10px;color:#aaa;">领取后自动存入背包</div>
-                            </div>
-                        </div>` : ''}
-                        ${m.expireAt ? `<span style="font-size:11px;color:#aaa;">有效期至 ${formatExpireTime(m.expireAt)}</span>` : ''}
-                    </div>
-                    <div style="display:flex;gap:8px;margin-top:6px;">
-                        <button onclick="event.stopPropagation();readMail('${escapeHtml(m.id)}', this.parentElement.parentElement)" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">${m.read ? '查看' : '领取'}</button>
-                        <button onclick="event.stopPropagation();deleteMail('${escapeHtml(m.id)}')" style="background:#eee;color:#999;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">删除</button>
-                    </div>
+                    ${!m.read ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;box-shadow:0 0 4px var(--primary-light);"></div>' : ''}
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
     } catch(e) {
         document.getElementById('mailList').innerHTML = '<div class="user-fav-empty">加载失败</div>';
@@ -11956,18 +11977,94 @@ function scrollToReplyComment(replyCommentId) {
     setTimeout(checkAndScroll, 200); // 给评论区域200ms初始加载时间
 }
 
-// 邮件展开状态追踪（id -> boolean）
-let _mailExpanded = {};
+// ── 打开邮件详情弹窗 ──
+function openMailDetail(mailId) {
+    const m = _mailDataCache[mailId];
+    if (!m) { showToast('邮件数据不存在，请刷新'); return; }
+    _currentMailId = mailId;
 
-async function readMail(mailId, el) {
+    // 设置弹窗标题
+    document.getElementById('mailDetailTitle').textContent = m.title;
+
+    // 构建弹窗内容
+    const hasReward = (m.fishReward && m.fishReward > 0) || m.avatarRewardUrl;
+    const html = `
+        <div style="font-size:11px;color:#aaa;margin-bottom:10px;text-align:center;">
+            ${formatTime(m.createdAt)} ${m.expireAt ? '· 有效期至 ' + formatExpireTime(m.expireAt) : ''}
+        </div>
+        <div style="font-size:13px;color:var(--text);line-height:1.8;margin-bottom:16px;white-space:pre-wrap;word-break:break-word;">
+            ${escapeHtml(m.content)}
+        </div>
+        ${hasReward ? `
+        <div style="background:linear-gradient(135deg,#fff8f0,#fff0f5);border-radius:14px;padding:14px;border:1.5px solid #ffb3cc;margin-top:8px;">
+            <div style="font-size:12px;color:#ff9800;font-weight:bold;margin-bottom:10px;text-align:center;">🎁 邮件奖励</div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+                ${m.avatarRewardUrl ? `
+                <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+                    <img src="${escapeHtml(m.avatarRewardUrl)}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid #ff9800;box-shadow:0 0 12px rgba(255,152,0,0.4);" onerror="this.style.display='none'">
+                    <div style="font-size:13px;color:var(--text);font-weight:bold;">${escapeHtml(m.avatarRewardName || '限定头像')}</div>
+                    <div style="font-size:10px;color:#ff9800;">限定头像奖励</div>
+                </div>` : ''}
+                ${m.fishReward ? `
+                <div style="display:flex;align-items:center;gap:4px;padding:6px 14px;background:rgba(255,152,0,0.1);border-radius:20px;">
+                    <span style="font-size:16px;">🐟</span>
+                    <span style="font-size:14px;color:#ff9800;font-weight:bold;">+${m.fishReward}</span>
+                    <span style="font-size:11px;color:#888;">小鱼干</span>
+                </div>` : ''}
+            </div>
+        </div>` : ''}
+        ${m.read ? '<div style="text-align:center;margin-top:12px;font-size:11px;color:#aaa;">该邮件奖励已领取</div>' : ''}
+    `;
+    document.getElementById('mailDetailBody').innerHTML = html;
+
+    // 显示底部按钮
+    const footer = document.getElementById('mailDetailFooter');
+    footer.style.display = 'flex';
+    const claimBtn = document.getElementById('mailClaimBtn');
+    claimBtn.textContent = m.read ? '已领取' : '领取奖励';
+    claimBtn.style.background = m.read
+        ? '#f5f5f5'
+        : 'linear-gradient(135deg,var(--primary),var(--primary-light))';
+    claimBtn.style.color = m.read ? '#aaa' : '#fff';
+    claimBtn.disabled = m.read;
+    claimBtn.style.cursor = m.read ? 'not-allowed' : 'pointer';
+
+    // 显示弹窗
+    const modal = document.getElementById('mailDetailModal');
+    modal.style.display = 'flex';
+    requestAnimationFrame(() => { modal.style.opacity = '1'; });
+}
+
+// ── 关闭邮件详情弹窗 ──
+function closeMailDetail() {
+    const modal = document.getElementById('mailDetailModal');
+    modal.style.opacity = '0';
+    setTimeout(() => {
+        modal.style.display = 'none';
+        _currentMailId = null;
+    }, 200);
+}
+
+// ── 领取当前邮件奖励 ──
+async function claimCurrentMail() {
+    if (!_currentMailId) return;
+    const mailData = _mailDataCache[_currentMailId];
+    if (!mailData || mailData.read) return;
+
+    await readMail(_currentMailId);
+}
+
+// ── 删除当前邮件 ──
+async function deleteCurrentMail() {
+    if (!_currentMailId) return;
+    if (!confirm('确定删除该邮件吗？')) return;
+    await deleteMail(_currentMailId);
+    closeMailDetail();
+}
+
+// ── 读取/领取邮件（核心API调用）──
+async function readMail(mailId) {
     if (!currentUser) return;
-    // 展开内容（只展开，不收起）
-    const contentEl = el.querySelector('.mail-content');
-    if (contentEl) {
-        contentEl.style.display = 'block';
-        _mailExpanded[mailId] = true;
-    }
-    // 始终请求服务器（服务器会判断奖励是否已领，避免重复领取）
     try {
         const res = await fetch(`${USER_API}/api/user/mail/read`, {
             method: 'POST',
@@ -11978,21 +12075,40 @@ async function readMail(mailId, el) {
             body: JSON.stringify({ mailId })
         });
         const data = await res.json();
-        if (data.success && data.message) {
-            if (data.fishCoins !== undefined) {
+        if (data.success) {
+            // 更新缓存中的邮件状态
+            if (_mailDataCache[mailId]) {
+                _mailDataCache[mailId].read = true;
+            }
+            // 如果有奖励消息，显示Toast
+            if (data.message) {
                 showToast('✅ ' + data.message);
+            }
+            if (data.fishCoins !== undefined) {
                 updateFishDisplay(data.fishCoins);
             }
+            // 更新弹窗UI为已领取状态
+            if (_currentMailId === mailId) {
+                const claimBtn = document.getElementById('mailClaimBtn');
+                claimBtn.textContent = '已领取';
+                claimBtn.style.background = '#f5f5f5';
+                claimBtn.style.color = '#aaa';
+                claimBtn.disabled = true;
+                claimBtn.style.cursor = 'not-allowed';
+                // 在弹窗底部添加已领取提示
+                const bodyEl = document.getElementById('mailDetailBody');
+                if (!bodyEl.querySelector('.mail-claimed-hint')) {
+                    const hint = document.createElement('div');
+                    hint.className = 'mail-claimed-hint';
+                    hint.style.cssText = 'text-align:center;margin-top:12px;font-size:11px;color:#aaa;';
+                    hint.textContent = '该邮件奖励已领取';
+                    bodyEl.appendChild(hint);
+                }
+            }
+            // 刷新列表
+            loadMails();
+            checkUnreadMails();
         }
-        checkUnreadMails();
-        const titleSpan = el.querySelector('span');
-        if (titleSpan && titleSpan.innerHTML.includes('🔴')) {
-            titleSpan.innerHTML = titleSpan.innerHTML.replace('🔴', '📭');
-        }
-        el.style.background = 'var(--pixel-soft)';
-        el.style.borderColor = 'var(--border)';
-        const btn = el.querySelector('button');
-        if (btn && btn.textContent === '领取') btn.textContent = '查看';
     } catch(e) {}
 }
 
@@ -13589,6 +13705,11 @@ document.getElementById('userHomeModal').addEventListener('click', function(e) {
 });
 document.getElementById('mailPanel').addEventListener('click', function(e) {
     if (e.target === this) closeMailPanel();
+});
+
+// 邮件详情弹窗：点击遮罩层关闭
+document.getElementById('mailDetailModal').addEventListener('click', function(e) {
+    if (e.target === this) closeMailDetail();
 });
 
 // ── 定期刷新未读邮件数量 ──
