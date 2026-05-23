@@ -7443,7 +7443,7 @@ function initCardFavorites() {
 
 function toggleFavorite(btn) {
     // 🔒 收藏功能必须登录
-    if (!currentToken) {
+    if (!currentUser || !currentUser.sessionToken) {
         showToast('❤️ 请先登录后再收藏');
         setTimeout(() => openLogin(), 800);
         return;
@@ -9851,14 +9851,40 @@ function closeCardDetail() {
 }
 
 function cardDetailToggleFav() {
-    if (!_cardDetailSource) return;
-    const favBtn = _cardDetailSource.querySelector('.fav-btn');
-    if (favBtn) {
-        toggleFavorite(favBtn);
-        const cid   = _cardDetailSource.dataset.cardId;
-        const faved = cid && favorites.has(cid);
-        document.getElementById('cardDetailFavBtn').textContent = faved ? '💖' : '🤍';
+    // 🔒 收藏功能必须登录
+    if (!currentUser || !currentUser.sessionToken) {
+        showToast('❤️ 请先登录后再收藏');
+        setTimeout(() => openLogin(), 800);
+        return;
     }
+    if (!_cardDetailSource) return;
+
+    const cardId = _cardDetailSource.dataset.cardId;
+    if (!cardId) { showToast('❌ 卡片ID无效'); return; }
+
+    const isFaved = favorites.has(cardId);
+    if (isFaved) {
+        // 取消收藏
+        favorites.delete(cardId);
+        document.getElementById('cardDetailFavBtn').textContent = '🤍';
+        // 同步源卡片上的 fav-btn（如果有）
+        _cardDetailSource.querySelectorAll('.fav-btn').forEach(b => {
+            b.innerHTML = '🤍'; b.classList.remove('favorited');
+        });
+        syncFavoriteToCloud(cardId, 'remove');
+    } else {
+        // 添加收藏
+        favorites.add(cardId);
+        document.getElementById('cardDetailFavBtn').textContent = '💖';
+        // 同步源卡片上的 fav-btn（如果有）
+        _cardDetailSource.querySelectorAll('.fav-btn').forEach(b => {
+            b.innerHTML = '💖'; b.classList.add('favorited');
+        });
+        syncFavoriteToCloud(cardId, 'add');
+    }
+    saveFavorites();
+    // 如果当前在收藏分区，刷新显示
+    if (currentCat === '收藏') { refreshUI(); }
 }
 
 function clearAllData() {
