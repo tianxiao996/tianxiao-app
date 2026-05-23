@@ -11488,7 +11488,7 @@ function openHomeSubpage(name) {
     history.pushState({ page: `subpage-${name}` }, '');
     // 按需加载数据
     if (name === 'shop')     loadAvatarShop();
-    if (name === 'backpack') loadUserBackpack && loadUserBackpack();
+    if (name === 'backpack') loadBackpack();
     if (name === 'mail')     { loadMails(); loadReplies(); }
 }
 
@@ -11766,6 +11766,15 @@ async function loadMails() {
                     <div class="mail-content" style="font-size:12px;color:#888;line-height:1.5;display:none;margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);">
                         ${escapeHtml(m.content)}<br>
                         ${m.fishReward ? `<span style="color:#ff9800;font-weight:bold;">🐟 +${m.fishReward} 小鱼干</span><br>` : ''}
+                        ${m.avatarRewardUrl ? `
+                        <div style="display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px;background:linear-gradient(135deg,#fff8f0,#ffe8f0);border-radius:10px;border:1px solid #ffb3cc;">
+                            <img src="${escapeHtml(m.avatarRewardUrl)}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #ff9800;box-shadow:0 0 6px rgba(255,152,0,0.35);flex-shrink:0;" onerror="this.style.display='none'">
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:11px;color:#ff9800;font-weight:bold;">🎁 限定头像奖励</div>
+                                <div style="font-size:12px;color:var(--text);font-weight:bold;">${escapeHtml(m.avatarRewardName || '限定头像')}</div>
+                                <div style="font-size:10px;color:#aaa;">领取后自动存入背包</div>
+                            </div>
+                        </div>` : ''}
                         ${m.expireAt ? `<span style="font-size:11px;color:#aaa;">有效期至 ${formatExpireTime(m.expireAt)}</span>` : ''}
                     </div>
                     <div style="display:flex;gap:8px;margin-top:6px;">
@@ -11904,26 +11913,39 @@ function renderSingleCard(cardData) {
     return div;
 }
 
-// ── 轮询滚动到指定回复评论（最多等2秒）──
+// ── 轮询滚动到指定回复评论（最多等5秒）──
 function scrollToReplyComment(replyCommentId) {
     let attempts = 0;
-    const maxAttempts = 20; // 20 * 100ms = 2秒
+    const maxAttempts = 50; // 50 * 100ms = 5秒
     const checkAndScroll = () => {
-        const replyEl = document.querySelector(
+        // 1. 先检查评论是否已渲染
+        let replyEl = document.querySelector(
             `.comment-item[data-comment-id="${CSS.escape(replyCommentId)}"], .comment-reply-item[data-comment-id="${CSS.escape(replyCommentId)}"]`
         );
         if (replyEl) {
-            // 找到评论，先展开回复列表（如果折叠）
-            const replyList = replyEl.closest('.comment-reply-list');
-            if (replyList && !replyList.classList.contains('expanded')) {
-                replyList.classList.add('expanded');
-                const toggleBtn = replyList.previousElementSibling?.querySelector('.comment-action-btn[onclick*="toggleReplies"]');
-                if (toggleBtn) toggleBtn.textContent = toggleBtn.textContent.replace('▼', '▲');
+            // 2. 如果回复在折叠区域内，先展开
+            const moreContainer = replyEl.closest('[id^="more_"]');
+            if (moreContainer && moreContainer.style.display === 'none') {
+                // 找到对应的展开按钮并点击
+                const parentId = moreContainer.id.replace('more_', '');
+                const expandBtn = document.getElementById(`expandBtn_${parentId}`);
+                if (expandBtn) {
+                    expandBtn.click();
+                } else {
+                    moreContainer.style.display = 'block';
+                }
             }
-            replyEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            replyEl.style.transition = 'box-shadow 0.3s';
-            replyEl.style.boxShadow = '0 0 0 3px #4caf50';
-            setTimeout(() => { replyEl.style.boxShadow = ''; }, 3000);
+            // 3. 确保回复列表可见（父级thread展开）
+            const thread = replyEl.closest('.comment-thread');
+            if (thread) thread.style.display = 'block';
+
+            // 4. 滚动到目标并高亮
+            setTimeout(() => {
+                replyEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                replyEl.style.transition = 'box-shadow 0.3s';
+                replyEl.style.boxShadow = '0 0 0 3px #4caf50';
+                setTimeout(() => { replyEl.style.boxShadow = ''; }, 3000);
+            }, 100);
             return;
         }
         attempts++;
@@ -11931,7 +11953,7 @@ function scrollToReplyComment(replyCommentId) {
             setTimeout(checkAndScroll, 100);
         }
     };
-    setTimeout(checkAndScroll, 300); // 给评论区域300ms初始加载时间
+    setTimeout(checkAndScroll, 200); // 给评论区域200ms初始加载时间
 }
 
 // 邮件展开状态追踪（id -> boolean）
