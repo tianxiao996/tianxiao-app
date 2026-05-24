@@ -2562,11 +2562,13 @@ window._checkAdminMode = function() {
     height: 14px;
 }
 .score-stat-stars {
-    width: 32px;
+    width: 68px;
     text-align: right;
     color: #ffb800;
     white-space: nowrap;
     overflow: hidden;
+    font-size: 12px;
+    letter-spacing: 1px;
 }
 .score-stat-track {
     flex: 1;
@@ -8412,10 +8414,14 @@ function renderLinkItems(container, items) {
         openBtn.style.cssText = `width:100%; padding:12px; border:none; border-radius:8px; background:${drive.color}; color:#fff; font-size:14px; font-weight:bold; cursor:pointer; margin-bottom:8px; touch-action:manipulation;`;
         openBtn.textContent = drive.icon + ' 打开 ' + drive.name;
         openBtn.addEventListener('click', async () => {
-            // 🔒 必须登录 + 检查24小时下载次数（限10次）
+            // 网盘链接：直接打开，不走下载验证流程
+            if (drive.name !== '其他链接') {
+                window.open(url, '_blank');
+                return;
+            }
+            // 直链（其他链接）：走安全下载验证流程
             const canDownload = await checkDownloadLimit();
             if (!canDownload) return;
-            // 🔒 统一走安全下载验证流程
             await openSecureDownloadFlow(url, label || drive.name);
         });
         itemDiv.appendChild(openBtn);
