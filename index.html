@@ -2533,6 +2533,60 @@ window._checkAdminMode = function() {
     display: flex; align-items: center;
     gap: 6px;
 }
+/* 评分统计区域 */
+.score-stats-wrap {
+    display: flex; align-items: center;
+    gap: 16px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+}
+.score-stats-big {
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+    min-width: 60px;
+    text-align: center;
+}
+.score-stats-bars {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.score-stat-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    height: 14px;
+}
+.score-stat-stars {
+    width: 32px;
+    text-align: right;
+    color: #ffb800;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.score-stat-track {
+    flex: 1;
+    height: 6px;
+    background: var(--pixel-soft, #eee);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.score-stat-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ffb800, #ff9800);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    min-width: 0;
+}
+.score-stat-count {
+    width: 20px;
+    text-align: right;
+    color: #aaa;
+}
 /* B站风格评论排序栏 */
 .comment-sort-bar {
     margin-left: auto;
@@ -13099,13 +13153,13 @@ function injectCommentSection(cardId) {
     section.innerHTML = `
         <div class="comment-section-title">
             💬 玩家评论<span id="commentCountNum"></span>
-            <span class="comment-avg-score" id="commentAvgScore"></span>
             <span class="comment-sort-bar" id="commentSortBar" style="display:none;">
                 <span id="sortHot" class="comment-sort-tab active" onclick="switchCommentSort('hot')">按热度</span>
                 <span class="comment-sort-divider">|</span>
                 <span id="sortTime" class="comment-sort-tab" onclick="switchCommentSort('time')">按时间</span>
             </span>
         </div>
+        <div id="scoreStatsArea" style="display:none;"></div>
         <div id="commentInputArea"></div>
         <div class="comment-list" id="commentList">
             <div class="comment-empty">加载中...</div>
@@ -13117,6 +13171,47 @@ function injectCommentSection(cardId) {
 
     // 初始化评论懒加载滚动监听
     _initCommentLazyLoad();
+}
+
+// ── 渲染评分统计区域 ──
+function _renderScoreStats(avgScore, scoreDist, maxDist, scoredCount) {
+    const area = document.getElementById('scoreStatsArea');
+    if (!area) return;
+
+    // 没有评分数据时不显示
+    if (!avgScore || avgScore <= 0 || !scoreDist) {
+        area.style.display = 'none';
+        return;
+    }
+
+    // 构建5星制分布条（5星 -> 1星倒序）
+    let barsHtml = '';
+    const maxVal = maxDist || 1;
+
+    for (let starNum = 5; starNum >= 1; starNum--) {
+        const count = scoreDist[starNum] || 0;
+        const pct = (count / maxVal * 100).toFixed(0);
+        const starsStr = '★'.repeat(starNum);
+        barsHtml += `
+            <div class="score-stat-row">
+                <div class="score-stat-stars">${starsStr}</div>
+                <div class="score-stat-track">
+                    <div class="score-stat-fill" style="width:${pct}%;"></div>
+                </div>
+                <div class="score-stat-count">${count}</div>
+            </div>
+        `;
+    }
+
+    area.innerHTML = `
+        <div class="score-stats-wrap">
+            <div class="score-stats-big">${avgScore}</div>
+            <div class="score-stats-bars">
+                ${barsHtml}
+            </div>
+        </div>
+    `;
+    area.style.display = 'block';
 }
 
 // 切换评论排序（前端瞬间切换，不重新请求API）
@@ -13143,12 +13238,6 @@ async function loadComments(cardId) {
             return;
         }
 
-        // 更新平均分
-        const avgEl = document.getElementById('commentAvgScore');
-        if (avgEl) {
-            avgEl.textContent = data.avgScore ? `(${data.avgScore}分)` : '';
-        }
-
         // 显示并更新排序栏 + 评论数量
         const sortBar = document.getElementById('commentSortBar');
         if (sortBar) sortBar.style.display = 'flex';
@@ -13156,6 +13245,9 @@ async function loadComments(cardId) {
         document.getElementById('sortTime')?.classList.toggle('active', _commentSortMode === 'time');
         const countNumEl = document.getElementById('commentCountNum');
         if (countNumEl) countNumEl.textContent = data.totalCount ? ` ${data.totalCount}` : '';
+
+        // 渲染评分统计区域
+        _renderScoreStats(data.avgScore, data.scoreDist, data.maxDist, data.scoredCount);
 
         // 渲染输入区
         renderCommentInput(cardId, data.userVoted);
@@ -13375,7 +13467,7 @@ function renderCommentInput(cardId, hasCommented) {
         <div class="comment-score-row">
             <span class="comment-score-label">打分：</span>
             <div class="score-stars" id="scoreStars">
-                ${[1,2,3,4,5,6,7,8,9,10].map(i =>
+                ${[1,2,3,4,5].map(i =>
                     `<span class="score-star" onclick="setScore(${i})" data-score="${i}">☆</span>`
                 ).join('')}
             </div>
@@ -13407,7 +13499,7 @@ function renderCommentInput(cardId, hasCommented) {
     `;
 }
 
-// 设置评分
+// 设置评分（5星制）
 function setScore(score) {
     currentCommentScore = score;
     const stars = document.querySelectorAll('.score-star');
