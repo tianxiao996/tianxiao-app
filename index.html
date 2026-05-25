@@ -467,7 +467,7 @@ const label=emoji?emoji+' '+name:name;categoryList.push({key:name,label});nameIn
 function deleteCat(idx){if(!confirm(`确定删除分类「${categoryList[idx].label}」吗？`))return;categoryList.splice(idx,1);renderCatPanel();showToast('🗑️ 已删除，记得点"保存并更新导航"');}
 function moveCat(idx,dir){const target=idx+dir;if(target<0||target>=categoryList.length)return;[categoryList[idx],categoryList[target]]=[categoryList[target],categoryList[idx]];renderCatPanel();}
 function saveCategoryOrder(){persistCategories();renderNav();showToast('✅ 分类已保存，导航已更新！');}
-let currentPage=1;let noticeText='';let maxPageCount=1;let favorites=new Set();let adminToken=null;function checkForUpdates(){const savedVersion=localStorage.getItem(VERSION_KEY);if(!savedVersion){localStorage.setItem(VERSION_KEY,APP_VERSION);console.log('✅ 首次安装，版本:',APP_VERSION);return;}
+let currentPage=1;let noticeText='';let maxPageCount=1;let favorites=new Set();Object.defineProperty(window,'adminToken',{get:function(){return sessionStorage.getItem('ADMIN_TOKEN')||null;},set:function(v){if(v)sessionStorage.setItem('ADMIN_TOKEN',v);else sessionStorage.removeItem('ADMIN_TOKEN');},configurable:true});function checkForUpdates(){const savedVersion=localStorage.getItem(VERSION_KEY);if(!savedVersion){localStorage.setItem(VERSION_KEY,APP_VERSION);console.log('✅ 首次安装，版本:',APP_VERSION);return;}
 if(savedVersion!==APP_VERSION){console.log('🔄 检测到更新:',savedVersion,'→',APP_VERSION);showUpdateNotification(savedVersion,APP_VERSION);localStorage.setItem(VERSION_KEY,APP_VERSION);}}
 function showUpdateNotification(oldVer,newVer){const notification=document.createElement('div');notification.style.cssText=`
         position: fixed;
