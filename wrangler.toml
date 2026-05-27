@@ -1,0 +1,20 @@
+name = "tianxiao"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+[[kv_namespaces]]
+binding = "STORAGE"
+id = "7c48d1144b414dc2b04b7b7ef6cddfaa"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tianxiao-db"
+database_id = "d7c21845-7bde-4cf8-9d83-ad0c17421b29"
+
+[[durable_objects.bindings]]
+name = "FISH_COINS"
+class_name = "FishCoinObject"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["FishCoinObject"]
