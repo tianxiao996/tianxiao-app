@@ -651,7 +651,7 @@ button:active,.link-jump-btn:active,.gate-btn:active{
 :root { --card: rgba(255,255,255,0.55); }
 
 .card:not(.card-expanded) {
-  background: rgba(255,255,255,0.30) !important;
+  background: rgba(255,255,255,0.50) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   border-color: rgba(160,160,160,0.50) !important;
@@ -680,7 +680,7 @@ button:active,.link-jump-btn:active,.gate-btn:active{
 
 /* 暗色模式 */
 [data-theme="dark"] .card:not(.card-expanded) {
-  background: rgba(20,20,20,0.35) !important;
+  background: rgba(20,20,20,0.40) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   border-color: rgba(180,180,180,0.20) !important;
@@ -1338,6 +1338,8 @@ function filterTab(cat,el){document.querySelectorAll("#nav li").forEach(li=>li.c
 function openNoticePanel(){const panel=document.getElementById('noticePanelPage');const body=document.getElementById('noticeContentBody');const hint=document.getElementById('noticeEditHint');const saved=noticeText||localStorage.getItem(NOTICE_KEY)||'';body.innerHTML=saved.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
 const isDark=document.documentElement.getAttribute('data-theme')==='dark';
 panel.style.backgroundImage=isDark?'linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)),url(\'images/bg_night.jpg\')':'linear-gradient(rgba(0,0,0,0.25),rgba(0,0,0,0.25)),url(\'images/bg.jpg\')';
+panel.style.backgroundSize='cover';
+panel.style.backgroundPosition='center center';
 if(isEditMode){body.contentEditable='true';hint.textContent='✏️ 直接编辑上方内容，完成后点击保存';setTimeout(()=>{body.focus();},100);}else{body.contentEditable='false';hint.textContent='';}
 panel.style.display='flex';requestAnimationFrame(()=>{const hdr=panel.querySelector('.fullpage-header');const body=panel.querySelector('.fullpage-body');if(hdr&&body)body.style.top=hdr.offsetHeight+'px';});}
 function closeNoticePanel(){document.getElementById('noticePanelPage').style.display='none';const body=document.getElementById('noticeContentBody');body.contentEditable='false';}
