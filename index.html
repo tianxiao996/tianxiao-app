@@ -41,11 +41,11 @@ return false;}},true);document.addEventListener('contextmenu',function(e){if(win
 /* GIF背景逐文件检测 */
 .gif-bg #bg-layer:not(.night){background-image:url('images/bg.gif')!important}
 .gif-bg #gateKeeper:not(.night){background-image:linear-gradient(rgba(0,0,0,0.15),rgba(0,0,0,0.15)),url('images/bg.gif')!important}
-.gif-bg .fullpage-panel:not(.night){background-image:linear-gradient(rgba(0,0,0,0.25),rgba(0,0,0,0.25)),url('images/bg.gif')!important}
-[data-theme="dark"] .gif-bg .fullpage-panel:not(.day-only){background-image:linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)),url('images/bg_night.gif')!important}
+.gif-bg .fullpage-panel{background-image:linear-gradient(rgba(0,0,0,0.25),rgba(0,0,0,0.25)),url('images/bg.gif')}
+
 .gif-bg_night #bg-layer.night{background-image:url('images/bg_night.gif')!important}
 .gif-bg_night #gateKeeper.night{background-image:linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)),url('images/bg_night.gif')!important}
-[data-theme="dark"] .gif-bg.gif-bg_night .fullpage-panel{background-image:linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)),url('images/bg_night.gif')!important}
+
 .gif-detail_bg #detailBgLayer:not(.night){background:url('images/detail_bg.gif') center top / cover no-repeat!important}
 .gif-detail_bg_night #detailBgLayer.night{background-image:url('images/detail_bg_night.gif')!important}
 .gif-gallery_bg #galleryBgLayer:not(.night){background-image:url('images/gallery_bg.gif')!important}
@@ -1332,9 +1332,6 @@ img.style.opacity='1';});img.addEventListener('error',function(){if(img.dataset.
 function imgSkeletonFrag(){const frag=document.createDocumentFragment();const skel=document.createElement('div');skel.className='img-skeleton';skel.innerHTML='<div class="img-spinner"></div><div class="img-loader-text">正在用力加载</div>';const err=document.createElement('div');err.className='img-error';err.innerHTML='404<small>图片走丢了</small>';frag.appendChild(skel);frag.appendChild(err);return frag;}
 function filterTab(cat,el){document.querySelectorAll("#nav li").forEach(li=>li.classList.remove("active"));el.classList.add("active");currentCat=cat;refreshUI(1);}
 function openNoticePanel(){const panel=document.getElementById('noticePanelPage');const body=document.getElementById('noticeContentBody');const hint=document.getElementById('noticeEditHint');const saved=noticeText||localStorage.getItem(NOTICE_KEY)||'';body.innerHTML=saved.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-const isDark=document.documentElement.getAttribute('data-theme')==='dark';
-if(isDark){panel.classList.add('night');}else{panel.classList.remove('night');}
-panel.style.backgroundSize='cover';panel.style.backgroundPosition='center center';
 if(isEditMode){body.contentEditable='true';hint.textContent='✏️ 直接编辑上方内容，完成后点击保存';setTimeout(()=>{body.focus();},100);}else{body.contentEditable='false';hint.textContent='';}
 panel.style.display='flex';requestAnimationFrame(()=>{const hdr=panel.querySelector('.fullpage-header');const body=panel.querySelector('.fullpage-body');if(hdr&&body)body.style.top=hdr.offsetHeight+'px';});}
 function closeNoticePanel(){document.getElementById('noticePanelPage').style.display='none';const body=document.getElementById('noticeContentBody');body.contentEditable='false';}
