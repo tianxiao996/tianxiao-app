@@ -88,9 +88,6 @@ button,.link-jump-btn,.gate-btn,.modal-btn,.direct-dl-btn{border-radius:255px 15
 
 .card-shake{animation:cardShake 1.7s ease-in-out 1!important;transition:none!important;z-index:100!important}
 @keyframes cardShake{0%,100%{transform:translate(0,0) rotate(0deg)}12%{transform:translate(-10px,-10px) rotate(-2deg)}25%{transform:translate(7px,7px) rotate(1.5deg)}40%{transform:translate(-5px,5px) rotate(-1deg)}55%{transform:translate(3px,-3px) rotate(0.8deg)}70%{transform:translate(-2px,-2px) rotate(-0.5deg)}85%{transform:translate(1px,1px) rotate(0.3deg)}}</style>
-
-[data-theme="dark"] .score-stats-big{color:#fff!important}
-[data-theme="dark"] .score-stat-stars{color:#f5a623!important}
 <style id="patch-fixes">
 /* 恢复旧版分类导航标签大小 */
 #nav li{font-size:14px!important;padding:8px 16px!important;font-family:var(--font-crayon)!important}
@@ -111,6 +108,10 @@ button,.link-jump-btn,.gate-btn,.modal-btn,.direct-dl-btn{border-radius:255px 15
 
 /* 紧凑卡片标签区最多两行 */
 .card-preview-tags{max-height:calc(2 * 1.7em + 8px)!important;overflow:hidden!important}
+
+/* 夜间模式评分颜色 */
+[data-theme="dark"] .score-stats-big{color:#fff!important}
+[data-theme="dark"] .score-stat-stars{color:#f5a623!important}
 </style></head>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script>function __safeFixDeleteImage(card){if(!card||!Array.isArray(card.images))return;let currentIndex=Number(card.currentIndex||0);if(card.images.length===0){card.currentIndex=0;if(typeof updateBackground==='function')updateBackground(null);return;}
