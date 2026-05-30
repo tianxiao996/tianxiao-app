@@ -654,8 +654,8 @@ button:active,.link-jump-btn:active,.gate-btn:active{
   background: rgba(255,255,255,0.50) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  border-color: rgba(160,160,160,0.50) !important;
-  box-shadow: 3px 3px 0 rgba(120,120,120,0.15) !important;
+  border-color: #111 !important;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.35) !important;
 }
 .card:not(.card-expanded) .card-preview {
   background: transparent !important;
@@ -683,8 +683,8 @@ button:active,.link-jump-btn:active,.gate-btn:active{
   background: rgba(20,20,20,0.40) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  border-color: rgba(180,180,180,0.20) !important;
-  box-shadow: 3px 3px 0 rgba(0,0,0,0.25) !important;
+  border-color: #111 !important;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.55) !important;
 }
 [data-theme="dark"] .card:not(.card-expanded) .card-thumb {
   background: rgba(10,10,10,0.20) !important;
@@ -1337,9 +1337,8 @@ function imgSkeletonFrag(){const frag=document.createDocumentFragment();const sk
 function filterTab(cat,el){document.querySelectorAll("#nav li").forEach(li=>li.classList.remove("active"));el.classList.add("active");currentCat=cat;refreshUI(1);}
 function openNoticePanel(){const panel=document.getElementById('noticePanelPage');const body=document.getElementById('noticeContentBody');const hint=document.getElementById('noticeEditHint');const saved=noticeText||localStorage.getItem(NOTICE_KEY)||'';body.innerHTML=saved.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
 const isDark=document.documentElement.getAttribute('data-theme')==='dark';
-panel.style.backgroundImage=isDark?'linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)),url(\'images/bg_night.jpg\')':'linear-gradient(rgba(0,0,0,0.25),rgba(0,0,0,0.25)),url(\'images/bg.jpg\')';
-panel.style.backgroundSize='cover';
-panel.style.backgroundPosition='center center';
+if(isDark){panel.classList.add('night');panel.style.backgroundImage='linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)),url(\'images/bg_night.jpg\')';}else{panel.classList.remove('night');panel.style.backgroundImage='linear-gradient(rgba(0,0,0,0.25),rgba(0,0,0,0.25)),url(\'images/bg.jpg\')';}
+panel.style.backgroundSize='cover';panel.style.backgroundPosition='center center';
 if(isEditMode){body.contentEditable='true';hint.textContent='✏️ 直接编辑上方内容，完成后点击保存';setTimeout(()=>{body.focus();},100);}else{body.contentEditable='false';hint.textContent='';}
 panel.style.display='flex';requestAnimationFrame(()=>{const hdr=panel.querySelector('.fullpage-header');const body=panel.querySelector('.fullpage-body');if(hdr&&body)body.style.top=hdr.offsetHeight+'px';});}
 function closeNoticePanel(){document.getElementById('noticePanelPage').style.display='none';const body=document.getElementById('noticeContentBody');body.contentEditable='false';}
