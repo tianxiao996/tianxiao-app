@@ -101,29 +101,18 @@ html,body{
 
 /* --- 卡片：更粗描边 + 更明显硬阴影 + 轻微不对称 --- */
 .card{
-  border:3px solid #1a1a1a!important;
-  border-radius:255px 12px 230px 18px/18px 230px 12px 255px!important;
-  box-shadow:4px 5px 0 rgba(0,0,0,0.22), 1px 1px 0 rgba(0,0,0,0.08)!important;
-  background:#faf9f6!important;
-  position:relative!important;
-}
-.card::after{
-  content:'';
-  position:absolute;
-  inset:0;
-  border-radius:inherit;
-  background: repeating-linear-gradient(
-    -45deg,
-    transparent,
-    transparent 8px,
-    rgba(0,0,0,0.012) 8px,
-    rgba(0,0,0,0.012) 9px
-  );
-  pointer-events:none;
+  border:2.5px solid #2a2a2a!important;
+  border-radius:255px 15px 225px 15px/15px 225px 15px 255px!important;
+  box-shadow:3px 4px 0 rgba(0,0,0,0.15)!important;
+  background:#fafafa!important;
+  transition:transform 0.15s, box-shadow 0.15s!important;
 }
 .card:hover{
-  transform:translate(-2px,-3px) rotate(-0.8deg)!important;
-  box-shadow:6px 8px 0 rgba(0,0,0,0.25), 2px 2px 0 rgba(0,0,0,0.1)!important;
+  transform:translate(-2px,-2px) rotate(-0.5deg)!important;
+  box-shadow:5px 6px 0 rgba(0,0,0,0.2)!important;
+}
+.card:active{
+  transform:translate(0,0) rotate(0deg)!important;
 }
 
 /* --- 导航标签 --- */
@@ -479,7 +468,7 @@ button:active,.link-jump-btn:active,.gate-btn:active{
 [data-theme="dark"] .card{
   background:rgba(32,30,25,0.96)!important;
   border-color:#666!important;
-  box-shadow:4px 5px 0 rgba(0,0,0,0.5)!important;
+  box-shadow:3px 4px 0 rgba(0,0,0,0.4)!important;
 }
 [data-theme="dark"] .card::after{
   background:repeating-linear-gradient(
@@ -654,8 +643,15 @@ button:active,.link-jump-btn:active,.gate-btn:active{
   background: rgba(255,255,255,0.50) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  border-color: #111 !important;
-  box-shadow: 4px 4px 0 rgba(0,0,0,0.35) !important;
+  border-color: #2a2a2a !important;
+  box-shadow: 3px 4px 0 rgba(0,0,0,0.15) !important;
+}
+.card:not(.card-expanded):hover {
+  transform: translate(-2px,-2px) rotate(-0.5deg) !important;
+  box-shadow: 5px 6px 0 rgba(0,0,0,0.2) !important;
+}
+.card:not(.card-expanded):active {
+  transform: translate(0,0) rotate(0deg) !important;
 }
 .card:not(.card-expanded) .card-preview {
   background: transparent !important;
@@ -683,8 +679,8 @@ button:active,.link-jump-btn:active,.gate-btn:active{
   background: rgba(20,20,20,0.40) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  border-color: #111 !important;
-  box-shadow: 4px 4px 0 rgba(0,0,0,0.55) !important;
+  border-color: #444 !important;
+  box-shadow: 3px 4px 0 rgba(0,0,0,0.4) !important;
 }
 [data-theme="dark"] .card:not(.card-expanded) .card-thumb {
   background: rgba(10,10,10,0.20) !important;
@@ -1777,7 +1773,14 @@ window.addEventListener('orientationchange',function(){setTimeout(init,300);});}
 else if(!img.complete){const s=img.src;img.src='';img.src=s;}});}
 (function(){window.addEventListener('load',function(){const isDesktop=window.matchMedia('(hover: hover) and (pointer: fine)').matches;if(!isDesktop)return;const main=document.getElementById('mainScroll');if(main)main.dispatchEvent(new Event('scroll'));});})();function toggleAZMode(){const ball=document.getElementById('azBall');window._azMode=!window._azMode;if(window._azMode){ball.classList.add('active');ball.title='安卓模式已开启（点击关闭）';showToast('📱 安卓模式已开启，仅显示AZ游戏');}else{ball.classList.remove('active');ball.title='安卓模式';showToast('✅ 安卓模式已关闭');}
 refreshUI(1);}
-const DARK_KEY='TX_DARK_MODE';function initDarkMode(){const saved=localStorage.getItem(DARK_KEY);const prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;const isDark=saved!==null?saved==='1':prefersDark;if(isDark)applyDarkMode(true,false);}
+const DARK_KEY='TX_DARK_MODE';function initDarkMode(){const saved=localStorage.getItem(DARK_KEY);const prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;const isDark=saved!==null?saved==='1':prefersDark;if(isDark){applyDarkMode(true,false);
+// 夜间模式背景图补丁：同步强制设置，避免rAF时机问题
+const bl=document.getElementById('bg-layer');const gate=document.getElementById('gateKeeper');const dbl=document.getElementById('detailBgLayer');const gbl=document.getElementById('galleryBgLayer');
+if(bl)bl.classList.add('night');
+if(gate)gate.classList.add('night');
+if(dbl)dbl.classList.add('night');
+if(gbl)gbl.classList.add('night');
+}}
 var _svgMoon='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
 var _svgSun='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>';
 function applyDarkMode(dark,save=true){const html=document.documentElement;const btn=document.getElementById('darkModeBtn');if(dark){html.setAttribute('data-theme','dark');if(btn)btn.innerHTML=_svgSun;}else{html.removeAttribute('data-theme');if(btn)btn.innerHTML=_svgMoon;}
