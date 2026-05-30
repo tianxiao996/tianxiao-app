@@ -647,8 +647,68 @@ button:active,.link-jump-btn:active,.gate-btn:active{
   opacity:0.45;
   filter:invert(1);
 }
+/* ===== 卡片半透明毛玻璃：让背景图透出来 ===== */
+:root { --card: rgba(255,255,255,0.55); }
+
+/* 紧凑卡片整体 */
+.card:not(.card-expanded) {
+  background: rgba(255,255,255,0.52) !important;
+  backdrop-filter: blur(10px) saturate(1.1) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(1.1) !important;
+  border-color: rgba(180,180,180,0.55) !important;
+  box-shadow: 3px 3px 0 rgba(150,150,150,0.18), 0 2px 12px rgba(0,0,0,0.08) !important;
+}
+/* 右侧预览区 */
+.card:not(.card-expanded) .card-preview {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+/* 缩略图区底色（图片加载前可见） */
+.card:not(.card-expanded) .card-thumb {
+  background: rgba(220,220,220,0.35) !important;
+  border-right-color: rgba(180,180,180,0.4) !important;
+}
+/* 文字确保可读：标题加轻微文字阴影 */
+.card:not(.card-expanded) .card-preview-title {
+  text-shadow: 0 1px 3px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.6) !important;
+  color: #111 !important;
+}
+.card:not(.card-expanded) .card-preview-desc {
+  text-shadow: 0 1px 2px rgba(255,255,255,0.85) !important;
+  color: #444 !important;
+}
+.card:not(.card-expanded) .card-preview-tags .pt {
+  background: rgba(255,255,255,0.7) !important;
+}
+
+/* 暗色模式 */
+[data-theme="dark"] .card:not(.card-expanded) {
+  background: rgba(30,30,30,0.85) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border-color: rgba(120,120,140,0.35) !important;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.3) !important;
+}
+[data-theme="dark"] .card:not(.card-expanded) .card-thumb {
+  background: rgba(20,20,20,0.6) !important;
+  border-right-color: rgba(120,120,140,0.25) !important;
+}
+[data-theme="dark"] .card:not(.card-expanded) .card-preview-title {
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8) !important;
+  color: #e8e8e8 !important;
+}
+[data-theme="dark"] .card:not(.card-expanded) .card-preview-desc {
+  text-shadow: none !important;
+  color: #aaa !important;
+}
+[data-theme="dark"] .card:not(.card-expanded) .card-preview-tags .pt {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: rgba(200,200,220,0.30) !important;
+  color: #ccc !important;
+}
 </style>
-<style id="patch-fixes">
+<style>
 /* 恢复旧版分类导航标签大小 */
 #nav li{font-size:14px!important;padding:8px 16px!important;font-family:var(--font-crayon)!important}
 
@@ -711,11 +771,32 @@ card.currentIndex=currentIndex;}</script>
 <div class="sidebar-burger" onclick="openSidebar()">☰</div>
 <div class="px-title-text">✦ 天笑の窝 ✦</div>
 <div style="display:flex;align-items:center;gap:5px;position:relative;z-index:1;">
-<div class="header-icon-btn" onclick="randomGame()" title="随机抽游戏" style="font-size:18px;">🎲</div>
-<div id="darkModeBtn" class="header-icon-btn" onclick="toggleDarkMode()" title="夜间模式" style="font-size:18px;">🌙</div>
-<div class="header-icon-btn" onclick="openMailPanel()" title="邮件" style="font-size:18px;position:relative;">
-📧
-<span id="mailBadge" style="display:none;position:absolute;top:-2px;right:-2px;background:#ff4444;color:#fff;font-size:9px;font-weight:bold;border-radius:50%;width:14px;height:14px;line-height:14px;text-align:center;">0</span>
+<div class="header-icon-btn" onclick="randomGame()" title="随机抽游戏" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;">
+<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <!-- 骰子手绘风：方形主体带透视 -->
+  <path d="M4 7 L12 3 L20 7 L20 17 L12 21 L4 17 Z" stroke-linejoin="round"/>
+  <path d="M4 7 L12 11 L20 7"/>
+  <path d="M12 11 L12 21"/>
+  <!-- 点：正面三个点 -->
+  <circle cx="8.5" cy="13" r="1" fill="currentColor" stroke="none"/>
+  <circle cx="12" cy="15.5" r="1" fill="currentColor" stroke="none"/>
+  <circle cx="15.5" cy="13" r="1" fill="currentColor" stroke="none"/>
+  <!-- 右侧面两个点 -->
+  <circle cx="17" cy="9.5" r="0.9" fill="currentColor" stroke="none"/>
+  <circle cx="17" cy="6.5" r="0.9" fill="currentColor" stroke="none"/>
+</svg>
+</div>
+<div id="darkModeBtn" class="header-icon-btn" onclick="toggleDarkMode()" title="夜间模式" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;">
+<svg id="darkModeIcon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+</svg>
+</div>
+<div class="header-icon-btn" onclick="openMailPanel()" title="邮件" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;position:relative;">
+<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M3 6 Q3 4 5 4 L19 4 Q21 4 21 6 L21 18 Q21 20 19 20 L5 20 Q3 20 3 18 Z"/>
+  <polyline points="3,6 12,13 21,6"/>
+</svg>
+<span id="mailBadge" style="display:none;position:absolute;top:0px;right:0px;background:#ff4444;color:#fff;font-size:9px;font-weight:bold;border-radius:50%;width:14px;height:14px;line-height:14px;text-align:center;">0</span>
 </div>
 </div>
 </div>
@@ -1029,8 +1110,8 @@ onkeydown="if(event.key==='Enter')addBlockedTag()">
 <div class="fullpage-back-btn" onclick="closeFavoritePanel()">←</div>
 <div class="fullpage-header-title">💖 我的收藏</div>
 <div style="display:flex;gap:4px;align-items:center;">
-<div class="header-icon-btn" onclick="importFavorites()" title="导入收藏">📂</div>
-<div class="header-icon-btn" onclick="exportFavorites()" title="导出收藏">💾</div>
+<div class="header-icon-btn" onclick="importFavorites()" title="导入收藏" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+<div class="header-icon-btn" onclick="exportFavorites()" title="导出收藏" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
 </div>
 </div>
 <!-- 隐藏的文件选择器，用于导入收藏 -->
@@ -1697,7 +1778,9 @@ else if(!img.complete){const s=img.src;img.src='';img.src=s;}});}
 (function(){window.addEventListener('load',function(){const isDesktop=window.matchMedia('(hover: hover) and (pointer: fine)').matches;if(!isDesktop)return;const main=document.getElementById('mainScroll');if(main)main.dispatchEvent(new Event('scroll'));});})();function toggleAZMode(){const ball=document.getElementById('azBall');window._azMode=!window._azMode;if(window._azMode){ball.classList.add('active');ball.title='安卓模式已开启（点击关闭）';showToast('📱 安卓模式已开启，仅显示AZ游戏');}else{ball.classList.remove('active');ball.title='安卓模式';showToast('✅ 安卓模式已关闭');}
 refreshUI(1);}
 const DARK_KEY='TX_DARK_MODE';function initDarkMode(){const saved=localStorage.getItem(DARK_KEY);const prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;const isDark=saved!==null?saved==='1':prefersDark;if(isDark)applyDarkMode(true,false);}
-function applyDarkMode(dark,save=true){const html=document.documentElement;const btn=document.getElementById('darkModeBtn');if(dark){html.setAttribute('data-theme','dark');if(btn)btn.textContent='☀️';}else{html.removeAttribute('data-theme');if(btn)btn.textContent='🌙';}
+var _svgMoon='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+var _svgSun='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>';
+function applyDarkMode(dark,save=true){const html=document.documentElement;const btn=document.getElementById('darkModeBtn');if(dark){html.setAttribute('data-theme','dark');if(btn)btn.innerHTML=_svgSun;}else{html.removeAttribute('data-theme');if(btn)btn.innerHTML=_svgMoon;}
 if(save)localStorage.setItem(DARK_KEY,dark?'1':'0');const bl=document.getElementById('bg-layer');const gate=document.getElementById('gateKeeper');requestAnimationFrame(()=>{if(bl){dark?bl.classList.add('night'):bl.classList.remove('night');}
 if(gate){dark?gate.classList.add('night'):gate.classList.remove('night');}
 const dbl=document.getElementById('detailBgLayer');if(dbl){dark?dbl.classList.add('night'):dbl.classList.remove('night');}
