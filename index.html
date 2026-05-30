@@ -106,12 +106,12 @@ button,.link-jump-btn,.gate-btn,.modal-btn,.direct-dl-btn{border-radius:255px 15
 .link-jump-btn.get-link-btn:active{transform:translate(2px,2px)!important;box-shadow:1px 2px 0 rgba(0,0,0,0.1)!important}
 [data-theme="dark"] .link-jump-btn.get-link-btn{background:#1a1a1a!important;border-color:#555!important;color:#e0e0e0!important}
 
-/* 紧凑卡片标签区最多两行 */
-.card-preview-tags{max-height:calc(2 * 1.7em + 8px)!important;overflow:hidden!important}
-
 /* 夜间模式评分颜色 */
 [data-theme="dark"] .score-stats-big{color:#fff!important}
 [data-theme="dark"] .score-stat-stars{color:#f5a623!important}
+
+/* 紧凑卡片标签区最多两行 */
+.card-preview-tags{max-height:40px!important;overflow:hidden!important;line-height:1.2!important}
 </style></head>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script>function __safeFixDeleteImage(card){if(!card||!Array.isArray(card.images))return;let currentIndex=Number(card.currentIndex||0);if(card.images.length===0){card.currentIndex=0;if(typeof updateBackground==='function')updateBackground(null);return;}
