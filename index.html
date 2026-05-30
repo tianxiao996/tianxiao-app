@@ -647,65 +647,61 @@ button:active,.link-jump-btn:active,.gate-btn:active{
   opacity:0.45;
   filter:invert(1);
 }
-/* ===== 卡片半透明毛玻璃：让背景图透出来 ===== */
+/* ===== 卡片半透明：无毛玻璃，背景图清晰可见 ===== */
 :root { --card: rgba(255,255,255,0.55); }
 
-/* 紧凑卡片整体 */
 .card:not(.card-expanded) {
-  background: rgba(255,255,255,0.52) !important;
-  backdrop-filter: blur(10px) saturate(1.1) !important;
-  -webkit-backdrop-filter: blur(10px) saturate(1.1) !important;
-  border-color: rgba(180,180,180,0.55) !important;
-  box-shadow: 3px 3px 0 rgba(150,150,150,0.18), 0 2px 12px rgba(0,0,0,0.08) !important;
+  background: rgba(255,255,255,0.30) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-color: rgba(160,160,160,0.50) !important;
+  box-shadow: 3px 3px 0 rgba(120,120,120,0.15) !important;
 }
-/* 右侧预览区 */
 .card:not(.card-expanded) .card-preview {
   background: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
-/* 缩略图区底色（图片加载前可见） */
 .card:not(.card-expanded) .card-thumb {
-  background: rgba(220,220,220,0.35) !important;
-  border-right-color: rgba(180,180,180,0.4) !important;
+  background: rgba(200,200,200,0.25) !important;
+  border-right-color: rgba(160,160,160,0.35) !important;
 }
-/* 文字确保可读：标题加轻微文字阴影 */
 .card:not(.card-expanded) .card-preview-title {
-  text-shadow: 0 1px 3px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.6) !important;
   color: #111 !important;
+  text-shadow: 0 1px 3px rgba(255,255,255,0.95), 0 0 6px rgba(255,255,255,0.7) !important;
 }
 .card:not(.card-expanded) .card-preview-desc {
-  text-shadow: 0 1px 2px rgba(255,255,255,0.85) !important;
-  color: #444 !important;
+  color: #333 !important;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.9) !important;
 }
 .card:not(.card-expanded) .card-preview-tags .pt {
-  background: rgba(255,255,255,0.7) !important;
+  background: rgba(255,255,255,0.65) !important;
 }
 
 /* 暗色模式 */
 [data-theme="dark"] .card:not(.card-expanded) {
-  background: rgba(30,30,30,0.85) !important;
-  backdrop-filter: blur(10px) !important;
-  -webkit-backdrop-filter: blur(10px) !important;
-  border-color: rgba(120,120,140,0.35) !important;
-  box-shadow: 3px 3px 0 rgba(0,0,0,0.3) !important;
+  background: rgba(20,20,20,0.35) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-color: rgba(180,180,180,0.20) !important;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.25) !important;
 }
 [data-theme="dark"] .card:not(.card-expanded) .card-thumb {
-  background: rgba(20,20,20,0.6) !important;
-  border-right-color: rgba(120,120,140,0.25) !important;
+  background: rgba(10,10,10,0.20) !important;
+  border-right-color: rgba(180,180,180,0.15) !important;
 }
 [data-theme="dark"] .card:not(.card-expanded) .card-preview-title {
-  text-shadow: 0 1px 4px rgba(0,0,0,0.8) !important;
-  color: #e8e8e8 !important;
+  color: #f0f0f0 !important;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9) !important;
 }
 [data-theme="dark"] .card:not(.card-expanded) .card-preview-desc {
-  text-shadow: none !important;
-  color: #aaa !important;
+  color: #ccc !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important;
 }
 [data-theme="dark"] .card:not(.card-expanded) .card-preview-tags .pt {
-  background: rgba(255,255,255,0.08) !important;
+  background: rgba(255,255,255,0.10) !important;
   border-color: rgba(200,200,220,0.30) !important;
-  color: #ccc !important;
+  color: #ddd !important;
 }
 </style>
 <style>
@@ -1339,7 +1335,10 @@ function bindImgEvents(img){img.addEventListener('load',function(){const wrap=im
 img.style.opacity='1';});img.addEventListener('error',function(){if(img.dataset.isFallback){const wrap=img.closest('.img-wrap')||img.parentElement;if(wrap){const skel=wrap.querySelector('.img-skeleton');const err=wrap.querySelector('.img-error');if(skel)skel.style.display='none';if(err)err.style.display='flex';}}else{img.dataset.isFallback='true';img.src='images/image_404.jpg';}});}
 function imgSkeletonFrag(){const frag=document.createDocumentFragment();const skel=document.createElement('div');skel.className='img-skeleton';skel.innerHTML='<div class="img-spinner"></div><div class="img-loader-text">正在用力加载</div>';const err=document.createElement('div');err.className='img-error';err.innerHTML='404<small>图片走丢了</small>';frag.appendChild(skel);frag.appendChild(err);return frag;}
 function filterTab(cat,el){document.querySelectorAll("#nav li").forEach(li=>li.classList.remove("active"));el.classList.add("active");currentCat=cat;refreshUI(1);}
-function openNoticePanel(){const panel=document.getElementById('noticePanelPage');const body=document.getElementById('noticeContentBody');const hint=document.getElementById('noticeEditHint');const saved=noticeText||localStorage.getItem(NOTICE_KEY)||'';body.innerHTML=saved.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');if(isEditMode){body.contentEditable='true';hint.textContent='✏️ 直接编辑上方内容，完成后点击保存';setTimeout(()=>{body.focus();},100);}else{body.contentEditable='false';hint.textContent='';}
+function openNoticePanel(){const panel=document.getElementById('noticePanelPage');const body=document.getElementById('noticeContentBody');const hint=document.getElementById('noticeEditHint');const saved=noticeText||localStorage.getItem(NOTICE_KEY)||'';body.innerHTML=saved.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+panel.style.backgroundImage=isDark?'linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)),url(\'images/bg_night.jpg\')':'linear-gradient(rgba(0,0,0,0.25),rgba(0,0,0,0.25)),url(\'images/bg.jpg\')';
+if(isEditMode){body.contentEditable='true';hint.textContent='✏️ 直接编辑上方内容，完成后点击保存';setTimeout(()=>{body.focus();},100);}else{body.contentEditable='false';hint.textContent='';}
 panel.style.display='flex';requestAnimationFrame(()=>{const hdr=panel.querySelector('.fullpage-header');const body=panel.querySelector('.fullpage-body');if(hdr&&body)body.style.top=hdr.offsetHeight+'px';});}
 function closeNoticePanel(){document.getElementById('noticePanelPage').style.display='none';const body=document.getElementById('noticeContentBody');body.contentEditable='false';}
 let galleryContent='';function openGalleryPanel(){const panel=document.getElementById('galleryPanelPage');const body=document.getElementById('galleryContentBody');const hint=document.getElementById('galleryEditHint');const saveBtn=document.querySelector('.gallery-save-btn');const insertBtn=document.getElementById('galleryInsertImgBtn');const bgLayer=document.getElementById('galleryBgLayer');const loadOverlay=document.getElementById('galleryLoadingOverlay');const isDark=document.documentElement.getAttribute('data-theme')==='dark';const bgUrl=isDark?'images/gallery_bg_night.jpg':'images/gallery_bg.jpg';const bgImg=new Image();bgImg.src=bgUrl;if(loadOverlay)loadOverlay.classList.add('show');bgImg.onload=bgImg.onerror=()=>{if(loadOverlay)loadOverlay.classList.remove('show');};const saved=galleryContent||localStorage.getItem(GALLERY_KEY)||'';if(saved.trim()){body.innerHTML=saved;}else{body.innerHTML='';}
