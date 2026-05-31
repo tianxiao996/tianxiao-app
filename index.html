@@ -1693,8 +1693,7 @@ if(!thumbSrc&&imgs[0])thumbSrc=imgs[0].getAttribute('src')||'';if(!card.querySel
 if(!card.querySelector('.card-thumb')){const thumb=document.createElement('div');thumb.className='card-thumb';if(thumbSrc){const iwrap=document.createElement('div');iwrap.className='img-wrap';const img=document.createElement('img');img.src=thumbSrc;img.loading='lazy';img.alt='';img.style.opacity='0';img.style.transition='opacity 0.3s';bindImgEvents(img);iwrap.appendChild(img);iwrap.appendChild(imgSkeletonFrag());thumb.appendChild(iwrap);const tcount=document.createElement('div');tcount.className='thumb-count';tcount.style.display='none';tcount.textContent=imgCount+'张';thumb.appendChild(tcount);}else{thumb.innerHTML=`
                 <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:28px;">🖼️</div>
             `;}
-const _cid=card.dataset.cardId;const _faved=_cid&&favorites.has(_cid);const favOverlay=document.createElement('div');favOverlay.className='card-thumb-fav'+(_faved?'':' hidden');favOverlay.textContent='\u{1F496}';favOverlay.title='已收藏';favOverlay.addEventListener('click',function(e){e.stopPropagation();const realBtn=card.querySelector('.fav-btn');if(realBtn)toggleFavorite(realBtn);});thumb.appendChild(favOverlay);
-// 先插 preview 再插 thumb，insertBefore 同一参照点时后插的排在前面
+const _cid=card.dataset.cardId;const _faved=_cid&&favorites.has(_cid);const favOverlay=document.createElement('div');favOverlay.className='card-thumb-fav'+(_faved?'':' hidden');favOverlay.textContent='\u{1F496}';favOverlay.title='已收藏';favOverlay.addEventListener('click',function(e){e.stopPropagation();const realBtn=card.querySelector('.fav-btn');if(realBtn)toggleFavorite(realBtn);});thumb.appendChild(favOverlay);card.insertBefore(thumb,insertRef);}
 if(!card.querySelector('.card-preview')){const preview=document.createElement('div');preview.className='card-preview';preview.innerHTML=`
             <div class="card-preview-top">
                 <div class="card-preview-title">${title}</div>
@@ -1707,8 +1706,7 @@ if(!card.querySelector('.card-preview')){const preview=document.createElement('d
                 <div class="card-preview-desc">${descText}</div>
                 <div class="card-expand-hint">点击查看 ▸</div>
             </div>
-        `;card.insertBefore(preview,insertRef);}
-card.insertBefore(thumb,insertRef);}
+        `;card.insertBefore(preview,insertRef);}}
 function toggleCardExpand(card){const isExpanded=card.classList.contains('card-expanded');document.querySelectorAll('.card.card-expanded').forEach(c=>{if(c!==card){c.classList.remove('card-expanded');}});if(isExpanded){card.classList.remove('card-expanded');setTimeout(()=>{const cardTop=card.offsetTop;const mainScroll=document.getElementById('mainScroll');if(mainScroll){mainScroll.scrollTo({top:cardTop-70,behavior:'smooth'});}},50);}else{card.classList.add('card-expanded');const sliderBox=card.querySelector('.slider-box');if(sliderBox){initSliderTrack(sliderBox);requestAnimationFrame(()=>requestAnimationFrame(()=>{updateSliderTrack(sliderBox);}));}
 preloadSliderImgs(card);setTimeout(()=>{const cardTop=card.offsetTop;const mainScroll=document.getElementById('mainScroll');if(mainScroll){mainScroll.scrollTo({top:cardTop-70,behavior:'smooth'});}},50);}}
 function toggleExpand(btn){let element=btn;let wrap=null;while(element&&element!==document.body){if(element.classList&&element.classList.contains('link-wrap')){wrap=element;break;}
