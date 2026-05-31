@@ -1184,11 +1184,16 @@ if(_adminUILoaded){showAdminUI();return;}
 showToast('⏳ 正在加载管理界面...');
 fetch(WORKER_BASE+'/api/admin/ui',{method:'POST',headers:{'Authorization':'Bearer '+token}}).then(r=>r.json()).then(data=>{
 if(!data.success){showToast('❌ '+(data.error||'加载失败'));return;}
+try{
 const style=document.createElement('style');style.id='admin-ui-style';style.textContent=data.data.css;document.head.appendChild(style);
 const container=document.getElementById('adminUIContainer');container.innerHTML=data.data.html;
-const fn=new Function(data.data.js);fn();
-_adminUILoaded=true;showAdminUI();
-}).catch(e=>{showToast('❌ 管理界面加载失败: '+e.message);});}
+_adminUILoaded=true;
+setTimeout(function(){
+try{new Function(data.data.js)();}catch(e2){console.error('Admin JS error:',e2);}
+showAdminUI();
+},100);
+}catch(e1){showToast('❌ 界面注入失败: '+e1.message);}
+}).catch(e=>{showToast('❌ 网络错误，请检查连接');});}
 function showAdminUI(){
 isEditMode=true;document.body.classList.add("admin-mode");
 const container=document.getElementById('adminUIContainer');if(container)container.style.display='block';
