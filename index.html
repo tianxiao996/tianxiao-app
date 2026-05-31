@@ -725,6 +725,10 @@ button:active,.link-jump-btn:active,.gate-btn:active{
 /* 夜间模式评分颜色 */
 [data-theme="dark"] .score-stats-big{color:#fff!important}
 [data-theme="dark"] .score-stat-stars{color:#f5a623!important}
+.admin-mode .slider-box{overflow:visible!important}
+.admin-mode .edit-img-btn,.admin-mode .img-add-btn,.admin-mode .img-del-btn,.admin-mode .slide-btn{z-index:20!important;pointer-events:auto!important}
+.admin-mode .edit-img-btn:hover,.admin-mode .img-add-btn:hover,.admin-mode .img-del-btn:hover{filter:brightness(1.15)}
+.admin-mode .img-add-btn,.admin-mode .img-del-btn{position:absolute!important;bottom:10px!important}
 </style></head>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script>function __safeFixDeleteImage(card){if(!card||!Array.isArray(card.images))return;let currentIndex=Number(card.currentIndex||0);if(card.images.length===0){card.currentIndex=0;if(typeof updateBackground==='function')updateBackground(null);return;}
