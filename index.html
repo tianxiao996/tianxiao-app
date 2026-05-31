@@ -1586,12 +1586,12 @@ function addCard(){const div=document.createElement("div");div.className="card";
         <div class="pin-btn" onclick="togglePin(this)">📌</div>
         <div class="del-btn" onclick="deleteCard(this)">×</div>
         <div class="slider-box">
-            <button class="edit-img-btn" onclick="event.stopPropagation();editCurrentImg(this)">🔗 更换图片</button>
-            <button class="slide-btn prev" onclick="event.stopPropagation();changeSlide(this, -1)">‹</button>
+            <button class="edit-img-btn" onclick="editCurrentImg(this)">🔗 更换图片</button>
+            <button class="slide-btn prev" onclick="changeSlide(this, -1)">‹</button>
             <img class="active" loading="lazy" src="https://via.placeholder.com">
             <img loading="lazy" src="https://via.placeholder.com">
             <img loading="lazy" src="https://via.placeholder.com">
-            <button class="slide-btn next" onclick="event.stopPropagation();changeSlide(this, 1)">›</button>
+            <button class="slide-btn next" onclick="changeSlide(this, 1)">›</button>
             <div class="img-index">1 / 3</div>
             <div class="fav-btn" onclick="toggleFavorite(this)">🤍</div>
             <div class="fav-btn" onclick="toggleFavorite(this)">🤍</div>
@@ -1639,8 +1639,8 @@ if(!box.querySelector('.slide-btn.prev')){const sb=document.createElement('butto
 if(!box.querySelector('.slide-btn.next')){const nb=document.createElement('button');nb.className='slide-btn next';nb.textContent='›';nb.onclick=function(e){e.stopPropagation();changeSlide(this,1);};box.appendChild(nb);}
 if(!box.querySelector('.img-add-btn')){const ab=document.createElement('button');ab.className='img-add-btn';ab.textContent='➕ 加图';ab.onclick=function(e){e.stopPropagation();addImgSlot(this);};box.appendChild(ab);}
 if(!box.querySelector('.img-del-btn')){const db=document.createElement('button');db.className='img-del-btn';db.textContent='🗑️ 删图';db.onclick=function(e){e.stopPropagation();delImgSlot(this);};box.appendChild(db);}
-});}
-function initCompactCards(){if(isEditMode&&!adminAuditMode)return;document.querySelectorAll('.card.active-render').forEach(card=>{if(!card.querySelector('.card-thumb')){generateCompactCardHTML(card);}});const box=document.getElementById('box');if(!box._compactClickBound){box._compactClickBound=true;box.addEventListener('click',function(e){try{const card=e.target.closest('.card');if(!card)return;if(isEditMode&&!adminAuditMode)return;if(e.target.closest('.del-btn, .pin-btn, .fav-btn, .slide-btn, .edit-img-btn, .img-add-btn, .img-del-btn, .link-jump-btn, .direct-dl-btn, .expand-btn, .desc-expand-btn')){return;}
+});}}
+function initCompactCards(){if(isEditMode&&!adminAuditMode)return;document.querySelectorAll('.card.active-render').forEach(card=>{if(!card.querySelector('.card-thumb')){generateCompactCardHTML(card);}});const box=document.getElementById('box');if(!box._compactClickBound){box._compactClickBound=true;box.addEventListener('click',function(e){try{const card=e.target.closest('.card');if(!card)return;if(isEditMode&&!adminAuditMode)return;if(e.target.closest('.del-btn, .pin-btn, .fav-btn, .slide-btn, .edit-img-btn, .link-jump-btn, .direct-dl-btn, .expand-btn, .desc-expand-btn')){return;}
 if(e.target.tagName==='IMG'&&e.target.closest('.slider-box')){return;}
 openCardDetail(card);}catch(err){console.error('卡片点击处理错误:',err);}});}}
 function generateCompactCardHTML(card){const sliderBox=card.querySelector('.slider-box');const infoBox=card.querySelector('.info-box');if(!sliderBox||!infoBox)return;const imgs=sliderBox.querySelectorAll('img');const imgCount=imgs.length;const nameEl=infoBox.querySelector('.g-name');const tagsEl=infoBox.querySelector('.g-tags');const descEl=infoBox.querySelector('.desc-text');const title=(nameEl?.textContent||'').trim()||'未命名';const tags=(tagsEl?.textContent||'').trim();const descText=(descEl?.textContent||'').trim();let thumbSrc='';for(const img of imgs){const src=img.getAttribute('src')||'';if(src&&!src.includes('placeholder')&&!src.includes('via.placeholder')){thumbSrc=src;break;}}
