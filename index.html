@@ -1711,7 +1711,7 @@ generateCompactCardHTML(card);
 if(e.target.tagName==='IMG'&&e.target.closest('.slider-box')){return;}
 openCardDetail(card);}catch(err){console.error('卡片点击处理错误:',err);}});}}
 function generateCompactCardHTML(card){const sliderBox=card.querySelector('.slider-box');const infoBox=card.querySelector('.info-box');if(!sliderBox||!infoBox)return;
-const insertRef=sliderBox.closest('.slider-box-btn-wrap')||sliderBox;const imgs=sliderBox.querySelectorAll('img');const nameEl=infoBox.querySelector('.g-name');const tagsEl=infoBox.querySelector('.g-tags');const descEl=infoBox.querySelector('.desc-text');
+const insertRef=sliderBox.closest('.slider-box-btn-wrap')||sliderBox;const imgs=sliderBox.querySelectorAll('img');const imgCount=imgs.length;const nameEl=infoBox.querySelector('.g-name');const tagsEl=infoBox.querySelector('.g-tags');const descEl=infoBox.querySelector('.desc-text');
 // === 关键修复1：强制从 .card-preview 恢复丢失的原始数据 ===
 if(nameEl||tagsEl||descEl){const existingPreview=card.querySelector('.card-preview');if(existingPreview){const pTitle=existingPreview.querySelector('.card-preview-title');const pTags=existingPreview.querySelector('.card-preview-tags');const pDesc=existingPreview.querySelector('.card-preview-desc');
 // 恢复标题
