@@ -1689,12 +1689,25 @@ function openImagePreview(img){const modal=document.getElementById('imagePreview
 function closeImagePreview(){const modal=document.getElementById('imagePreviewModal');modal.style.display='none';document.body.style.overflow='';}
 function initImagePreview(){document.querySelectorAll('.slider-box img').forEach(img=>{img.onclick=null;img.addEventListener('click',function(e){if(!isEditMode){e.stopPropagation();openImagePreview(this);}});});if(isEditMode){document.querySelectorAll('.slider-box').forEach(box=>{if(!box.querySelector('.img-add-btn')){const addBtn=document.createElement('button');addBtn.className='img-add-btn';addBtn.textContent='➕ 加图';addBtn.onclick=function(){addImgSlot(this);};box.appendChild(addBtn);}
 if(!box.querySelector('.img-del-btn')){const delBtn=document.createElement('button');delBtn.className='img-del-btn';delBtn.textContent='🗑️ 删图';delBtn.onclick=function(){delImgSlot(this);};box.appendChild(delBtn);}});}}
-function initCompactCards(){if(isEditMode&&!adminAuditMode)return;document.querySelectorAll('.card.active-render').forEach(card=>{if(!card.querySelector('.card-thumb')){generateCompactCardHTML(card);}});const box=document.getElementById('box');if(!box._compactClickBound){box._compactClickBound=true;box.addEventListener('click',function(e){try{const card=e.target.closest('.card');if(!card)return;if(isEditMode&&!adminAuditMode)return;if(e.target.closest('.del-btn, .pin-btn, .fav-btn, .slide-btn, .edit-img-btn, .link-jump-btn, .direct-dl-btn, .expand-btn, .desc-expand-btn')){return;}
+function initCompactCards(){if(isEditMode&&!adminAuditMode)return;document.querySelectorAll('.card.active-render').forEach(card=>{
+// === FIX: 不仅检查.card-thumb，还检查.card-preview内容是否有效 ===
+const hasThumb=!!card.querySelector('.card-thumb');
+const existingPreview=card.querySelector('.card-preview');
+const hasValidPreview=existingPreview&&existingPreview.querySelector('.card-preview-title')&&((existingPreview.querySelector('.card-preview-title').textContent||'').trim()).length>0&&((existingPreview.querySelector('.card-preview-title').textContent||'').trim())!=='未命名';
+if(!hasThumb||!hasValidPreview){
+if(existingPreview)existingPreview.remove();
+if(card.querySelector('.card-thumb'))card.querySelector('.card-thumb').remove();
+generateCompactCardHTML(card);
+}
+});const box=document.getElementById('box');if(!box._compactClickBound){box._compactClickBound=true;box.addEventListener('click',function(e){try{const card=e.target.closest('.card');if(!card)return;if(isEditMode&&!adminAuditMode)return;if(e.target.closest('.del-btn, .pin-btn, .fav-btn, .slide-btn, .edit-img-btn, .link-jump-btn, .direct-dl-btn, .expand-btn, .desc-expand-btn')){return;}
 if(e.target.tagName==='IMG'&&e.target.closest('.slider-box')){return;}
 openCardDetail(card);}catch(err){console.error('卡片点击处理错误:',err);}});}}
 function generateCompactCardHTML(card){const sliderBox=card.querySelector('.slider-box');const infoBox=card.querySelector('.info-box');if(!sliderBox||!infoBox)return;
 // sliderBox 可能在 slider-box-btn-wrap 里，找到 card 的直属子节点作为插入参照
-const insertRef=sliderBox.closest('.slider-box-btn-wrap')||sliderBox;const imgs=sliderBox.querySelectorAll('img');const imgCount=imgs.length;const nameEl=infoBox.querySelector('.g-name');const tagsEl=infoBox.querySelector('.g-tags');const descEl=infoBox.querySelector('.desc-text');const title=(nameEl?.textContent||'').trim()||'未命名';const tags=(tagsEl?.textContent||'').trim();const descText=(descEl?.textContent||'').trim();let thumbSrc='';for(const img of imgs){const src=img.getAttribute('src')||'';if(src&&!src.includes('placeholder')&&!src.includes('via.placeholder')){thumbSrc=src;break;}}
+const insertRef=sliderBox.closest('.slider-box-btn-wrap')||sliderBox;const imgs=sliderBox.querySelectorAll('img');const imgCount=imgs.length;const nameEl=infoBox.querySelector('.g-name');const tagsEl=infoBox.querySelector('.g-tags');const descEl=infoBox.querySelector('.desc-text');
+// === FIX: 生成.card-preview前，如果原始数据为空，从现有.card-preview恢复 ===
+if(nameEl&&tagsEl&&descEl){const n=(nameEl.textContent||'').trim();const t=(tagsEl.textContent||'').trim().replace(/^标签[：:]\s*/,'');const d=(descEl.textContent||'').trim();if(!n&&!t&&!d){const ep=card.querySelector('.card-preview');if(ep){const ept=ep.querySelector('.card-preview-title');const epta=ep.querySelector('.card-preview-tags');const epd=ep.querySelector('.card-preview-desc');if(ept){const bt=(ept.textContent||'').trim();if(bt)nameEl.textContent=bt;}if(epta){const ta=Array.from(epta.querySelectorAll('.pt')).map(pt=>pt.textContent).filter(Boolean);if(ta.length)tagsEl.textContent='标签: '+ta.join(' ');}if(epd){const bd=(epd.textContent||'').trim();if(bd)descEl.textContent=bd;}}}}
+const title=(nameEl?.textContent||'').trim()||'未命名';const tags=(tagsEl?.textContent||'').trim();const descText=(descEl?.textContent||'').trim();let thumbSrc='';for(const img of imgs){const src=img.getAttribute('src')||'';if(src&&!src.includes('placeholder')&&!src.includes('via.placeholder')){thumbSrc=src;break;}}
 if(!thumbSrc&&imgs[0])thumbSrc=imgs[0].getAttribute('src')||'';if(!card.querySelector('.card-close-hint')){const closeHint=document.createElement('div');closeHint.className='card-close-hint';closeHint.textContent='点击任意处收起 ▴';card.appendChild(closeHint);}
 if(!card.querySelector('.card-thumb')){const thumb=document.createElement('div');thumb.className='card-thumb';if(thumbSrc){const iwrap=document.createElement('div');iwrap.className='img-wrap';const img=document.createElement('img');img.src=thumbSrc;img.loading='lazy';img.alt='';img.style.opacity='0';img.style.transition='opacity 0.3s';bindImgEvents(img);iwrap.appendChild(img);iwrap.appendChild(imgSkeletonFrag());thumb.appendChild(iwrap);const tcount=document.createElement('div');tcount.className='thumb-count';tcount.style.display='none';tcount.textContent=imgCount+'张';thumb.appendChild(tcount);}else{thumb.innerHTML=`
                 <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:28px;">🖼️</div>
@@ -1730,14 +1743,11 @@ cleanNode(el);});}
 function normalizeDescNewlines(){document.querySelectorAll('.desc-text').forEach(el=>{if(el.children.length===0){const text=el.textContent||'';if(text.includes('\n')){el.innerHTML=text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').split('\n').join('<br>');}}else{const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false);const nodesToFix=[];let node;while(node=walker.nextNode()){if(node.textContent.includes('\n')){nodesToFix.push(node);}}
 nodesToFix.forEach(node=>{const parts=node.textContent.split('\n');const fragment=document.createDocumentFragment();parts.forEach((part,i)=>{if(part)fragment.appendChild(document.createTextNode(part));if(i<parts.length-1)fragment.appendChild(document.createElement('br'));});node.parentNode.replaceChild(fragment,node);});}});}
 function stripCompactCardElements(){document.querySelectorAll('.card').forEach(card=>{const thumb=card.querySelector('.card-thumb');const preview=card.querySelector('.card-preview');const hint=card.querySelector('.card-close-hint');
-// === 关键修复：删除 .card-preview 前，先从其中恢复数据到原始节点 ===
+// === FIX: 删除.card-preview前，先从其中恢复数据到原始节点 ===
 if(preview){const infoBox=card.querySelector('.info-box');if(infoBox){const pTitle=preview.querySelector('.card-preview-title');const pTags=preview.querySelector('.card-preview-tags');const pDesc=preview.querySelector('.card-preview-desc');const nameEl=infoBox.querySelector('.g-name');const tagsEl=infoBox.querySelector('.g-tags');const descEl=infoBox.querySelector('.desc-text');
-// 恢复标题：如果 .g-name 为空，从 .card-preview-title 恢复
-if(nameEl&&pTitle){const orig=(nameEl.textContent||'').trim();const bak=(pTitle.textContent||'').trim();if(!orig&&bak){nameEl.textContent=bak;}}
-// 恢复标签：如果 .g-tags 为空，从 .card-preview-tags 恢复
-if(tagsEl&&pTags){const orig=(tagsEl.textContent||'').trim().replace(/^标签[：:]\s*/,'');const tagTexts=Array.from(pTags.querySelectorAll('.pt')).map(pt=>pt.textContent).filter(Boolean).join(' ');if(!orig&&tagTexts){tagsEl.textContent='标签: '+tagTexts;}}
-// 恢复简介：如果 .desc-text 为空，从 .card-preview-desc 恢复
-if(descEl&&pDesc){const orig=(descEl.textContent||'').trim();const bak=(pDesc.textContent||'').trim();if(!orig&&bak){descEl.textContent=bak;}}}}
+if(nameEl&&pTitle){const o=(nameEl.textContent||'').trim();const b=(pTitle.textContent||'').trim();if(!o&&b)nameEl.textContent=b;}
+if(tagsEl&&pTags){const o=(tagsEl.textContent||'').trim().replace(/^标签[：:]\s*/,'');const t=Array.from(pTags.querySelectorAll('.pt')).map(pt=>pt.textContent).filter(Boolean).join(' ');if(!o&&t)tagsEl.textContent='标签: '+t;}
+if(descEl&&pDesc){const o=(descEl.textContent||'').trim();const b=(pDesc.textContent||'').trim();if(!o&&b)descEl.textContent=b;}}}
 if(thumb)thumb.remove();if(preview)preview.remove();if(hint)hint.remove();});}
 function resetAllCardStates(){document.querySelectorAll(".card").forEach(card=>{card.classList.remove("card-expanded");const descWrap=card.querySelector(".desc-wrap");if(descWrap){descWrap.classList.remove("expanded");const btn=descWrap.querySelector(".desc-expand-btn");if(btn)btn.textContent="展开简介 ▾";}
 const linkWrap=card.querySelector(".link-wrap");if(linkWrap){linkWrap.classList.remove("expanded");const btn=linkWrap.querySelector(".expand-btn");if(btn)btn.textContent="展开 ▾";}
