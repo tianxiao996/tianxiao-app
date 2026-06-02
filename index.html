@@ -1343,7 +1343,7 @@ function filterTab(cat,el){document.querySelectorAll("#nav li").forEach(li=>li.c
 function openNoticePanel(){const panel=document.getElementById('noticePanelPage');const body=document.getElementById('noticeContentBody');const hint=document.getElementById('noticeEditHint');const saved=noticeText||localStorage.getItem(NOTICE_KEY)||'';body.innerHTML=saved.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
 const isDark=document.documentElement.getAttribute('data-theme')==='dark';
 if(isDark){panel.classList.add('night');panel.style.backgroundImage='linear-gradient(rgba(0,0,0,0.55),rgba(0,0,0,0.55)),url(\'images/夜间主页.gif\')';}else{panel.classList.remove('night');panel.style.backgroundImage='linear-gradient(rgba(0,0,0,0.25),rgba(0,0,0,0.25)),url(\'images/日间主页.jpg\')';}
-panel.style.backgroundSize='cover';panel.style.backgroundPosition='center center';
+panel.style.backgroundSize='cover';panel.style.backgroundPosition='center top';
 if(isEditMode){body.contentEditable='true';hint.textContent='✏️ 直接编辑上方内容，完成后点击保存';setTimeout(()=>{body.focus();},100);}else{body.contentEditable='false';hint.textContent='';}
 panel.style.display='flex';requestAnimationFrame(()=>{const hdr=panel.querySelector('.fullpage-header');const body=panel.querySelector('.fullpage-body');if(hdr&&body)body.style.top=hdr.offsetHeight+'px';});}
 function closeNoticePanel(){document.getElementById('noticePanelPage').style.display='none';const body=document.getElementById('noticeContentBody');body.contentEditable='false';}
