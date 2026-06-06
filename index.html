@@ -765,7 +765,7 @@ card.currentIndex=currentIndex;}</script>
 </div>
 <!-- 固定底部：输入框+按钮，键盘弹出时贴在键盘上方 -->
 <div class="gate-bottom">
-<input type="password" id="accessPass" class="gate-input" placeholder="输入天笑的解压暗号" style="margin-bottom:10px;">
+<input type="password" id="accessPass" maxlength="50" class="gate-input" placeholder="输入天笑的解压暗号" style="margin-bottom:10px;">
 <button class="gate-btn" onclick="verifyAccess()">解锁基地</button>
 </div>
 </div>
@@ -812,7 +812,7 @@ card.currentIndex=currentIndex;}</script>
 <div class="site-title">天笑の窝</div>
 </div>
 <div class="search-row" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:10px 14px 0 14px;">
-<input type="text" id="search" placeholder="🔍 搜搜看..." oninput="refreshUI(1); checkSearchEgg(this.value)" style="margin-bottom:0;flex:1;">
+<input type="text" id="search" maxlength="50" placeholder="🔍 搜搜看..." oninput="refreshUI(1); checkSearchEgg(this.value)" style="margin-bottom:0;flex:1;">
 <button id="filterBtn" onclick="openFilterPanel()" style="flex-shrink:0;padding:9px 14px;border:1px solid rgba(255,255,255,0.5);border-radius:10px;background:rgba(255,255,255,0.35);color:#333;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;touch-action:manipulation;transition:all 0.2s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);" title="设置屏蔽标签">🚫 过滤</button>
 </div>
 <div id="filterTagsBar" style="display:none;flex-wrap:wrap;gap:6px;padding:0 14px 8px 14px;"></div>
@@ -1154,7 +1154,7 @@ onkeydown="if(event.key==='Enter')addBlockedTag()">
 <div id="loginModal" class="modal-overlay" style="display: none;">
 <div class="modal-box">
 <div class="modal-title">🔑 验证管理身份：</div>
-<input type="password" id="passInput" class="modal-input" placeholder="天笑的管理暗号">
+<input type="password" id="passInput" maxlength="50" class="modal-input" placeholder="天笑的管理暗号">
 <div class="modal-btns">
 <button class="modal-btn btn-cancel" onclick="closeLogin()">取消</button>
 <button class="modal-btn btn-confirm" onclick="checkPass()">确定</button>
@@ -2680,7 +2680,7 @@ overscroll-behavior-y:contain;position:relative;z-index:1;"></div>
 </div>
 <div class="user-field">
 <label>密码</label>
-<input type="password" id="loginPassword" placeholder="请输入密码">
+<input type="password" id="loginPassword" maxlength="50" placeholder="请输入密码">
 </div>
 
 <button class="user-submit-btn" onclick="doLogin()">登录</button>
@@ -2700,11 +2700,11 @@ overscroll-behavior-y:contain;position:relative;z-index:1;"></div>
 </div>
 <div class="user-field">
 <label>密码（8位以上含字母）</label>
-<input type="password" id="regPassword" placeholder="请输入密码">
+<input type="password" id="regPassword" maxlength="50" placeholder="请输入密码">
 </div>
 <div class="user-field">
 <label>确认密码</label>
-<input type="password" id="regPassword2" placeholder="再次输入密码">
+<input type="password" id="regPassword2" maxlength="50" placeholder="再次输入密码">
 </div>
 <!-- ⭐ 超级邀请码专属问题（默认隐藏） -->
 <div class="user-field" id="regSuperQuestionBox" style="display:none;">
