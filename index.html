@@ -920,7 +920,7 @@ card.currentIndex=currentIndex;}</script>
 <button onclick="openProxyManagePanel()" style="background:#795548!important;">📋 管理代理链接</button>
 <button id="adminAuditBtn" onclick="toggleAdminAuditMode()" style="background:#7d7d7d!important;">💬 审核评论</button>
 <button onclick="openVerifyQuestionsPanel()" style="background:#009688!important;">📝 导入验证问题</button>
-<button onclick="fixLinkFormat()" style="background:#ff9800!important">🔧 修复格式</button>
+<button onclick="fixLinkFormatV2()" style="background:#ff9800!important">🔧 修复格式</button>
 <button class="btn-exit" onclick="exitAdmin()">🚪 退出</button></div>
 </div>
 <!-- 🏷️ 分类管理面板 -->
@@ -3685,6 +3685,59 @@ document.getElementById('userModal').addEventListener('click',function(e){if(e.t
   });
   document.addEventListener('click', function(){ setTimeout(addBlots, 100); }, true);
 })();
+function fixLinkFormatV2(){if(!confirm('全面修复所有卡片链接格式。确定继续？'))return;
+var DRIVES=['百度网盘','夸克网盘','蓝奏云','阿里云盘','UC网盘','中国移动云盘','MEGA','Google Drive','OneDrive','Dropbox','GitHub','catbox','123云盘','迅雷云盘','天翼云盘','和彩云','微云','iCloud','MediaFire','pixeldrain','Buzzheavier'];
+function isDrive(w){for(var i=0;i<DRIVES.length;i++){if(w===DRIVES[i]||w===DRIVES[i].replace(/\s/g,''))return true;}return false;}
+function isPasscode(s){return /^[A-Za-z0-9]{4,8}$/.test(s)&&!/^[A-Z]{4,}$/.test(s);}
+function fixBlock(block){
+var trimmed=block.replace(/^\|/,'');
+var parts=trimmed.split('|');
+for(var i=0;i<parts.length;i++){parts[i]=parts[i].replace(/^(提取码|解压码|密码)\s*[：:]\s*/i,'');}
+if(parts.length===1){
+if(isPasscode(parts[0]))return '||'+parts[0]+'|';
+return parts[0]+'|||';
+}
+if(parts.length===2){
+if(isPasscode(parts[1]))return parts[0]+'||'+parts[1]+'|';
+return trimmed+'||';
+}
+if(parts.length===3){
+if(parts[1]==='')return trimmed+'|';
+if(isPasscode(parts[1])&&!isDrive(parts[0]))return parts[0]+'||'+parts[1]+'|'+parts[2];
+if(parts[2]==='')return parts[0]+'||'+parts[1]+'|';
+return trimmed+'|';
+}
+return trimmed;
+}
+function fixLinkText(text){
+if(!text||text==='（链接已安全存储）')return text;
+if(text.indexOf('\n')!==-1&&text.indexOf(';;;')===-1){
+var lines=text.split(/\r?\n/).map(function(l){return l.trim();}).filter(function(l){return l!==''&&l!=='||'&&l!=='|';});
+var labels=[],passcodes=[];
+lines.forEach(function(line){
+if(/提取码|密码|解压码/.test(line)){var pc=line.replace(/^(提取码|解压码|密码)\s*[：:]\s*/i,'');if(pc)passcodes.push(pc);}
+else{var label=line.replace(/^\|/,'');if(label&&!/^链接[：:]?$/.test(label))labels.push(label);}
+});
+if(passcodes.length>0){
+var blocks=[],max=Math.max(labels.length,passcodes.length);
+for(var i=0;i<max;i++){blocks.push(fixBlock((labels[i]||'')+'||'+(passcodes[i]||'')+'|'));}
+return blocks.join(';;;');
+}
+if(labels.length>0){return labels.map(function(l){return fixBlock(l+'|||');}).join(';;;');}
+}
+if(text.indexOf(';;;')!==-1){return text.split(';;;').map(fixBlock).filter(function(b){return b!=='|'&&b!=='||'&&b!=='|||'&&b!=='';}).join(';;;');}
+if(text.indexOf('|||')!==-1){return text.split('|||').map(fixBlock).filter(function(b){return b!=='|'&&b!=='||'&&b!=='|||'&&b!=='';}).join(';;;');}
+return fixBlock(text);
+}
+var fixed=0;
+document.querySelectorAll('.card').forEach(function(card){
+var lt=card.querySelector('.link-text');if(!lt)return;
+var text=(lt.textContent||'').trim();if(!text)return;
+var result=fixLinkText(text);
+if(result!==text){lt.textContent=result;fixed++;}
+});
+if(fixed>0){showToast('✅ 已修复 '+fixed+' 张卡片。请逐张检查，确认无误后保存云端！');autoSave();}
+else{showToast('没有需要修复的卡片');}}
 </script>
 
 </body></html>
