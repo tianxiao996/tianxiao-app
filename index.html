@@ -77,11 +77,16 @@ return false;}},true);document.addEventListener('contextmenu',function(e){if(win
   .fav-panel-grid{max-width:900px !important;}
   .notice-content-wrap{max-width:900px !important;}
 
+  /* PC端卡片放大（非管理模式） */
   .card:not(.card-expanded){height:160px !important;}
   .card-thumb{width:210px !important;height:160px !important;}
   .card-preview-title{font-size:16px !important;}
   .card-preview-desc{font-size:13px !important;}
   .card-preview-tags .pt{font-size:12px !important;padding:2px 9px !important;}
+  /* 管理模式覆盖：恢复自动高度（必须放PC规则之后） */
+  body.admin-mode .card:not(.card-expanded){height:auto !important;}
+  body.admin-mode .card .card-thumb{display:none !important;}
+  body.admin-mode .card .card-preview{display:none !important;}
 
   /* PC端背景图 */
   #detailBgLayer{background-image:url('images/电脑日间下载页.jpg') !important;}
