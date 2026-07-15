@@ -1733,7 +1733,11 @@ function updateSliderTrack(box){const track=box.querySelector('.slider-track');i
 function changeSlide(btn,dir){const box=btn.parentElement;const isNew=!box.querySelector('.slider-track');if(isNew)initSliderTrack(box);const track=box.querySelector('.slider-track');const imgs=track?track.querySelectorAll('img'):box.querySelectorAll('img');let idx=parseInt(box.dataset.slideIdx||'0');idx=(idx+dir+imgs.length)%imgs.length;box.dataset.slideIdx=idx;if(isNew){requestAnimationFrame(()=>requestAnimationFrame(()=>updateSliderTrack(box)));}else{updateSliderTrack(box);}}
 function editCurrentImg(btn){const IMGBED='https://pvz.2865036763.workers.dev';const box=btn.parentElement;const activeImg=box.querySelector('img.active');const currentSrc=(activeImg&&activeImg.src&&!activeImg.src.includes('via.placeholder'))?activeImg.src:'';const overlay=document.createElement('div');overlay.className='modal-overlay';overlay.style.cssText='display:flex; z-index:3000;';const modalBox=document.createElement('div');modalBox.className='modal-box';modalBox.style.cssText='width:88%; max-width:440px;';modalBox.onclick=e=>e.stopPropagation();const title=document.createElement('div');title.className='modal-title';title.textContent='🖼️ 更换图片';modalBox.appendChild(title);
 // --- 上传区 ---
-const uploadZone=document.createElement('div');uploadZone.style.cssText='border:2px dashed #d0d0d0; border-radius:8px; padding:14px; text-align:center; margin-bottom:12px; cursor:pointer; transition:border-color .2s; background:#fafafa; color:#888; font-size:13px;';uploadZone.innerHTML='📁 点击或拖拽图片到此上传<br><small style="color:#aaa">自动上传到图床并填入链接</small>';
+const uploadZone=document.createElement('div');uploadZone.style.cssText='border:2px dashed #d0d0d0; border-radius:8px; padding:14px; text-align:center; margin-bottom:10px; cursor:pointer; transition:border-color .2s; background:#fafafa; color:#888; font-size:13px;';uploadZone.innerHTML='📁 点击或拖拽图片到此上传<br><small style="color:#aaa">自动上传到图床并填入链接</small>';
+// 文件夹选择
+const folderRow=document.createElement('div');folderRow.style.cssText='display:flex; gap:8px; align-items:center; margin-bottom:12px;';const folderLabel=document.createElement('span');folderLabel.textContent='📂';folderLabel.style.cssText='font-size:14px;flex-shrink:0';const folderSelect=document.createElement('select');folderSelect.style.cssText='flex:1; padding:6px 8px; border:1px solid #d0d0d0; border-radius:6px; font-size:12px; outline:none; background:#fff; color:#666';folderSelect.innerHTML='<option value="">默认</option><option value="" disabled>加载中...</option>';folderRow.appendChild(folderLabel);folderRow.appendChild(folderSelect);modalBox.appendChild(folderRow);
+// 异步加载文件夹列表
+(async()=>{try{let token=sessionStorage.getItem('imagebed_token');if(token){const res=await fetch(`${IMGBED}/folders?password=${encodeURIComponent(token)}`);const data=await res.json();if(data.success&&data.folders){folderSelect.innerHTML='<option value="">默认</option>';data.folders.forEach(f=>{if(f==='默认')return;const opt=document.createElement('option');opt.value=f;opt.textContent=f;folderSelect.appendChild(opt)});}else{folderSelect.innerHTML='<option value="">默认</option>'}}}catch(e){folderSelect.innerHTML='<option value="">默认</option>'}})();
 const fileInput=document.createElement('input');fileInput.type='file';fileInput.accept='image/*';fileInput.style.display='none';
 uploadZone.onclick=()=>fileInput.click();
 uploadZone.ondragover=e=>{e.preventDefault();uploadZone.style.borderColor='var(--primary)';uploadZone.style.background='#fff0f4'};
@@ -1747,7 +1751,7 @@ if(!token){token=prompt('请输入图床上传密码：');if(!token)return;sessi
 uploadZone.innerHTML='<span style="color:var(--primary)">⏳ 上传中...</span>';
 try{
 const fd=new FormData();fd.append('file',file);
-const res=await fetch(`${IMGBED}/upload?password=${encodeURIComponent(token)}`,{method:'POST',body:fd});
+const res=await fetch(`${IMGBED}/upload?password=${encodeURIComponent(token)}&folder=${encodeURIComponent(folderSelect.value)}`,{method:'POST',body:fd});
 const data=await res.json();
 if(data.success&&data.url){input.value=data.url;uploadZone.innerHTML='✅ <b style="color:#22c55e">上传成功！</b><br><small>链接已填入下方</small>';sessionStorage.setItem('imagebed_token',token)}
 else if(data.error==='Unauthorized'){sessionStorage.removeItem('imagebed_token');uploadZone.innerHTML='❌ 密码错误，点击重试';showToast('❌ 图床密码错误')}
