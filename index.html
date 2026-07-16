@@ -846,8 +846,30 @@ card.currentIndex=currentIndex;}</script>
 </div>
 <!-- 固定底部：输入框+按钮，键盘弹出时贴在键盘上方 -->
 <div class="gate-bottom">
-<input type="password" id="accessPass" maxlength="50" class="gate-input" placeholder="输入天笑的解压暗号" style="margin-bottom:10px;">
-<button class="gate-btn" onclick="verifyAccess()">解锁基地</button>
+<!-- 滑动解锁验证 -->
+<div id="sliderCaptcha" style="width:280px;margin:0 auto;"></div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/longbow.slidercaptcha@latest/dist/slidercaptcha.min.css">
+<script src="https://cdn.jsdelivr.net/npm/longbow.slidercaptcha@latest/dist/slidercaptcha.min.js"></script>
+<script>
+(function initSlider(){
+  if(typeof sliderCaptcha==='undefined'){setTimeout(initSlider,200);return}
+  var captcha=sliderCaptcha.create({
+    id:'sliderCaptcha',width:280,height:155,
+    sliderStyle:{borderRadius:'22px',backgroundColor:'#f5f5f5',border:'1px solid #e0e0e0'},
+    barStyle:{borderRadius:'22px',backgroundColor:'#FB7299'},
+    text:'→ 滑动解锁 ←',successText:'✅ 解锁成功',
+    onSuccess:function(){
+      setTimeout(function(){
+        sessionStorage.setItem('TX_GATE_PASSED','1');
+        document.getElementById("gateKeeper").style.display="none";
+        document.getElementById("contentBlocker").style.display="none";
+        sessionStorage.setItem('TX_SHOW_NOTICE','1');
+        if(!_cloudLoadDone){var overlay=document.getElementById('globalLoadingOverlay');if(overlay)overlay.classList.add('show');}
+      },300);
+    }
+  });
+})();
+</script>
 </div>
 </div>
 </div>
