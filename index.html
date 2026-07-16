@@ -1821,17 +1821,21 @@ async function batchUpload(images){
 if(!images.length)return;
 const adminTok=adminToken||sessionStorage.getItem('ADMIN_TOKEN');if(!adminTok){uploadZone.innerHTML='No admin';return}
 const fakeBtn={parentElement:box};const track=box.querySelector('.slider-track')||box;
-// 找现有空槽（占位图）
-const allImgs=Array.from(track.querySelectorAll('img'));
-const emptySlots=allImgs.filter(img=>img.src.includes('via.placeholder')||img.src.includes('111111/111111'));
-// 空槽不够就补
-while(emptySlots.length<images.length){addImgSlot(fakeBtn);const added=Array.from(track.querySelectorAll('img')).slice(-1)[0];emptySlots.push(added)}
-// 取前 N 个空槽
-const slots=emptySlots.slice(0,images.length);
-let ok=0;for(let i=0;i<images.length;i++){uploadZone.innerHTML='Upload '+(i+1)+'/'+images.length;
+// 确保足够槽位：先建后取
+const total=track.querySelectorAll('img').length;
+let need=images.length-total;while(need-->0){addImgSlot(fakeBtn)}
+// 重新取所有img（addImgSlot可能动了DOM）
+const fresh=track.querySelectorAll('img');
+// 取空槽：via.placeholder 或 1x1占位
+let emptyIdx=[];for(let i=0;i<fresh.length;i++){if(fresh[i].src.includes('via.placeholder')||fresh[i].src.includes('1x1/111111'))emptyIdx.push(i)}
+// 空槽不够再补
+while(emptyIdx.length<images.length){addImgSlot(fakeBtn);const fresher=track.querySelectorAll('img');emptyIdx.push(fresher.length-1)}
+// 填前N个空槽
+let ok=0;for(let i=0;i<images.length;i++){const idx=emptyIdx[i];const img=track.querySelectorAll('img')[idx];
+uploadZone.innerHTML='Upload '+(i+1)+'/'+images.length;
 try{const fd=new FormData();fd.append('file',images[i]);fd.append('folder',localStorage.getItem('imgbed_folder')||'');
 const res=await fetch(WORKER_BASE+'/api/admin/upload-image',{method:'POST',headers:{'Authorization':'Bearer '+adminTok},body:fd});
-const data=await res.json();if(data.success&&data.url){slots[i].src=data.url;slots[i].style.visibility='';slots[i].style.opacity='1';slots[i].classList.remove('img-error');delete slots[i].dataset.errorBound;ok++}}
+const data=await res.json();if(data.success&&data.url){img.src=data.url;img.style.visibility='';img.style.opacity='1';img.classList.remove('img-error');delete img.dataset.errorBound;ok++}}
 catch(e){}}
 uploadZone.innerHTML='OK '+ok+'/'+images.length;requestAnimationFrame(()=>requestAnimationFrame(()=>updateSliderTrack(box)));autoSave();}modalBox.appendChild(uploadZone);
 modalBox.appendChild(fileInput);
