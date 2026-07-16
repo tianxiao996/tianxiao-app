@@ -822,7 +822,11 @@ button:active,.link-jump-btn:active,.gate-btn:active{
 [data-theme="dark"] .score-stats-big{color:#fff!important}
 [data-theme="dark"] .score-stat-stars{color:#f5a623!important}
 </style></head>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer onerror="window._tsLoadFailed=true"></script>
+<script>
+// Turnstile 加载超时降级（国内被墙）
+setTimeout(function(){if(typeof turnstile==='undefined'){window._tsLoadFailed=true;var el=document.getElementById('turnstileWidget');if(el&&!el.innerHTML.trim())el.innerHTML='<div style="text-align:center;padding:20px;color:#888;font-size:13px">⚠️ 验证组件加载失败<br><small>请检查网络或使用代理</small><br><button onclick="location.reload()" style="margin-top:10px;padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🔄 刷新重试</button></div>';}},10000);
+</script>
 <script>function __safeFixDeleteImage(card){if(!card||!Array.isArray(card.images))return;let currentIndex=Number(card.currentIndex||0);if(card.images.length===0){card.currentIndex=0;if(typeof updateBackground==='function')updateBackground(null);return;}
 if(currentIndex>=card.images.length){currentIndex=Math.max(0,card.images.length-1);}
 card.currentIndex=currentIndex;}</script>
