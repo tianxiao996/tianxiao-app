@@ -1577,7 +1577,9 @@ async function enterAdmin(){const token=adminToken||sessionStorage.getItem('ADMI
 // 检查编辑锁
 let lockId=sessionStorage.getItem('ADMIN_LOCK_ID');
 try{const lockRes=await fetch(WORKER_BASE+'/api/admin/lock',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({user:currentUser?.username||'管理员',lid:lockId})});
-if(lockRes.status===409){const d=await lockRes.json();alert('⚠️ '+d.user+' 正在使用管理员模式！\n请稍后再试。');return}
+if(lockRes.status===409){const d=await lockRes.json();if(!confirm('⚠️ '+d.user+' 正在使用管理员模式！\n\n是否强制接管？（若非本人/误操作请点取消）'))return;
+const forceRes=await fetch(WORKER_BASE+'/api/admin/lock/force',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({user:currentUser?.username||'管理员'})});
+const forceData=await forceRes.json();if(forceData.lid){lockId=forceData.lid;sessionStorage.setItem('ADMIN_LOCK_ID',lockId)}}
 const lockData=await lockRes.json();if(lockData.lid){lockId=lockData.lid;sessionStorage.setItem('ADMIN_LOCK_ID',lockId)}}
 catch(e){alert('⚠️ 编辑锁服务异常，请刷新重试');return}
 // 心跳：每45秒续锁
