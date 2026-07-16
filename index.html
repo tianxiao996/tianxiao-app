@@ -1574,12 +1574,10 @@ function toggleAdminAuditMode(){adminAuditMode=!adminAuditMode;const btn=documen
 if(!card.querySelector('.pin-btn')){const pin=document.createElement('div');pin.className='pin-btn';pin.innerHTML='📌';pin.onclick=function(){togglePin(this);};card.prepend(pin);}
 const delBtn=card.querySelector('.del-btn');if(delBtn)delBtn.onclick=function(){deleteCard(this);};}
 async function enterAdmin(){const token=adminToken||sessionStorage.getItem('ADMIN_TOKEN');if(!token){alert('❌ 未授权访问！请先登录');return;}
-// 检查编辑锁
-try{const lockRes=await fetch(WORKER_BASE+'/api/admin/lock',{headers:{'Authorization':'Bearer '+token}});const lockData=await lockRes.json();
-if(lockData.locked&&lockData.user!==(currentUser?.username||'管理员')){alert('⚠️ '+lockData.user+' 正在使用管理员模式！\n请稍后再试。');return}}
+// 检查并获取编辑锁
+try{const lockRes=await fetch(WORKER_BASE+'/api/admin/lock',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({user:currentUser?.username||'管理员'})});
+if(lockRes.status===409){const lockData=await lockRes.json();alert('⚠️ '+lockData.user+' 正在使用管理员模式！\n请稍后再试。');return}}
 catch(e){}
-// 获取锁
-try{await fetch(WORKER_BASE+'/api/admin/lock',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({user:currentUser?.username||'管理员'})});}catch(e){}
 // 心跳：每45秒续锁
 window._adminLockTimer=setInterval(async()=>{try{await fetch(WORKER_BASE+'/api/admin/lock',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({user:currentUser?.username||'管理员'})});}catch(e){}},45000);
 isEditMode=true;document.body.classList.add('admin-mode');document.getElementById('adminBar').style.display='flex';const adminBarBtns=document.getElementById('adminBarBtns');const adminToggleBtn=document.getElementById('adminBarToggleBtn');if(adminBarBtns&&adminBarBtns.style.display==='none'){adminBarBtns.style.display='';if(adminToggleBtn)adminToggleBtn.textContent='▲ 收起面板';}
