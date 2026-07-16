@@ -1808,9 +1808,13 @@ const uploadZone=document.createElement('div');uploadZone.style.cssText='border:
 	const track=box.querySelector('.slider-track')||box;let imgEls=Array.from(track.querySelectorAll('img')).filter(img=>!img.src.includes('via.placeholder'));
 	while(imgEls.length<images.length){addImgSlot({parentElement:box});imgEls=Array.from(track.querySelectorAll('img')).filter(img=>!img.src.includes('via.placeholder'));}
 	imgEls=imgEls.slice(0,images.length);let ok=0,fail=0;
+	// 压缩函数：限制1920px，JPEG 0.8质量
+	async function compressImg(file){return new Promise(r=>{if(file.size<200*1024){r(file);return}const img=new Image();img.onload=()=>{const maxW=1920;let w=img.width,h=img.height;if(w>maxW){h=h*(maxW/w);w=maxW}const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');ctx.drawImage(img,0,0,w,h);c.toBlob(b=>{r(new File([b],file.name,{type:'image/jpeg'}))},'image/jpeg',0.8)};img.src=URL.createObjectURL(file)})}
 	for(let i=0;i<images.length;i++){
-	uploadZone.innerHTML='<span style="color:var(--primary)">⏳ 上传中 '+ (i+1) +'/'+ images.length +'...</span>';
-	try{const fd=new FormData();fd.append('file',images[i]);fd.append('folder',localStorage.getItem('imgbed_folder')||'');
+	uploadZone.innerHTML='<span style="color:var(--primary)">⏳ 处理 '+ (i+1) +'/'+ images.length +'...</span>';
+	const compressed=await compressImg(images[i]);
+	uploadZone.innerHTML='<span style="color:var(--primary)">⏳ 上传 '+ (i+1) +'/'+ images.length +'...</span>';
+	try{const fd=new FormData();fd.append('file',compressed);fd.append('folder',localStorage.getItem('imgbed_folder')||'');
 	const res=await fetch(WORKER_BASE+'/api/admin/upload-image',{method:'POST',headers:{'Authorization':'Bearer '+adminTok},body:fd});
 	const data=await res.json();if(data.success&&data.url){imgEls[i].src=data.url;imgEls[i].style.visibility='';imgEls[i].style.opacity='1';imgEls[i].classList.remove('img-error');delete imgEls[i].dataset.errorBound;ok++}else{fail++}}catch(e){fail++}}
 	uploadZone.innerHTML='✅ 上传完成：'+ ok +' 成功'+(fail>0?'，'+ fail +' 失败':'');requestAnimationFrame(()=>requestAnimationFrame(()=>updateSliderTrack(box)));autoSave();}modalBox.appendChild(uploadZone);
