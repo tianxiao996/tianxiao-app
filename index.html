@@ -1577,12 +1577,12 @@ async function enterAdmin(){const token=adminToken||sessionStorage.getItem('ADMI
 // 生成唯一会话ID用于编辑锁
 const sessionId=sessionStorage.getItem('ADMIN_SESSION')||(Date.now().toString(36)+Math.random().toString(36).slice(2,8));
 sessionStorage.setItem('ADMIN_SESSION',sessionId);
-// 检查并获取编辑锁
+// 获取编辑锁（后来者直接踢掉前者）
 try{const lockRes=await fetch(WORKER_BASE+'/api/admin/lock',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({user:currentUser?.username||'管理员',sid:sessionId})});
-if(lockRes.status===409){const lockData=await lockRes.json();alert('⚠️ '+lockData.user+' 正在使用管理员模式！\n请稍后再试。');return}}
+const lockData=await lockRes.json();if(lockData.kicked)showToast('⚠️ 已踢掉 '+lockData.kicked+' 的编辑会话');}
 catch(e){}
-// 心跳：每45秒续锁
-window._adminLockTimer=setInterval(async()=>{try{await fetch(WORKER_BASE+'/api/admin/lock',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({user:currentUser?.username||'管理员',sid:sessionId})});}catch(e){}},45000);
+// 心跳：每30秒续锁，发现被踢则退出
+window._adminLockTimer=setInterval(async()=>{try{const r=await fetch(WORKER_BASE+'/api/admin/lock',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({user:currentUser?.username||'管理员',sid:sessionId})});const d=await r.json();if(d.kicked){alert('⚠️ '+d.kicked+' 已接管管理员模式！\n你已被踢出编辑。');exitAdmin();}}catch(e){}},30000);
 isEditMode=true;document.body.classList.add('admin-mode');document.getElementById('adminBar').style.display='flex';const adminBarBtns=document.getElementById('adminBarBtns');const adminToggleBtn=document.getElementById('adminBarToggleBtn');if(adminBarBtns&&adminBarBtns.style.display==='none'){adminBarBtns.style.display='';if(adminToggleBtn)adminToggleBtn.textContent='▲ 收起面板';}
 document.querySelectorAll('.card').forEach(prepareCardForAdmin);document.querySelectorAll('.g-name, .link-text, .desc-text').forEach(el=>{el.contentEditable='true';el.onpaste=handlePlainPaste;});document.querySelectorAll('.g-tags').forEach(el=>{el.contentEditable='true';el.addEventListener('keydown',function(e){const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);const offset=range.startOffset;const text=el.textContent;if((e.key==='Backspace'||e.key==='Delete')&&offset<4&&text.startsWith('标签')){e.preventDefault();}});});document.querySelectorAll('.g-tags').forEach(el=>{el.onpaste=handleTagPaste;protectTagPrefix(el);});initImagePreview();updateSidebarAdminUI();refreshUI();}
 function exitAdmin(){const token=adminToken||sessionStorage.getItem('ADMIN_TOKEN');const sid=sessionStorage.getItem('ADMIN_SESSION');if(token){try{fetch(WORKER_BASE+'/api/admin/lock',{method:'DELETE',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({sid:sid||token})})}catch(e){}}
