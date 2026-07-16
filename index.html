@@ -1795,27 +1795,25 @@ function updateSliderTrack(box){const track=box.querySelector('.slider-track');i
 function changeSlide(btn,dir){const box=btn.parentElement;const isNew=!box.querySelector('.slider-track');if(isNew)initSliderTrack(box);const track=box.querySelector('.slider-track');const imgs=track?track.querySelectorAll('img'):box.querySelectorAll('img');let idx=parseInt(box.dataset.slideIdx||'0');idx=(idx+dir+imgs.length)%imgs.length;box.dataset.slideIdx=idx;if(isNew){requestAnimationFrame(()=>requestAnimationFrame(()=>updateSliderTrack(box)));}else{updateSliderTrack(box);}}
 function editCurrentImg(btn){const IMGBED='https://pvz.2865036763.workers.dev';const box=btn.parentElement;const activeImg=box.querySelector('img.active');const currentSrc=(activeImg&&activeImg.src&&!activeImg.src.includes('via.placeholder'))?activeImg.src:'';const overlay=document.createElement('div');overlay.className='modal-overlay';overlay.style.cssText='display:flex; z-index:3000;';const modalBox=document.createElement('div');modalBox.className='modal-box';modalBox.style.cssText='width:88%; max-width:440px;';modalBox.onclick=e=>e.stopPropagation();const title=document.createElement('div');title.className='modal-title';title.textContent='🖼️ 更换图片';modalBox.appendChild(title);
 // --- 上传区 ---
-const uploadZone=document.createElement('div');uploadZone.style.cssText='border:2px dashed #d0d0d0; border-radius:8px; padding:14px; text-align:center; margin-bottom:12px; cursor:pointer; transition:border-color .2s; background:#fafafa; color:#888; font-size:13px;';const curFolder=localStorage.getItem('imgbed_folder')||'';uploadZone.innerHTML='📁 点击或拖拽图片上传'+(curFolder?' 到「'+curFolder+'」':'')+'<br><small style="color:#aaa">自动上传图床并填入链接</small>';
-const fileInput=document.createElement('input');fileInput.type='file';fileInput.accept='image/*';fileInput.style.display='none';
-uploadZone.onclick=()=>fileInput.click();
-uploadZone.ondragover=e=>{e.preventDefault();uploadZone.style.borderColor='var(--primary)';uploadZone.style.background='#fff0f4'};
-uploadZone.ondragleave=()=>{uploadZone.style.borderColor='#d0d0d0';uploadZone.style.background='#fafafa'};
-uploadZone.ondrop=e=>{e.preventDefault();uploadZone.style.borderColor='#d0d0d0';uploadZone.style.background='#fafafa';if(e.dataTransfer.files.length>0)uploadFile(e.dataTransfer.files[0]);};
-fileInput.onchange=()=>{if(fileInput.files.length>0)uploadFile(fileInput.files[0])};
-async function uploadFile(file){
-if(!file.type.startsWith('image/')){showToast('❌ 仅支持图片文件');return}
-const adminTok=adminToken||sessionStorage.getItem('ADMIN_TOKEN');
-if(!adminTok){uploadZone.innerHTML='❌ 请先登录管理员';return}
-uploadZone.innerHTML='<span style="color:var(--primary)">⏳ 上传中...</span>';
-try{
-const fd=new FormData();fd.append('file',file);fd.append('folder',localStorage.getItem('imgbed_folder')||'');
-const res=await fetch(WORKER_BASE+'/api/admin/upload-image',{method:'POST',headers:{'Authorization':'Bearer '+adminTok},body:fd});
-const data=await res.json();
-if(data.success&&data.url){input.value=data.url;uploadZone.innerHTML='✅ <b style="color:#22c55e">上传成功！</b><br><small>链接已填入下方</small>'}
-else{uploadZone.innerHTML='❌ 上传失败，点击重试';showToast('❌ '+(data.error||'上传失败'))}
-}catch(e){uploadZone.innerHTML='❌ 网络错误，点击重试';showToast('❌ 网络错误')}
-}
-modalBox.appendChild(uploadZone);
+const uploadZone=document.createElement('div');uploadZone.style.cssText='border:2px dashed #d0d0d0; border-radius:8px; padding:14px; text-align:center; margin-bottom:12px; cursor:pointer; transition:border-color .2s; background:#fafafa; color:#888; font-size:13px;';const curFolder=localStorage.getItem('imgbed_folder')||'';uploadZone.innerHTML='📁 点击或拖拽批量上传'+(curFolder?' 到「'+curFolder+'」':'')+'<br><small style="color:#aaa">可多选，自动填入图片槽，槽不够自动加</small>';
+	const fileInput=document.createElement('input');fileInput.type='file';fileInput.accept='image/*';fileInput.multiple=true;fileInput.style.display='none';
+	uploadZone.onclick=()=>fileInput.click();
+	uploadZone.ondragover=e=>{e.preventDefault();uploadZone.style.borderColor='var(--primary)';uploadZone.style.background='#fff0f4'};
+	uploadZone.ondragleave=()=>{uploadZone.style.borderColor='#d0d0d0';uploadZone.style.background='#fafafa'};
+	uploadZone.ondrop=e=>{e.preventDefault();uploadZone.style.borderColor='#d0d0d0';uploadZone.style.background='#fafafa';if(e.dataTransfer.files.length>0)uploadFiles(Array.from(e.dataTransfer.files));};
+	fileInput.onchange=()=>{if(fileInput.files.length>0)uploadFiles(Array.from(fileInput.files))};
+	async function uploadFiles(files){
+	const images=files.filter(f=>f.type.startsWith('image/'));if(!images.length){showToast('❌ 仅支持图片文件');return}
+	const adminTok=adminToken||sessionStorage.getItem('ADMIN_TOKEN');if(!adminTok){uploadZone.innerHTML='❌ 请先登录管理员';return}
+	const track=box.querySelector('.slider-track')||box;let imgEls=Array.from(track.querySelectorAll('img')).filter(img=>!img.src.includes('via.placeholder'));
+	while(imgEls.length<images.length){addImgSlot({parentElement:box});imgEls=Array.from(track.querySelectorAll('img')).filter(img=>!img.src.includes('via.placeholder'));}
+	imgEls=imgEls.slice(0,images.length);let ok=0,fail=0;
+	for(let i=0;i<images.length;i++){
+	uploadZone.innerHTML='<span style="color:var(--primary)">⏳ 上传中 '+ (i+1) +'/'+ images.length +'...</span>';
+	try{const fd=new FormData();fd.append('file',images[i]);fd.append('folder',localStorage.getItem('imgbed_folder')||'');
+	const res=await fetch(WORKER_BASE+'/api/admin/upload-image',{method:'POST',headers:{'Authorization':'Bearer '+adminTok},body:fd});
+	const data=await res.json();if(data.success&&data.url){imgEls[i].src=data.url;imgEls[i].style.visibility='';imgEls[i].style.opacity='1';imgEls[i].classList.remove('img-error');delete imgEls[i].dataset.errorBound;ok++}else{fail++}}catch(e){fail++}}
+	uploadZone.innerHTML='✅ 上传完成：'+ ok +' 成功'+(fail>0?'，'+ fail +' 失败':'');requestAnimationFrame(()=>requestAnimationFrame(()=>updateSliderTrack(box)));autoSave();}modalBox.appendChild(uploadZone);
 modalBox.appendChild(fileInput);
 // --- URL 输入 ---
 const inputRow=document.createElement('div');inputRow.style.cssText='display:flex; gap:8px; align-items:center; margin-bottom:14px;';const input=document.createElement('input');input.type='text';input.placeholder='https://... 或上传图片自动填入';input.value=currentSrc;input.style.cssText='flex:1; padding:10px; border:2px solid var(--primary-light); border-radius:8px; font-size:14px; outline:none; margin:0; width:0; box-sizing:border-box;';inputRow.appendChild(input);const clearBtn=document.createElement('button');clearBtn.textContent='🗑️';clearBtn.style.cssText='flex-shrink:0; padding:8px 10px; border:2px solid #d4d4d4; border-radius:8px; background:#f6f6f6; cursor:pointer; font-size:16px; line-height:1;';clearBtn.onclick=()=>{input.value='';input.focus();};inputRow.appendChild(clearBtn);modalBox.appendChild(inputRow);
