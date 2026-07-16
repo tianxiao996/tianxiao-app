@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a1a1a">
+<title>网盘链接提取器</title>
+<link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIue9keebjuS4reeni+W5s+aLkOmHjyIsCiAgInNob3J0X25hbWUiOiAi6ZO+5o6l5o+Q5Y+WIiwKICAic3RhcnRfdXJsIjogIi4vIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjMWExYTFhIiwKICAidGhlbWVfY29sb3IiOiAiIzFhMWExYSIsCiAgImljb25zIjogW3sic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMlp5QjRiV3h1Y3owaWFIUjBjRG92TDNkM2R5NTNNeTV2Y21jdk1qQXdNQzl6ZG1jaUlIZHBaSFJvUFNJeE1EQWlJR2hsYVdkb2REMGlNVEF3SWlCbWFXeHNQU0pqWkRneVpHRTFNQ0lnZUQwaU1UQXdJaUI1UFNJeE1EQWlQanh5WldOMElIZHBaSFJvUFNJeE1EQWlJR2hsYVdkb2REMGlNVEF3SWlCeWVUMGlNQ0lnWm1sc2JEMGlJMk5rT0RKa1lUVXdJaTgrUEM5emRtYysiLAogICAgICAic2l6ZXMiOiAiMTI4eDEyOCIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zy94bWwiLAogICAgICAicHVycG9zZSI6ICJhbnkiCiAgICB9XQp9">'
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('data:application/javascript,'+encodeURIComponent(
+    "self.addEventListener('install',e=>self.skipWaiting());"+
+    "self.addEventListener('activate',e=>e.waitUntil(clients.claim()));"+
+    "self.addEventListener('fetch',e=>e.respondWith(fetch(e.request)))"
+  ));
+}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a1a;color:#e0e0e0;font-family:"Microsoft YaHei",sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:16px}
+.c{max-width:600px;width:100%}
+h1{font-size:20px;text-align:center;color:#FB7299;margin-bottom:20px}
+textarea{width:100%;height:200px;background:#222;border:1px solid #444;border-radius:8px;color:#e0e0e0;padding:12px;font-size:13px;resize:vertical;outline:none;font-family:inherit;margin-bottom:12px}
+textarea:focus{border-color:#FB7299}
+.btn-row{display:flex;gap:10px;margin-bottom:16px}
+button{flex:1;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.btn-go{background:linear-gradient(135deg,#FB7299,#e05580);color:#fff}
+.btn-clear{background:#333;color:#ccc}
+.output{background:#1a2a1a;border:1px solid #22c55e;border-radius:8px;padding:14px;display:none}
+.output .link{font-size:14px;color:#e0e0e0;word-break:break-all;margin-bottom:8px}
+.output .code{font-size:18px;font-weight:700;color:#22c55e;letter-spacing:3px}
+.output .copy{background:#333;color:#ccc;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer;margin-top:8px;touch-action:manipulation}
+.hint{font-size:11px;color:#555;text-align:center;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="c">
+  <h1>📎 网盘链接提取</h1>
+  <textarea id="input" placeholder="粘贴网盘分享文本...&#10;&#10;支持：百度网盘、夸克网盘、阿里云盘、蓝奏云等"></textarea>
+  <div class="btn-row">
+    <button class="btn-go" onclick="extract()">🔍 提取</button>
+    <button class="btn-clear" onclick="clearAll()">🗑️ 清空</button>
+  </div>
+  <div class="output" id="output"></div>
+  <div class="hint">粘贴 → 提取 → 自动复制链接到剪贴板</div>
+</div>
+
+<script>
+function extract(){
+  const text = document.getElementById('input').value.trim();
+  if(!text) return;
+
+  // 提取链接
+  const urlPattern = /https?:\/\/[^\s一-鿿]+/g;
+  const urls = text.match(urlPattern) || [];
+  const cleanUrls = urls.map(u => u.replace(/[,，。.;；!！?？\)）\]】}>》'"]+$/, ''));
+
+  // 提取密码
+  const pwdPattern = /(?:提取码|密码|访问码|提取密码)[：:\s]*([a-zA-Z0-9]{4,8})/;
+  const pwdMatch = text.match(pwdPattern);
+  const passcode = pwdMatch ? pwdMatch[1] : '';
+
+  // 也检查 &pwd= 或 &code=
+  const pwdUrl = text.match(/[?&](?:pwd|code|password)=([a-zA-Z0-9]{4,8})/);
+  const urlPasscode = pwdUrl ? pwdUrl[1] : '';
+
+  // 提取文件名
+  const namePattern = /(?:文件|文件名)[：:\s]*([^\s\n]+)/;
+  const nameMatch = text.match(namePattern);
+  const filename = nameMatch ? nameMatch[1] : '';
+
+  const out = document.getElementById('output');
+  let html = '';
+
+  if(cleanUrls.length > 0){
+    cleanUrls.forEach((url, i) => {
+      html += `<div style="margin-bottom:12px;${i>0?'border-top:1px solid rgba(255,255,255,.05);padding-top:12px':''}">`;
+      if(filename) html += `<div style="font-size:13px;color:#FB7299;margin-bottom:6px">📦 ${filename}</div>`;
+      html += `<div class="link">🔗 <a href="${url}" target="_blank" style="color:#60a5fa">${url}</a></div>`;
+      html += `<div class="link" style="margin-top:6px">📋 <span id="url${i}" style="color:#aaa;font-size:12px">${url}</span> <button class="copy" onclick="copyText('url${i}')">复制</button></div>`;
+      html += `</div>`;
+    });
+  }
+
+  const finalPwd = passcode || urlPasscode;
+  if(finalPwd){
+    html += `<div style="margin-top:8px;padding-top:12px;border-top:1px solid rgba(255,255,255,.05)">`;
+    html += `<div style="font-size:12px;color:#888;margin-bottom:4px">🔑 提取码</div>`;
+    html += `<div class="code" id="pwdCode">${finalPwd}</div>`;
+    html += `<button class="copy" onclick="copyText('pwdCode')">复制提取码</button>`;
+    html += `</div>`;
+  }
+
+  if(!html){
+    html = '<div style="color:#ef4444;font-size:13px">未识别到链接或提取码</div>';
+  }
+
+  out.innerHTML = html;
+  out.style.display = 'block';
+
+  // 自动复制第一个链接
+  if(cleanUrls.length > 0){
+    navigator.clipboard?.writeText(cleanUrls[0]);
+  }
+}
+
+function copyText(id){
+  const el = document.getElementById(id);
+  navigator.clipboard?.writeText(el.textContent).then(() => {
+    showToast('✅ 已复制');
+  });
+}
+
+function clearAll(){
+  document.getElementById('input').value = '';
+  document.getElementById('output').style.display = 'none';
+}
+
+let toastTimer;
+function showToast(msg){
+  let t = document.getElementById('_toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = '_toast';
+    t.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;z-index:9999;pointer-events:none;transition:opacity .3s';
+    document.body.appendChild(t);
+  }
+  clearTimeout(toastTimer);
+  t.textContent = msg;
+  t.style.opacity = '1';
+  toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 1500);
+}
+</script>
+</body>
+</html>
