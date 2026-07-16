@@ -846,28 +846,62 @@ card.currentIndex=currentIndex;}</script>
 </div>
 <!-- 固定底部：输入框+按钮，键盘弹出时贴在键盘上方 -->
 <div class="gate-bottom">
-<!-- 滑动解锁验证 -->
-<div id="sliderCaptcha" style="width:280px;margin:0 auto;"></div>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/longbow.slidercaptcha@latest/dist/slidercaptcha.min.css">
-<script src="https://cdn.jsdelivr.net/npm/longbow.slidercaptcha@latest/dist/slidercaptcha.min.js"></script>
+<!-- 滑动解锁 -->
+<div id="slideUnlockWrap" style="width:280px;margin:0 auto;text-align:center">
+<div id="slideUnlock" style="position:relative;width:280px;height:48px;background:#f5f5f5;border-radius:24px;overflow:hidden;border:2px solid #e0e0e0;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;margin:0 auto">
+  <div id="slideTrack" style="position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,#FB7299,#ff99bb);border-radius:24px;width:0;pointer-events:none"></div>
+  <div id="slideText" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:14px;font-weight:500;pointer-events:none">→ 滑动解锁 ←</div>
+  <div id="slideHandle" style="position:absolute;left:2px;top:2px;width:44px;height:44px;background:#fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;font-size:18px;z-index:2;transition:none">🔓</div>
+</div>
+<div style="color:#ccc;font-size:11px;margin-top:6px">向右滑动滑块完成验证</div>
+</div>
+<style>
+#slideUnlock:hover { border-color: #FB7299; }
+[data-theme="dark"] #slideUnlock { background: #2a2a2a; border-color: #444; }
+[data-theme="dark"] #slideHandle { background: #444; }
+</style>
 <script>
-(function initSlider(){
-  if(typeof sliderCaptcha==='undefined'){setTimeout(initSlider,200);return}
-  var captcha=sliderCaptcha.create({
-    id:'sliderCaptcha',width:280,height:155,
-    sliderStyle:{borderRadius:'22px',backgroundColor:'#f5f5f5',border:'1px solid #e0e0e0'},
-    barStyle:{borderRadius:'22px',backgroundColor:'#FB7299'},
-    text:'→ 滑动解锁 ←',successText:'✅ 解锁成功',
-    onSuccess:function(){
-      setTimeout(function(){
-        sessionStorage.setItem('TX_GATE_PASSED','1');
-        document.getElementById("gateKeeper").style.display="none";
-        document.getElementById("contentBlocker").style.display="none";
-        sessionStorage.setItem('TX_SHOW_NOTICE','1');
-        if(!_cloudLoadDone){var overlay=document.getElementById('globalLoadingOverlay');if(overlay)overlay.classList.add('show');}
-      },300);
-    }
-  });
+(function(){
+  var el=document.getElementById('slideUnlock');
+  var handle=document.getElementById('slideHandle');
+  var track=document.getElementById('slideTrack');
+  var text=document.getElementById('slideText');
+  var dragging=false, startX=0, startLeft=2, maxLeft=0, unlocked=false;
+  function updateMax(){ maxLeft=el.clientWidth-handle.clientWidth-4; }
+  function setPos(px,animate){
+    px=Math.max(2,Math.min(maxLeft+2,px));
+    if(animate){handle.style.transition='left .3s ease'}else{handle.style.transition='none'}
+    handle.style.left=px+'px';
+    var pct=(px-2)/maxLeft;
+    track.style.width=(pct*100)+'%';
+    if(pct>0.6)text.style.opacity='0';else text.style.opacity='1';
+    if(pct>=1&&!unlocked){unlocked=true;unlock();}
+  }
+  function unlock(){
+    el.style.borderColor='#22c55e';
+    track.style.background='#22c55e';
+    text.textContent='✅ 解锁成功';text.style.opacity='1';text.style.color='#fff';
+    handle.innerHTML='✅';
+    setTimeout(function(){
+      sessionStorage.setItem('TX_GATE_PASSED','1');
+      document.getElementById("gateKeeper").style.display="none";
+      document.getElementById("contentBlocker").style.display="none";
+      sessionStorage.setItem('TX_SHOW_NOTICE','1');
+      if(!_cloudLoadDone){var o=document.getElementById('globalLoadingOverlay');if(o)o.classList.add('show');}
+    },400);
+  }
+  updateMax();
+  window.addEventListener('resize',function(){updateMax();if(unlocked)setPos(maxLeft+2,false)});
+  function onStart(ex){dragging=true;startX=ex;startLeft=parseInt(handle.style.left)||2}
+  function onMove(ex){if(!dragging||unlocked)return;setPos(startLeft+ex-startX,false)}
+  function onEnd(){if(!dragging||unlocked)return;dragging=false;var cur=parseInt(handle.style.left)||2;if(cur<maxLeft+2-5)setPos(2,true);}
+  el.addEventListener('mousedown',function(e){onStart(e.clientX);e.preventDefault()});
+  document.addEventListener('mousemove',function(e){onMove(e.clientX)});
+  document.addEventListener('mouseup',onEnd);
+  el.addEventListener('touchstart',function(e){onStart(e.touches[0].clientX);e.preventDefault()},{passive:false});
+  el.addEventListener('touchmove',function(e){onMove(e.touches[0].clientX);e.preventDefault()},{passive:false});
+  el.addEventListener('touchend',onEnd);
+  el.addEventListener('click',function(e){if(!dragging&&!unlocked&&confirm('点击直接解锁（测试用）？')){setPos(maxLeft+2,true)}});
 })();
 </script>
 </div>
