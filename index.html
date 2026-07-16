@@ -1837,7 +1837,7 @@ try{const fd=new FormData();fd.append('file',images[i]);fd.append('folder',local
 const res=await fetch(WORKER_BASE+'/api/admin/upload-image',{method:'POST',headers:{'Authorization':'Bearer '+adminTok},body:fd});
 const data=await res.json();if(data.success&&data.url){img.src=data.url;img.style.visibility='';img.style.opacity='1';img.classList.remove('img-error');delete img.dataset.errorBound;ok++}}
 catch(e){}}
-uploadZone.innerHTML='OK '+ok+'/'+images.length;requestAnimationFrame(()=>{requestAnimationFrame(()=>updateSliderTrack(box));autoSave();setTimeout(initImagePreview,300);});}modalBox.appendChild(uploadZone);
+uploadZone.innerHTML='OK '+ok+'/'+images.length;requestAnimationFrame(()=>{requestAnimationFrame(()=>{updateSliderTrack(box);autoSave();addLinkJumpButtons();initImagePreview()})});}modalBox.appendChild(uploadZone);
 modalBox.appendChild(fileInput);
 // --- URL 输入 ---
 const inputRow=document.createElement('div');inputRow.style.cssText='display:flex; gap:8px; align-items:center; margin-bottom:14px;';const input=document.createElement('input');input.type='text';input.placeholder='https://... 或上传图片自动填入';input.value=currentSrc;input.style.cssText='flex:1; padding:10px; border:2px solid var(--primary-light); border-radius:8px; font-size:14px; outline:none; margin:0; width:0; box-sizing:border-box;';inputRow.appendChild(input);const clearBtn=document.createElement('button');clearBtn.textContent='🗑️';clearBtn.style.cssText='flex-shrink:0; padding:8px 10px; border:2px solid #d4d4d4; border-radius:8px; background:#f6f6f6; cursor:pointer; font-size:16px; line-height:1;';clearBtn.onclick=()=>{input.value='';input.focus();};inputRow.appendChild(clearBtn);modalBox.appendChild(inputRow);
