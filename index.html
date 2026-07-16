@@ -1629,13 +1629,13 @@ function toggleShopAdminPanel(){const panel=document.getElementById('shopAdminSe
 function closeAvatarShopPage(){const page=document.getElementById('avatarShopPage');if(!page)return;page.classList.remove('show');setTimeout(()=>{page.style.display='none';},220);}
 async function loadAvatarShopPage(){const grid=document.getElementById('avatarShopGrid');const ownedGrid=document.getElementById('avatarShopOwnedGrid');const ownedTitle=document.getElementById('shopOwnedTitle');const adminSection=document.getElementById('shopAdminSection');if(!grid)return;const isAdmin=isEditMode||adminToken||sessionStorage.getItem('ADMIN_TOKEN');const fabBtn=document.getElementById('shopFabBtn');if(fabBtn){fabBtn.style.display=isAdmin?'flex':'none';}
 if(adminSection){adminSection.style.display='none';}
-try{const headers=currentUser?{'Authorization':`Bearer ${currentUser.sessionToken}`}:{};const res=await fetch(`${USER_API}/api/user/avatars`,{headers});const data=await res.json();if(data.success&&data.avatars&&data.avatars.length>0){const owned=data.avatars.filter(a=>a.owned);const notOwned=data.avatars.filter(a=>!a.owned);if(notOwned.length>0){grid.innerHTML=notOwned.map(a=>`
-                    <div class="user-avatar-item" onclick="buyAvatar('${a.id}', ${a.price}, '${escapeHtml(a.name)}')">
-                        <img class="avatar-img" src="${escapeHtml(a.url)}" alt="" onerror="this.src='./avatar.png'">
-                        <div class="avatar-name">${escapeHtml(a.name)}</div>
-                        <div class="avatar-price">🐟 ${a.price}</div>
+try{const headers=currentUser?{'Authorization':`Bearer ${currentUser.sessionToken}`}:{};const res=await fetch(`${USER_API}/api/user/avatars`,{headers});const data=await res.json();if(data.success&&data.avatars&&data.avatars.length>0){const owned=data.avatars.filter(a=>a.owned);const notOwned=data.avatars.filter(a=>!a.owned);if(notOwned.length>0){grid.innerHTML=notOwned.map(a=>{const limited=a.limited||a.price===0;const style=limited?'opacity:0.5;filter:grayscale(0.5);cursor:not-allowed':'';const onclick=limited?'':`onclick="buyAvatar('${a.id}', ${a.price||0}, '${escapeHtml(a.name)}')"`;return`
+                    <div class="user-avatar-item" ${onclick} style="${style}">
+                        <img class="avatar-img" src="${escapeHtml(a.url)}" alt="" onerror="this.src='./avatar.png'" style="${limited?'filter:grayscale(1)':''}">
+                        <div class="avatar-name">${escapeHtml(a.name)}${limited?'<br><small style="color:#999">限定</small>':''}</div>
+                        <div class="avatar-price">${limited?'🔒 限定':('🐟 '+a.price)}</div>
                     </div>
-                `).join('');}else{grid.innerHTML='<div class="shop-empty">暂无新装扮</div>';}
+                `}).join('');}else{grid.innerHTML='<div class="shop-empty">暂无新装扮</div>';}
 if(owned.length>0&&ownedGrid&&ownedTitle){ownedTitle.style.display='';ownedGrid.innerHTML=owned.map(a=>`
                     <div class="user-avatar-item ${a.url === ((_userHomeData && _userHomeData.avatar) || '') ? 'avatar-current' : ''}" onclick="setCurrentAvatar('${a.id}', '${escapeHtml(a.url)}')">
                         <img class="avatar-img" src="${escapeHtml(a.url)}" alt="" onerror="this.src='./avatar.png'">
