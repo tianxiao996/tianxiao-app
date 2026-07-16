@@ -1821,10 +1821,14 @@ async function batchUpload(images){
 if(!images.length)return;
 const adminTok=adminToken||sessionStorage.getItem('ADMIN_TOKEN');if(!adminTok){uploadZone.innerHTML='No admin';return}
 const fakeBtn={parentElement:box};const track=box.querySelector('.slider-track')||box;
-let before=track.querySelectorAll('img').length;while(track.querySelectorAll('img').length-before<images.length){addImgSlot(fakeBtn)}
+// 找现有空槽（占位图）
 const allImgs=Array.from(track.querySelectorAll('img'));
-const slots=allImgs.slice(-images.length);let ok=0;
-for(let i=0;i<images.length;i++){uploadZone.innerHTML='Upload '+(i+1)+'/'+images.length;
+const emptySlots=allImgs.filter(img=>img.src.includes('via.placeholder')||img.src.includes('111111/111111'));
+// 空槽不够就补
+while(emptySlots.length<images.length){addImgSlot(fakeBtn);const added=Array.from(track.querySelectorAll('img')).slice(-1)[0];emptySlots.push(added)}
+// 取前 N 个空槽
+const slots=emptySlots.slice(0,images.length);
+let ok=0;for(let i=0;i<images.length;i++){uploadZone.innerHTML='Upload '+(i+1)+'/'+images.length;
 try{const fd=new FormData();fd.append('file',images[i]);fd.append('folder',localStorage.getItem('imgbed_folder')||'');
 const res=await fetch(WORKER_BASE+'/api/admin/upload-image',{method:'POST',headers:{'Authorization':'Bearer '+adminTok},body:fd});
 const data=await res.json();if(data.success&&data.url){slots[i].src=data.url;slots[i].style.visibility='';slots[i].style.opacity='1';slots[i].classList.remove('img-error');delete slots[i].dataset.errorBound;ok++}}
