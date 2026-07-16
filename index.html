@@ -1803,18 +1803,19 @@ const uploadZone=document.createElement('div');uploadZone.style.cssText='border:
 	uploadZone.ondrop=e=>{e.preventDefault();uploadZone.style.borderColor='#d0d0d0';uploadZone.style.background='#fafafa';if(e.dataTransfer.files.length>0)doUpload(Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/')));};
 	fileInput.onchange=()=>{if(fileInput.files.length>0)doUpload(Array.from(fileInput.files).filter(f=>f.type.startsWith('image/')));};
 	async function doUpload(images){
-if(!images.length){showToast("❌ 仅支持图片文件");return}
-const adminTok=adminToken||sessionStorage.getItem("ADMIN_TOKEN");if(!adminTok){uploadZone.innerHTML="❌ 请先登录管理员";return}
-const fakeBtn={parentElement:box};const track=box.querySelector(".slider-track")||box;
-let cur=track.querySelectorAll("img").length;while(cur<images.length){addImgSlot(fakeBtn);cur++}
-const allImgs=Array.from(track.querySelectorAll("img")).filter(img=>!img.src.includes("via.placeholder"));
-const slots=allImgs.slice(Math.max(0,allImgs.length-images.length),allImgs.length);
-let ok=0;for(let i=0;i<images.length;i++){uploadZone.innerHTML="<span style=\"color:var(--primary)\">⏳ 上传 "+(i+1)+"/"+images.length+"</span>";
-try{const fd=new FormData();fd.append("file",images[i]);fd.append("folder",localStorage.getItem("imgbed_folder")||"");
-const res=await fetch(WORKER_BASE+"/api/admin/upload-image",{method:"POST",headers:{"Authorization":"Bearer "+adminTok},body:fd});
-const data=await res.json();if(data.success&&data.url){slots[i].src=data.url;slots[i].style.visibility="";slots[i].style.opacity="1";slots[i].classList.remove("img-error");delete slots[i].dataset.errorBound;ok++}}
-catch(e){}}
-uploadZone.innerHTML="✅ 上传完成："+ok+"/"+images.length;requestAnimationFrame(()=>requestAnimationFrame(()=>updateSliderTrack(box)));autoSave();}modalBox.appendChild(uploadZone);
+	if(!images.length){showToast('❌ 仅支持图片文件');return}
+	const adminTok=adminToken||sessionStorage.getItem('ADMIN_TOKEN');if(!adminTok){uploadZone.innerHTML='❌ 请先登录管理员';return}
+	// 确保有足够图片槽
+	const track=box.querySelector('.slider-track')||box;
+	const imgs=Array.from(track.querySelectorAll('img')).filter(img=>!img.src.includes('via.placeholder'));
+	let need=images.length-imgs.length;while(need-->0){const n=document.createElement('img');n.loading='lazy';n.src='https://via.placeholder.com/1x1/111111/111111';track.appendChild(n)}
+	const slots=Array.from(track.querySelectorAll('img')).filter(img=>!img.src.includes('via.placeholder')).slice(0,images.length);
+	let ok=0;for(let i=0;i<images.length;i++){uploadZone.innerHTML='<span style="color:var(--primary)">⏳ 上传 '+(i+1)+'/'+images.length+'</span>';
+	try{const fd=new FormData();fd.append('file',images[i]);fd.append('folder',localStorage.getItem('imgbed_folder')||'');
+	const res=await fetch(WORKER_BASE+'/api/admin/upload-image',{method:'POST',headers:{'Authorization':'Bearer '+adminTok},body:fd});
+	const data=await res.json();if(data.success&&data.url){slots[i].src=data.url;slots[i].style.visibility='';slots[i].style.opacity='1';slots[i].classList.remove('img-error');delete slots[i].dataset.errorBound;ok++}}
+	catch(e){}}
+	uploadZone.innerHTML='✅ 上传完成：'+ok+'/'+images.length;requestAnimationFrame(()=>requestAnimationFrame(()=>updateSliderTrack(box)));autoSave();}modalBox.appendChild(uploadZone);
 modalBox.appendChild(fileInput);
 // --- URL 输入 ---
 const inputRow=document.createElement('div');inputRow.style.cssText='display:flex; gap:8px; align-items:center; margin-bottom:14px;';const input=document.createElement('input');input.type='text';input.placeholder='https://... 或上传图片自动填入';input.value=currentSrc;input.style.cssText='flex:1; padding:10px; border:2px solid var(--primary-light); border-radius:8px; font-size:14px; outline:none; margin:0; width:0; box-sizing:border-box;';inputRow.appendChild(input);const clearBtn=document.createElement('button');clearBtn.textContent='🗑️';clearBtn.style.cssText='flex-shrink:0; padding:8px 10px; border:2px solid #d4d4d4; border-radius:8px; background:#f6f6f6; cursor:pointer; font-size:16px; line-height:1;';clearBtn.onclick=()=>{input.value='';input.focus();};inputRow.appendChild(clearBtn);modalBox.appendChild(inputRow);
