@@ -133,7 +133,7 @@ async function doGithubReg(){
     var r=await fetch(API+'/api/user/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     var d=await r.json();
     if(d.success&&d.token){showSuccess(d.userId);}
-    else if(d.githubUrl){location.href=d.githubUrl;}
+    else if(d.githubUrl){showPending(d.githubUrl,d.state||null);}
     else{toast(d.error||'注册失败');btn.disabled=false;}
   }catch(e){toast('网络错误');btn.disabled=false;}
 }
@@ -199,8 +199,6 @@ async function doResetPwd(){
   }catch(e){toast('网络错误');}
 }
 (function(){if(location.search.includes('reset')){document.getElementById('mainCard').querySelector('.tabs').style.display='none';document.getElementById('panelGithub').style.display='none';document.getElementById('panelEmail').style.display='none';document.getElementById('resetBox').style.display='block';setTimeout(function(){loadTs('rTsBox');},1200);}})();
-// GitHub OAuth 回调后带 token 跳转回来
-(function(){var p=new URLSearchParams(location.search);if(p.get('reg_ok')==='1'){var uid=p.get('userId');if(uid){showSuccess(uid);window.history.replaceState({},'',location.pathname);}}})();
 setTimeout(function(){loadTs('tsBox');},1200);
 </script>
 </body>
