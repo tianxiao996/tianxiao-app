@@ -154,7 +154,7 @@ async function doEmailVerify(){
   if(!ic){toast('请输入邀请码');return;}
   var btn=document.getElementById('eBtn');btn.disabled=true;
   try{
-    var r=await fetch(API+'/api/user/email-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,code:vc,username:un,inviteCode:ic,fingerprint:('e_'+em).slice(0,64)})});
+    var r=await fetch(API+'/api/user/email-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,code:vc,username:un,password:p,password2:p2,inviteCode:ic,fingerprint:('e_'+em).slice(0,64)})});
     var d=await r.json();
     if(d.success){showSuccess(d.userId);}else toast(d.error||'验证失败');
   }catch(e){toast('网络错误');}
