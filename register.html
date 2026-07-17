@@ -86,7 +86,7 @@ h1{font-size:17px;font-weight:bold;color:var(--primary);margin-bottom:16px;text-
     <div class="field"><label>确认密码</label><input type="password" id="ePass2" placeholder="再次输入密码" maxlength="50" autocomplete="off"></div>
     <div class="field"><label>邀请码</label><input type="text" id="eCode" placeholder="请输入邀请码" autocomplete="off"></div>
     <div id="eTsBox"></div>
-    <button class="btn btn-em" id="eBtn" onclick="emailStep()">发送验证码</button>
+    <button class="btn btn-em" id="eBtn" onclick="doEmailVerify()">注册</button>
   </div>
 </div>
 <div class="card" id="successCard" style="display:none">
@@ -131,25 +131,6 @@ function showPending(url,state){_ghUrl=url;_ghState=state;document.getElementByI
 function resetForm(){document.getElementById('gBtn').style.display='';document.getElementById('gNote').style.display='';document.getElementById('pendingBox').style.display='none';if(_ghTimer){clearInterval(_ghTimer);_ghTimer=null;}_ghState=null;onInviteInput();}
 async function checkAuth(){if(!_ghState){document.getElementById('pendingMsg').textContent='授权会话已过期';return;}try{var r=await fetch(API+'/api/user/check_auth?state='+_ghState);var d=await r.json();if(d.success&&d.token){if(_ghTimer){clearInterval(_ghTimer);_ghTimer=null;}showSuccess(d.userId);}else if(d.error&&d.error!=='授权尚未完成或已过期'){document.getElementById('pendingMsg').textContent=d.error;}}catch(e){}}
 
-function emailStep(){
-  var em=document.getElementById('eEmail').value.trim(),un=document.getElementById('eUser').value.trim();
-  var p=document.getElementById('ePass').value,p2=document.getElementById('ePass2').value;
-  var c=document.getElementById('eCode').value.trim();
-  if(!em||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){toast('请输入有效邮箱');return;}
-  if(!un||un.length<1||un.length>8){toast('用户名1-8字符');return;}
-  if(!p||p.length<8||!/[a-zA-Z]/.test(p)){toast('密码须8位以上且包含字母');return;}
-  if(p!==p2){toast('两次密码不一致');return;}
-  if(!c){toast('请输入邀请码');return;}
-  var btn=document.getElementById('eBtn');btn.disabled=true;
-  var ts=document.getElementById('eTsBox').dataset.token||'';
-  if(!ts){toast('请完成人机验证');btn.disabled=false;return;}
-  fetch(API+'/api/user/send-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,inviteCode:c,turnstileToken:ts})})
-  .then(function(r){return r.json();}).then(function(d){
-    if(d.success){document.getElementById('eBtn').textContent='验证并注册';document.getElementById('eBtn').onclick=doEmailVerify;startCd(document.getElementById('eSendBtn'));}
-    else toast(d.error||'发送失败');
-    btn.disabled=false;
-  }).catch(function(){toast('网络错误');btn.disabled=false;});
-}
 function sendCode(){
   var em=document.getElementById('eEmail').value.trim(),c=document.getElementById('eCode').value.trim();
   var btn=document.getElementById('eSendBtn');btn.disabled=true;
@@ -164,7 +145,13 @@ function startCd(btn){var s=60;if(_cdTimer)clearInterval(_cdTimer);btn.textConte
 async function doEmailVerify(){
   var em=document.getElementById('eEmail').value.trim(),vc=document.getElementById('eVerifyCode').value.trim();
   var un=document.getElementById('eUser').value.trim(),ic=document.getElementById('eCode').value.trim();
+  var p=document.getElementById('ePass').value,p2=document.getElementById('ePass2').value;
+  if(!em||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){toast('请输入有效邮箱');return;}
   if(!vc){toast('请输入验证码');return;}
+  if(!un||un.length<1||un.length>8){toast('用户名1-8字符');return;}
+  if(!p||p.length<8||!/[a-zA-Z]/.test(p)){toast('密码须8位以上且包含字母');return;}
+  if(p!==p2){toast('两次密码不一致');return;}
+  if(!ic){toast('请输入邀请码');return;}
   var btn=document.getElementById('eBtn');btn.disabled=true;
   try{
     var r=await fetch(API+'/api/user/email-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,code:vc,username:un,inviteCode:ic,fingerprint:('e_'+em).slice(0,64)})});
