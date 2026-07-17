@@ -133,7 +133,7 @@ async function doGithubReg(){
     var r=await fetch(API+'/api/user/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     var d=await r.json();
     if(d.success&&d.token){showSuccess(d.userId);}
-    else if(d.githubUrl){showPending(d.githubUrl,d.state||null);}
+    else if(d.githubUrl){location.href=d.githubUrl;}
     else{toast(d.error||'注册失败');btn.disabled=false;}
   }catch(e){toast('网络错误');btn.disabled=false;}
 }
