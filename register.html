@@ -80,13 +80,13 @@ h1{font-size:17px;font-weight:bold;color:var(--primary);margin-bottom:16px;text-
   </div>
   <div id="panelEmail">
     <div class="field"><label>邮箱</label><input type="email" id="eEmail" placeholder="请输入邮箱" autocomplete="off"></div>
-    <div class="field"><label>邮箱验证码</label><div class="code-row"><input type="text" id="eVerifyCode" placeholder="请输入验证码" maxlength="6"><button id="eSendBtn" onclick="sendCode()">发送验证码</button></div></div>
+    <div class="field"><label>邮箱验证码</label><div class="code-row"><input type="text" id="eVerifyCode" placeholder="请输入验证码" maxlength="6"><button id="eSendBtn" onclick="sendCode()">发送</button></div></div>
     <div class="field"><label>用户名（1-8字符）</label><input type="text" id="eUser" placeholder="请输入用户名" autocomplete="off" maxlength="8"></div>
     <div class="field"><label>密码（8位以上含字母）</label><input type="password" id="ePass" placeholder="请输入密码" maxlength="50" autocomplete="off"></div>
     <div class="field"><label>确认密码</label><input type="password" id="ePass2" placeholder="再次输入密码" maxlength="50" autocomplete="off"></div>
     <div class="field"><label>邀请码</label><input type="text" id="eCode" placeholder="请输入邀请码" autocomplete="off"></div>
     <div id="eTsBox"></div>
-    <button class="btn btn-em" id="eBtn" onclick="emailStep()">获取验证码</button>
+    <button class="btn btn-em" id="eBtn" onclick="emailStep()">发送验证码</button>
   </div>
 </div>
 <div class="card" id="successCard" style="display:none">
