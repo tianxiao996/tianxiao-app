@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>注册账号 - 天笑の窝</title>
 <style>
-:root{--primary:#e91e63;--primary-light:rgba(233,30,99,0.25);--pixel-white:#fff;--pixel-soft:#f5f5f5;--border:#ddd;--text:#333;--bg:#fafafa}
+:root{--primary:#ff6b35;--primary-light:rgba(255,107,53,0.25);--pixel-white:#fff;--pixel-soft:#f5f5f5;--border:#ddd;--text:#333;--bg:#fafafa}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingFang SC",sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
 .card{background:var(--pixel-white);width:100%;max-width:380px;border-radius:16px;padding:24px;box-shadow:5px 5px 0 rgba(188,188,188,0.3);border:2px solid var(--primary-light)}
@@ -94,10 +94,12 @@ h1{font-size:18px;font-weight:bold;color:var(--primary);margin-bottom:14px;text-
   <!-- 邮箱注册 -->
   <div id="panelEmail">
     <div class="field"><label>邮箱</label><input type="email" id="eEmail" placeholder="请输入邮箱" autocomplete="off"></div>
+    <div class="field"><label>用户名（1-8字符）</label><input type="text" id="eUser" placeholder="请输入用户名" autocomplete="off" maxlength="8"></div>
+    <div class="field"><label>密码（8位以上含字母）</label><input type="password" id="ePass" placeholder="请输入密码" maxlength="50" autocomplete="off"></div>
+    <div class="field"><label>确认密码</label><input type="password" id="ePass2" placeholder="再次输入密码" maxlength="50" autocomplete="off"></div>
     <div class="field"><label>邀请码</label><input type="text" id="eCode" placeholder="请输入邀请码" autocomplete="off"></div>
-    <div class="field" id="eUserField" style="display:none"><label>用户名（1-8字符，首次登录需设置）</label><input type="text" id="eUser" placeholder="请输入用户名" autocomplete="off" maxlength="8"></div>
-    <div class="field" id="eCodeField" style="display:none">
-      <label>验证码</label>
+    <div class="field" id="eCodeField">
+      <label>邮箱验证码</label>
       <div class="code-row">
         <input type="text" id="eVerifyCode" placeholder="请输入验证码" maxlength="6">
         <button id="eSendBtn" onclick="sendCode()">发送验证码</button>
@@ -197,14 +199,20 @@ async function checkAuth(){
 
 // 邮箱注册
 function emailStep(){
-  var em=document.getElementById('eEmail').value.trim(),c=document.getElementById('eCode').value.trim();
+  var em=document.getElementById('eEmail').value.trim(),un=document.getElementById('eUser').value.trim();
+  var p=document.getElementById('ePass').value,p2=document.getElementById('ePass2').value;
+  var c=document.getElementById('eCode').value.trim();
   if(!em||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){toast('请输入有效邮箱');return;}
+  if(!un||un.length<1||un.length>8){toast('用户名1-8字符');return;}
+  if(!p||p.length<8||!/[a-zA-Z]/.test(p)){toast('密码须8位以上且包含字母');return;}
+  if(p!==p2){toast('两次密码不一致');return;}
   if(!c){toast('请输入邀请码');return;}
   var btn=document.getElementById('eBtn');btn.disabled=true;
   var ts=document.getElementById('eTsBox').dataset.token||'';
+  if(!ts){toast('请完成人机验证');btn.disabled=false;return;}
   fetch(API+'/api/user/send-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,inviteCode:c,turnstileToken:ts})})
   .then(function(r){return r.json();}).then(function(d){
-    if(d.success){_eStep='code';document.getElementById('eCodeField').style.display='block';document.getElementById('eBtn').textContent='验证并登录/注册';document.getElementById('eBtn').onclick=doEmailVerify;}
+    if(d.success){_eStep='code';document.getElementById('eBtn').textContent='验证并注册';document.getElementById('eBtn').onclick=doEmailVerify;}
     else toast(d.error||'发送失败');
     btn.disabled=false;
   }).catch(function(){toast('网络错误');btn.disabled=false;});
@@ -216,7 +224,7 @@ function sendCode(){
   var ts=document.getElementById('eTsBox').dataset.token||'';
   fetch(API+'/api/user/send-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,inviteCode:c,turnstileToken:ts})})
   .then(function(r){return r.json();}).then(function(d){
-    if(d.success){_eStep='verify';document.getElementById('eUserField').style.display='block';document.getElementById('eBtn').textContent='验证并登录/注册';document.getElementById('eBtn').onclick=doEmailVerify;btn.disabled=true;}
+    if(d.success){toast('验证码已发送');btn.textContent='已发送';}
     else toast(d.error||'发送失败');
     btn.disabled=false;
   }).catch(function(){toast('网络错误');btn.disabled=false;});
@@ -225,6 +233,7 @@ function sendCode(){
 async function doEmailVerify(){
   var em=document.getElementById('eEmail').value.trim(),vc=document.getElementById('eVerifyCode').value.trim();
   var un=document.getElementById('eUser').value.trim(),ic=document.getElementById('eCode').value.trim();
+  var p=document.getElementById('ePass').value,p2=document.getElementById('ePass2').value;
   if(!vc){toast('请输入验证码');return;}
   var btn=document.getElementById('eBtn');btn.disabled=true;
   try{
