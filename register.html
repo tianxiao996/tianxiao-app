@@ -119,7 +119,7 @@ function copyId(){var v=document.getElementById('succId').textContent;navigator.
 
 async function doGithubReg(){
   var c=document.getElementById('giCode').value.trim(),u=document.getElementById('gUser').value.trim();
-  var p=document.getElementById('gPass').value,p2=document.getElementById('gPass2').value;
+  var p=document.getElementById('gPass').value.trim(),p2=document.getElementById('gPass2').value.trim();
   var ans=document.getElementById('gAnswer').value.trim(),sup=c.toUpperCase().startsWith('SUPER_');
   var ts=document.getElementById('tsBox').dataset.token||'';
   if(!c||!u||!p||!p2){toast('请填写完整信息');return;}
@@ -155,7 +155,7 @@ function startCd(btn){var s=60;if(_cdTimer)clearInterval(_cdTimer);btn.textConte
 async function doEmailVerify(){
   var em=document.getElementById('eEmail').value.trim(),vc=document.getElementById('eVerifyCode').value.trim();
   var un=document.getElementById('eUser').value.trim(),ic=document.getElementById('eCode').value.trim();
-  var p=document.getElementById('ePass').value,p2=document.getElementById('ePass2').value;
+  var p=document.getElementById('ePass').value.trim(),p2=document.getElementById('ePass2').value.trim();
   if(!em||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){toast('请输入有效邮箱');return;}
   if(!vc){toast('请输入验证码');return;}
   if(!un||un.length<1||un.length>8){toast('用户名1-8字符');return;}
