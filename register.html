@@ -80,6 +80,7 @@ h1{font-size:17px;font-weight:bold;color:var(--primary);margin-bottom:16px;text-
   </div>
   <div id="panelEmail">
     <div class="field"><label>邮箱</label><input type="email" id="eEmail" placeholder="请输入邮箱" autocomplete="off"></div>
+    <div style="text-align:right;margin-top:-8px;margin-bottom:10px"><a href="javascript:void(0)" onclick="showResetPwd()" style="font-size:11px;color:var(--primary);text-decoration:underline">忘记密码？</a></div>
     <div class="field"><label>邮箱验证码</label><div class="code-row"><input type="text" id="eVerifyCode" placeholder="请输入验证码" maxlength="6"><button id="eSendBtn" onclick="sendCode()">发送</button></div></div>
     <div class="field"><label>用户名（1-8字符）</label><input type="text" id="eUser" placeholder="请输入用户名" autocomplete="off" maxlength="8"></div>
     <div class="field"><label>密码（8位以上含字母）</label><input type="password" id="ePass" placeholder="请输入密码" maxlength="50" autocomplete="off"></div>
@@ -87,6 +88,16 @@ h1{font-size:17px;font-weight:bold;color:var(--primary);margin-bottom:16px;text-
     <div class="field"><label>邀请码</label><input type="text" id="eCode" placeholder="请输入邀请码" autocomplete="off"></div>
     <div id="eTsBox"></div>
     <button class="btn btn-em" id="eBtn" onclick="doEmailVerify()">注册</button>
+  </div>
+  <!-- 找回密码 -->
+  <div id="resetBox" style="display:none">
+    <div class="field"><label>邮箱</label><input type="email" id="rEmail" placeholder="请输入注册邮箱" autocomplete="off"></div>
+    <div class="field"><label>新密码（8位以上含字母）</label><input type="password" id="rPass" placeholder="请输入新密码" maxlength="50" autocomplete="off"></div>
+    <div class="field"><label>确认新密码</label><input type="password" id="rPass2" placeholder="再次输入新密码" maxlength="50" autocomplete="off"></div>
+    <div class="field"><label>验证码</label><div class="code-row"><input type="text" id="rCode" placeholder="请输入验证码" maxlength="6"><button id="rSendBtn" onclick="sendResetCode()">发送</button></div></div>
+    <div id="rTsBox"></div>
+    <button class="btn btn-em" onclick="doResetPwd()">重置密码</button>
+    <button onclick="hideResetPwd()" style="background:none;border:none;color:#aaa;font-size:12px;margin-top:8px;cursor:pointer;width:100%">返回注册</button>
   </div>
 </div>
 <div class="card" id="successCard" style="display:none">
@@ -159,6 +170,34 @@ async function doEmailVerify(){
     if(d.success){showSuccess(d.userId);}else toast(d.error||'验证失败');
   }catch(e){toast('网络错误');}
   btn.disabled=false;
+}
+// 找回密码
+function showResetPwd(){document.getElementById('panelEmail').style.display='none';document.getElementById('resetBox').style.display='block';loadTs('rTsBox');}
+function hideResetPwd(){document.getElementById('resetBox').style.display='none';document.getElementById('panelEmail').style.display='block';loadTs('eTsBox');}
+function sendResetCode(){
+  var em=document.getElementById('rEmail').value.trim();
+  if(!em||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){toast('请输入有效邮箱');return;}
+  var btn=document.getElementById('rSendBtn');btn.disabled=true;
+  var ts=document.getElementById('rTsBox').dataset.token||'';
+  if(!ts){toast('请完成人机验证');btn.disabled=false;return;}
+  fetch(API+'/api/user/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,turnstileToken:ts})})
+  .then(function(r){return r.json();}).then(function(d){
+    if(d.success){toast('验证码已发送');startCd(btn);}
+    else{toast(d.error||'发送失败');btn.disabled=false;}
+  }).catch(function(){toast('网络错误');btn.disabled=false;});
+}
+async function doResetPwd(){
+  var em=document.getElementById('rEmail').value.trim(),c=document.getElementById('rCode').value.trim();
+  var p=document.getElementById('rPass').value,p2=document.getElementById('rPass2').value;
+  if(!em||!c||!p){toast('请填写完整信息');return;}
+  if(p!==p2){toast('两次密码不一致');return;}
+  if(p.length<8||!/[a-zA-Z]/.test(p)){toast('密码须8位以上且包含字母');return;}
+  try{
+    var r=await fetch(API+'/api/user/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,code:c,newPassword:p})});
+    var d=await r.json();
+    if(d.success){toast('密码已重置，请返回登录');hideResetPwd();}
+    else toast(d.error||'重置失败');
+  }catch(e){toast('网络错误');}
 }
 setTimeout(function(){loadTs('tsBox');},1200);
 </script>
