@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>注册账号 - 天笑の窝</title>
 <style>
-:root{--primary:#ff6b35;--primary-light:rgba(255,107,53,0.25);--pixel-white:#fff;--pixel-soft:#f5f5f5;--border:#ddd;--text:#333;--bg:#fafafa}
+:root{--primary:#e91e63;--primary-light:rgba(233,30,99,0.25);--pixel-white:#fff;--pixel-soft:#f5f5f5;--border:#ddd;--text:#333;--bg:#fafafa}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingFang SC",sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
 .card{background:var(--pixel-white);width:100%;max-width:380px;border-radius:16px;padding:24px;box-shadow:5px 5px 0 rgba(188,188,188,0.3);border:2px solid var(--primary-light)}
@@ -212,23 +212,24 @@ function emailStep(){
   if(!ts){toast('请完成人机验证');btn.disabled=false;return;}
   fetch(API+'/api/user/send-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,inviteCode:c,turnstileToken:ts})})
   .then(function(r){return r.json();}).then(function(d){
-    if(d.success){_eStep='code';document.getElementById('eBtn').textContent='验证并注册';document.getElementById('eBtn').onclick=doEmailVerify;}
+    if(d.success){_eStep='code';document.getElementById('eBtn').textContent='验证并注册';document.getElementById('eBtn').onclick=doEmailVerify;startCd(document.getElementById('eSendBtn'));}
     else toast(d.error||'发送失败');
     btn.disabled=false;
   }).catch(function(){toast('网络错误');btn.disabled=false;});
 }
 
+var _cdTimer=null;
 function sendCode(){
   var em=document.getElementById('eEmail').value.trim(),c=document.getElementById('eCode').value.trim();
   var btn=document.getElementById('eSendBtn');btn.disabled=true;
   var ts=document.getElementById('eTsBox').dataset.token||'';
   fetch(API+'/api/user/send-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,inviteCode:c,turnstileToken:ts})})
   .then(function(r){return r.json();}).then(function(d){
-    if(d.success){toast('验证码已发送');btn.textContent='已发送';}
-    else toast(d.error||'发送失败');
-    btn.disabled=false;
+    if(d.success){toast('验证码已发送');startCd(btn);}
+    else{toast(d.error||'发送失败');btn.disabled=false;}
   }).catch(function(){toast('网络错误');btn.disabled=false;});
 }
+function startCd(btn){var s=60;if(_cdTimer)clearInterval(_cdTimer);btn.textContent=s+'s';_cdTimer=setInterval(function(){s--;if(s<=0){clearInterval(_cdTimer);btn.disabled=false;btn.textContent='重新发送';}else{btn.textContent=s+'s';}},1000);}
 
 async function doEmailVerify(){
   var em=document.getElementById('eEmail').value.trim(),vc=document.getElementById('eVerifyCode').value.trim();
