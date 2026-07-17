@@ -107,7 +107,7 @@ h1{font-size:17px;font-weight:bold;color:var(--primary);margin-bottom:16px;text-
   </div>
 </div>
 <script>
-var API='https://api.tianxiao.us.kg',TK='0x4AAAAAACxkhwPrw1gO9XFQ';
+var API='https://api.tian-xiao.com',TK='0x4AAAAAACxkhwPrw1gO9XFQ';
 var _mode='github',_ghState=null,_ghTimer=null,_ghUrl=null,_tsReady=false,_cdTimer=null;
 function toast(m){var t=document.getElementById('_t');if(!t){t=document.createElement('div');t.id='_t';t.className='toast';document.body.appendChild(t);}t.textContent=m;t.style.opacity='1';clearTimeout(t._tid);t._tid=setTimeout(function(){t.style.opacity='0';},2000);}
 function switchTab(m){_mode=m;document.getElementById('tabGithub').classList.toggle('active',m==='github');document.getElementById('tabEmail').classList.toggle('active',m==='email');document.getElementById('panelGithub').style.display=m==='github'?'block':'none';document.getElementById('panelEmail').style.display=m==='email'?'block':'none';if(m==='github'){onInviteInput();loadTs('tsBox');}else loadTs('eTsBox');}
