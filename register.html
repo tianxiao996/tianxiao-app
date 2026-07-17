@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>注册账号 - 天笑の窝</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#111;color:#ddd;font-family:"Microsoft YaHei","PingFang SC",sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:16px}
+.card{background:#1a1a1a;border-radius:16px;padding:28px 22px;max-width:420px;width:100%}
+h1{font-size:20px;text-align:center;color:#ff6b35;margin-bottom:6px}
+.sub{text-align:center;font-size:12px;color:#666;margin-bottom:18px}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tabs button{flex:1;padding:10px;border:none;border-radius:10px;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;color:#fff;background:#333}
+.tabs button.active{background:#24292e}
+.tabs button.active.etab{background:#4a90d9}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;color:#888;margin-bottom:4px}
+.field input{width:100%;background:#222;border:1px solid #444;border-radius:8px;padding:10px 12px;color:#ddd;font-size:14px;outline:none;font-family:inherit}
+.field input:focus{border-color:#ff6b35}
+.hint{font-size:10px;color:#555;margin-top:4px;text-align:center}
+.hint.super{background:#1a1a00;color:#b8860b;padding:8px;border-radius:6px;margin-bottom:12px;display:none}
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:14px;font-weight:bold;cursor:pointer;font-family:inherit;color:#fff;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px;touch-action:manipulation}
+.btn-github{background:#24292e}
+.btn-email{background:#4a90d9}
+.btn:disabled{background:#333!important;color:#666;cursor:not-allowed}
+#turnstileBox{margin:10px 0;display:flex;justify-content:center}
+.note{font-size:10px;color:#555;text-align:center;margin-top:6px}
+.error{background:#2a1a1a;border:1px solid #5a2d2d;border-radius:8px;padding:12px;margin-top:10px;font-size:12px;color:#ef4444;text-align:center;display:none}
+/* 成功页 */
+.success{text-align:center;padding:20px 0;display:none}
+.success .ok{font-size:44px;margin-bottom:8px}
+.success .msg{font-size:15px;color:#22c55e;margin-bottom:16px}
+.success .idbox{background:#111;border:1px solid #333;border-radius:10px;padding:16px;margin-bottom:14px}
+.success .idbox .lbl{font-size:11px;color:#888;margin-bottom:6px}
+.success .idbox .val{font-size:20px;font-family:monospace;color:#ff6b35;font-weight:bold;letter-spacing:1px;word-break:break-all}
+.success .btns{display:flex;gap:8px}
+.success .btns button{flex:1;padding:12px;border:none;border-radius:8px;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit}
+.success .btns .copy{background:#ff6b35;color:#fff}
+.success .btns .close{background:#333;color:#ccc}
+.warn{font-size:11px;color:#b8860b;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="card" id="formCard">
+  <h1>注册账号</h1>
+  <div class="sub">天笑の窝 · 新用户注册</div>
+
+  <div class="tabs">
+    <button id="tabGithub" class="active" onclick="switchTab('github')">GitHub 注册</button>
+    <button id="tabEmail" class="etab" onclick="switchTab('email')">📧 邮箱注册</button>
+  </div>
+
+  <!-- GitHub 注册 -->
+  <div id="panelGithub">
+    <div class="field">
+      <label>邀请码</label>
+      <input type="text" id="giCode" placeholder="请输入邀请码" autocomplete="off" oninput="onInviteInput()">
+    </div>
+    <div class="hint super" id="superHint">⭐ 超级邀请码：无需 GitHub 授权，回答问题即可注册</div>
+    <div class="field">
+      <label>用户名（1-8字符，中英文数字下划线）</label>
+      <input type="text" id="gUsername" placeholder="请输入用户名" autocomplete="off" maxlength="8">
+    </div>
+    <div class="field">
+      <label>密码（8位以上，含字母）</label>
+      <input type="password" id="gPassword" placeholder="请输入密码" maxlength="50" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>确认密码</label>
+      <input type="password" id="gPassword2" placeholder="再次输入密码" maxlength="50" autocomplete="off">
+    </div>
+    <div class="field" id="superQ" style="display:none">
+      <label>📝 验证问题：最帅的群主是谁？</label>
+      <input type="text" id="gAnswer" placeholder="请输入答案" autocomplete="off">
+    </div>
+    <div id="turnstileBox"></div>
+    <button class="btn btn-github" id="gBtn" onclick="doGithubRegister()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      <span id="gBtnText">验证通过后跳转 GitHub 完成注册</span>
+    </button>
+    <div class="note">GitHub 仅用于验证身份，不会获取敏感信息</div>
+  </div>
+
+  <!-- 邮箱注册 -->
+  <div id="panelEmail" style="display:none">
+    <div class="field">
+      <label>邮箱</label>
+      <input type="email" id="eEmail" placeholder="请输入邮箱" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>邀请码</label>
+      <input type="text" id="eCode" placeholder="请输入邀请码" autocomplete="off">
+    </div>
+    <div class="field" id="emailUserFields" style="display:none">
+      <label>用户名（1-8字符）</label>
+      <input type="text" id="eUsername" placeholder="首次登录需设置用户名" autocomplete="off" maxlength="8">
+    </div>
+    <div class="field" id="emailCodeFields" style="display:none">
+      <label>验证码</label>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="eVerifyCode" placeholder="请输入验证码" autocomplete="off" style="flex:1">
+        <button id="eSendBtn" onclick="sendEmailCode()" style="background:#4a90d9;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;white-space:nowrap;">发送验证码</button>
+      </div>
+    </div>
+    <div id="emailTsBox"></div>
+    <button class="btn btn-email" id="eBtn" onclick="doEmailStep()">获取验证码</button>
+  </div>
+
+  <div class="error" id="errBox"></div>
+</div>
+
+<!-- 成功页 -->
+<div class="card" id="successCard" style="display:none">
+  <div class="success" style="display:block">
+    <div class="ok">🎉</div>
+    <div class="msg">注册成功！请保管好你的账号ID</div>
+    <div class="idbox">
+      <div class="lbl">你的账号ID</div>
+      <div class="val" id="succId"></div>
+    </div>
+    <div class="btns">
+      <button class="copy" onclick="copyId()">📋 复制ID</button>
+      <button class="close" onclick="window.close()">关闭页面</button>
+    </div>
+    <div class="warn">⚠ 此ID仅显示一次，请立即保存</div>
+  </div>
+</div>
+
+<script>
+var API='https://api.tianxiao.us.kg';
+var _mode='github',_gState=null,_gTimer=null,_eStep='init'; // email steps: init→ts→code→verify
+
+// ── Tab 切换 ──
+function switchTab(m){
+  _mode=m;
+  document.getElementById('tabGithub').classList.toggle('active',m==='github');
+  document.getElementById('tabEmail').classList.toggle('active',m==='email');
+  document.getElementById('panelGithub').style.display=m==='github'?'block':'none';
+  document.getElementById('panelEmail').style.display=m==='email'?'block':'none';
+  if(m==='github'){onInviteInput();loadTurnstile('g');}
+  else loadTurnstile('e');
+}
+
+// ── Turnstile ──
+var _tsLoaded=false,_tsSitekey='0x4AAAAAACxkhwPrw1gO9XFQ';
+(function(){var s=document.createElement('script');s.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=_onTsLoad';s.async=true;s.defer=true;document.head.appendChild(s);})();
+var _tsTimeout;
+function _onTsLoad(){_tsLoaded=true;if(_mode==='github')loadTurnstile('g');else loadTurnstile('e');}
+function loadTurnstile(mode){
+  var boxId=mode==='g'?'turnstileBox':'emailTsBox';
+  var box=document.getElementById(boxId);if(!box)return;
+  if(!_tsLoaded){clearTimeout(_tsTimeout);_tsTimeout=setTimeout(function(){loadTurnstile(mode);},500);return;}
+  if(window.turnstile){
+    box.innerHTML='<div class="cf-turnstile" id="ts_'+mode+'" data-sitekey="'+_tsSitekey+'" data-theme="dark"></div>';
+    try{turnstile.render('#ts_'+mode,{sitekey:_tsSitekey,theme:'dark',callback:function(t){
+      box.dataset.token=t;
+    }});}catch(e){}
+  }
+}
+
+// ── 邀请码输入 ──
+function onInviteInput(){
+  var code=(document.getElementById('giCode').value||'').trim();
+  var sup=code.toUpperCase().startsWith('SUPER_');
+  document.getElementById('superHint').style.display=sup?'block':'none';
+  document.getElementById('superQ').style.display=sup?'block':'none';
+  var tsBox=document.getElementById('turnstileBox');
+  tsBox.style.display=sup?'none':'flex';
+  var btn=document.getElementById('gBtn');
+  document.getElementById('gBtnText').textContent=sup?'立即注册':'验证通过后跳转 GitHub 完成注册';
+  btn.style.background=sup?'#878787':'#24292e';
+}
+
+// ── 错误提示 ──
+function showErr(msg){var e=document.getElementById('errBox');e.textContent=msg;e.style.display='block';}
+function hideErr(){document.getElementById('errBox').style.display='none';}
+
+// ── 显示成功 ──
+function showSuccess(userId){
+  document.getElementById('formCard').style.display='none';
+  document.getElementById('successCard').style.display='block';
+  document.getElementById('succId').textContent=userId;
+}
+
+// ── GitHub 注册 ──
+async function doGithubRegister(){
+  hideErr();
+  var code=document.getElementById('giCode').value.trim();
+  var u=document.getElementById('gUsername').value.trim();
+  var p=document.getElementById('gPassword').value;
+  var p2=document.getElementById('gPassword2').value;
+  var ans=document.getElementById('gAnswer').value.trim();
+  var sup=code.toUpperCase().startsWith('SUPER_');
+  var tsBox=document.getElementById('turnstileBox');
+  var tsToken=tsBox.dataset.token||'';
+
+  if(!code||!u||!p||!p2){showErr('所有字段都必须填写');return;}
+  if(u.length<1||u.length>8){showErr('用户名1-8字符');return;}
+  if(!/^[a-zA-Z0-9_一-龥]+$/.test(u)){showErr('用户名只能中英文数字下划线');return;}
+  if(p.length<8){showErr('密码至少8位');return;}
+  if(!/[a-zA-Z]/.test(p)){showErr('密码必须包含至少一个字母');return;}
+  if(p!==p2){showErr('两次密码不一致');return;}
+  if(sup&&ans!=='天笑'){showErr('回答错误');return;}
+
+  var btn=document.getElementById('gBtn');btn.disabled=true;btn.style.opacity='0.6';
+
+  try{
+    var body={username:u,password:p,password2:p2,inviteCode:code,fingerprint:('reg_'+u+Date.now()).slice(0,64)};
+    if(sup){body.answer=ans;}else{body.tsToken=tsToken;}
+
+    var res=await fetch(API+'/api/user/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    var data=await res.json();
+
+    if(data.success&&data.token){
+      showSuccess(data.userId);
+    }else if(data.githubUrl){
+      // 需要GitHub授权
+      _gState=data.state;
+      var popup=window.open(data.githubUrl,'ghAuth','width=600,height=700');
+      if(!popup){showErr('请允许弹窗，或关闭弹窗拦截后重试');btn.disabled=false;btn.style.opacity='1';return;}
+      // 监听GitHub授权结果
+      if(_gTimer)clearInterval(_gTimer);
+      _gTimer=setInterval(async function(){
+        try{
+          var cr=await fetch(API+'/api/user/check_auth?state='+_gState);
+          var cd=await cr.json();
+          if(cd.success&&cd.token){
+            clearInterval(_gTimer);_gTimer=null;
+            showSuccess(cd.userId);
+          }else if(cd.error&&cd.error!=='授权尚未完成或已过期'){
+            clearInterval(_gTimer);_gTimer=null;
+            showErr(cd.error);btn.disabled=false;btn.style.opacity='1';
+          }
+        }catch(e){}
+      },2000);
+      // 超时3分钟
+      setTimeout(function(){if(_gTimer){clearInterval(_gTimer);_gTimer=null;showErr('授权超时，请重试');btn.disabled=false;btn.style.opacity='1';}},180000);
+    }else{
+      showErr(data.error||'注册失败');
+      btn.disabled=false;btn.style.opacity='1';
+    }
+  }catch(e){showErr('网络错误，请重试');btn.disabled=false;btn.style.opacity='1';}
+}
+
+// ── 邮箱注册 ──
+function _setEmailStep(s){_eStep=s;
+  document.getElementById('emailUserFields').style.display=(s==='verify')?'block':'none';
+  document.getElementById('emailCodeFields').style.display=(s==='code'||s==='verify')?'block':'none';
+  var btn=document.getElementById('eBtn');
+  if(s==='init'){btn.textContent='获取验证码';btn.onclick=doEmailStep;}
+  else if(s==='code'){btn.textContent='发送验证码';btn.onclick=sendEmailCode;}
+  else if(s==='verify'){btn.textContent='验证并登录/注册';btn.onclick=doEmailVerify;}
+}
+
+async function doEmailStep(){
+  hideErr();
+  var email=document.getElementById('eEmail').value.trim();
+  var code=document.getElementById('eCode').value.trim();
+  var tsBox=document.getElementById('emailTsBox');var ts=tsBox.dataset.token||'';
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showErr('请输入有效邮箱');return;}
+  if(!code){showErr('请输入邀请码');return;}
+  if(!ts){showErr('请完成人机验证');return;}
+
+  var btn=document.getElementById('eBtn');btn.disabled=true;
+  try{
+    var res=await fetch(API+'/api/user/send-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,inviteCode:code,turnstileToken:ts})});
+    var data=await res.json();
+    if(data.success){_setEmailStep('code');showErr('');document.getElementById('errBox').style.display='none';}
+    else showErr(data.error||'发送失败');
+  }catch(e){showErr('网络错误');}
+  btn.disabled=false;
+}
+
+async function sendEmailCode(){
+  hideErr();
+  var email=document.getElementById('eEmail').value.trim();
+  var code=document.getElementById('eCode').value.trim();
+  var tsBox=document.getElementById('emailTsBox');var ts=tsBox.dataset.token||'';
+  var btn=document.getElementById('eBtn');btn.disabled=true;
+  try{
+    var res=await fetch(API+'/api/user/send-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,inviteCode:code,turnstileToken:ts})});
+    var data=await res.json();
+    if(data.success){_setEmailStep('verify');showErr('');document.getElementById('errBox').style.display='none';document.getElementById('eSendBtn').disabled=true;}
+    else showErr(data.error||'发送失败');
+  }catch(e){showErr('网络错误');}
+  btn.disabled=false;
+}
+
+async function doEmailVerify(){
+  hideErr();
+  var email=document.getElementById('eEmail').value.trim();
+  var vcode=document.getElementById('eVerifyCode').value.trim();
+  var uname=document.getElementById('eUsername').value.trim();
+  var icode=document.getElementById('eCode').value.trim();
+  if(!vcode){showErr('请输入验证码');return;}
+
+  var btn=document.getElementById('eBtn');btn.disabled=true;
+  try{
+    var res=await fetch(API+'/api/user/email-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,code:vcode,username:uname,inviteCode:icode,fingerprint:('em_'+email).slice(0,64)})});
+    var data=await res.json();
+    if(data.success){showSuccess(data.userId);}
+    else showErr(data.error||'验证失败');
+  }catch(e){showErr('网络错误');}
+  btn.disabled=false;
+}
+
+// ── 复制 ──
+function copyId(){
+  var id=document.getElementById('succId').textContent;
+  navigator.clipboard.writeText(id).then(function(){alert('已复制: '+id);}).catch(function(){
+    var ta=document.createElement('textarea');ta.value=id;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('已复制: '+id);
+  });
+}
+
+// 初始化
+setTimeout(function(){loadTurnstile('g');},1000);
+</script>
+</body>
+</html>
