@@ -72,7 +72,7 @@ return false;}},true);document.addEventListener('contextmenu',function(e){if(win
   /* PC端卡片放大 */
   .grid{max-width:900px !important;}
   #bannerSection{max-width:550px !important;}
-  #adminBar{max-width:900px !important;}
+  #adminBar{max-width:900px !important;display:flex !important;flex-direction:column !important;align-items:center !important;margin-left:auto !important;margin-right:auto !important;}
   #bannerEditPanel,#shortlinkPanel,#catPanel{max-width:900px !important;}
   .fav-panel-grid{max-width:900px !important;}
   .notice-content-wrap{max-width:900px !important;}
@@ -999,7 +999,7 @@ card.currentIndex=currentIndex;}</script>
 <div style="font-size:13px; margin-bottom:8px;">当前：<b id="permanentInviteDisplay" style="font-family:monospace;color:#6a1b9a;">加载中...</b></div>
 <div style="display:flex; gap:8px;">
 <input type="text" id="permanentInviteInput" placeholder="输入新的永久邀请码" style="flex:1;border:1px solid #aaa;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;min-width:0;">
-<button onclick="setPermanentInvite()" style="background:#7b7b7b;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;flex-shrink:0;">更新</button><button onclick="exitAdmin()" style="background:#666;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;flex-shrink:0;">🚪 退出</button>
+<button onclick="setPermanentInvite()" style="background:#7b7b7b;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;flex-shrink:0;">更新</button>
 
 </div>
 </div>
