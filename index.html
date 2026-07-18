@@ -3253,7 +3253,50 @@ async function loadBackpack(){if(!currentUser)return;const grid=document.getElem
             `).join('');}else{grid.innerHTML='<div class="user-fav-empty">背包为空，去商店购买或领取限定头像吧~</div>';}}catch(e){grid.innerHTML='<div class="user-fav-empty">加载失败</div>';}}
 async function equipAvatar(url){if(!currentUser)return;try{const res=await fetch(`${USER_API}/api/user/backpack/equip`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${currentUser.sessionToken}`},body:JSON.stringify({url})});const data=await res.json();if(data.success){showToast('✅ 头像已装备！');loadBackpack();}else{showToast('❌ '+(data.error||'装备失败'));}}catch(e){showToast('❌ 网络错误');}}
 async function unequipAvatar(){if(!currentUser)return;try{const res=await fetch(`${USER_API}/api/user/backpack/unequip`,{method:'POST',headers:{'Authorization':`Bearer ${currentUser.sessionToken}`}});const data=await res.json();if(data.success){showToast('✅ 已卸下头像');loadBackpack();}else{showToast('❌ '+(data.error||'卸下失败'));}}catch(e){showToast('❌ 网络错误');}}
-async function loadUserHomeData(){if(!currentUser)return;try{const res=await fetch(`${USER_API}/api/user/home`,{headers:{'Authorization':`Bearer ${currentUser.sessionToken}`}});const data=await res.json();if(data.success){_userHomeData=data;renderUserHome(data);}else if(data.banned){_userHomeData=data;renderUserHome(data);}else{if(data.error&&data.error.includes('登录')){showToast('登录已过期，请重新登录');doLogout();closeUserHome();openUserModal();}}}catch(e){console.error('加载主页数据失败',e);}}
+async function loadUserHomeData(){if(!currentUser)return;try{const res=await fetch(`${USER_API}/api/user/home`,{headers:{'Authorization':`Bearer ${currentUser.sessionToken}`}});const data=await res.json();if(data.success){_userHomeData=data;renderUserHome(data);initEmailBindUI(data);}else if(data.banned){_userHomeData=data;renderUserHome(data);}else{if(data.error&&data.error.includes('登录')){showToast('登录已过期，请重新登录');doLogout();closeUserHome();openUserModal();}}}catch(e){console.error('加载主页数据失败',e);}}
+function initEmailBindUI(data){
+  var wrap=document.getElementById('homeEmailWrap');
+  if(!wrap){
+    var fishRow=document.getElementById('homeFishRow');
+    if(!fishRow)return;
+    wrap=document.createElement('div');wrap.id='homeEmailWrap';
+    wrap.style.cssText='background:var(--pixel-soft);border-radius:12px;padding:12px;margin-top:10px;border:1.5px solid var(--primary-light);';
+    fishRow.parentNode.insertBefore(wrap,fishRow.nextSibling);
+  }
+  var email=data.email||'';
+  if(email){
+    wrap.innerHTML='<div style=\"font-size:12px;color:var(--primary);font-weight:bold;margin-bottom:4px;\">📧 已绑定邮箱</div><div style=\"font-size:13px;color:var(--text);\">'+_esc(email)+'</div>';
+  }else{
+    var hasBindForm=document.getElementById('homeBindForm');
+    wrap.innerHTML='<div style=\"font-size:12px;color:var(--primary);font-weight:bold;margin-bottom:8px;\">📧 未绑定邮箱</div><div id=\"homeBindForm\"><input type=\"email\" id=\"hmBindEmail\" placeholder=\"输入邮箱\" style=\"width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:6px;box-sizing:border-box;outline:none;\"><button onclick=\"showHomeBindCode()\" style=\"padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:bold;cursor:pointer;\">发送验证码</button><div id=\"hmBindCodeRow\" style=\"display:none;margin-top:6px;\"><input type=\"text\" id=\"hmBindCode\" placeholder=\"验证码\" maxlength=\"6\" style=\"width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:6px;box-sizing:border-box;outline:none;\"><button onclick=\"doHomeBindEmail()\" style=\"padding:8px 14px;background:#4a90d9;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:bold;cursor:pointer;margin-right:4px;\">验证绑定</button><button onclick=\"showHomeBindCode()\" style=\"padding:8px 14px;background:#aaa;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;\">重新发送</button></div></div>';
+  }
+}
+var _hmCdTimer=null;
+async function showHomeBindCode(){
+  var em=document.getElementById('hmBindEmail').value.trim();
+  if(!em||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){showToast('请输入有效邮箱');return;}
+  var token=currentUser?currentUser.sessionToken:'';if(!token){showToast('请先登录');return;}
+  try{
+    var r=await fetch(USER_API+'/api/user/bind-email',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({email:em,turnstileToken:'bind_home'})});
+    var d=await r.json();
+    if(d.success){showToast('验证码已发送');document.getElementById('hmBindCodeRow').style.display='block';
+      var btn=document.querySelector('#homeEmailWrap button');if(btn){var s=60;btn.disabled=true;if(_hmCdTimer)clearInterval(_hmCdTimer);btn.textContent=s+'s';_hmCdTimer=setInterval(function(){s--;if(s<=0){clearInterval(_hmCdTimer);btn.disabled=false;btn.textContent='重新发送';}else{btn.textContent=s+'s';}},1000);}
+    }else if(d.error&&d.error.includes('人机验证')){
+      showToast('请先完成人机验证');}
+    else{showToast(d.error||'发送失败');}
+  }catch(e){showToast('网络错误');}
+}
+async function doHomeBindEmail(){
+  var em=document.getElementById('hmBindEmail').value.trim(),c=document.getElementById('hmBindCode').value.trim();
+  if(!em||!c){showToast('请填写完整');return;}
+  var token=currentUser?currentUser.sessionToken:'';if(!token){showToast('请先登录');return;}
+  try{
+    var r=await fetch(USER_API+'/api/user/bind-email',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({email:em,code:c})});
+    var d=await r.json();
+    if(d.success){showToast('邮箱绑定成功！');_userHomeData.email=em;initEmailBindUI(_userHomeData);}
+    else{showToast(d.error||'绑定失败');}
+  }catch(e){showToast('网络错误');}
+}
 function renderUserHome(data){document.getElementById('homeUsername').textContent=data.username||currentUser?.username||'未知';const avatarEl=document.getElementById('homeAvatarDisplay');if(avatarEl){avatarEl.onclick=()=>openAvatarShopPage();avatarEl.title='点击打开装扮商店';avatarEl.style.cursor='pointer';const avatarUrl=data.avatar&&data.avatar!==''?data.avatar:null;if(avatarUrl){avatarEl.innerHTML=`<img src="${escapeHtml(avatarUrl)}" alt="头像" onerror="this.parentElement.textContent='人类';this.parentElement.style.fontSize='18px';this.parentElement.style.fontWeight='bold';this.parentElement.style.color='var(--primary)';">`;}else{avatarEl.textContent='人类';avatarEl.style.fontSize='18px';avatarEl.style.fontWeight='bold';avatarEl.style.color='var(--primary)';}}
 const banBox=document.getElementById('homeBanStatus');const renameRow=document.getElementById('homeRenameRow');const fishRow=document.getElementById('homeFishRow');if(data.banned){if(banBox)banBox.style.display='block';const banReason=document.getElementById('homeBanReason');if(banReason)banReason.textContent=data.reason||'';const banCountdown=document.getElementById('homeBanCountdown');if(banCountdown){const days=data.daysLeft||Math.ceil((data.bannedUntil-Date.now())/(24*60*60*1000));banCountdown.textContent=`封号倒计时：${days} 天`;}
 if(renameRow)renameRow.style.display='none';if(fishRow)fishRow.style.display='none';document.querySelectorAll('.user-home-section').forEach(s=>s.style.display='none');_isUserBanned=true;_banInfo={bannedUntil:data.bannedUntil,reason:data.reason,daysLeft:data.daysLeft};return;}else{if(banBox)banBox.style.display='none';if(renameRow)renameRow.style.display='block';if(fishRow)fishRow.style.display='block';document.querySelectorAll('.user-home-section').forEach(s=>s.style.display='');_isUserBanned=false;_banInfo=null;}
