@@ -3237,7 +3237,7 @@ const detailPage=document.getElementById('cardDetailPage');if(detailPage&&detail
 const modal=document.getElementById('userHomeModal');modal.classList.add('show');document.getElementById('redeemResult').style.display='none';history.pushState({page:'userHome'},'');document.getElementById('homeUserId').textContent=currentUser.userId||'';if(_userHomeData){renderUserHome(_userHomeData);}else{document.getElementById('homeUsername').textContent=currentUser.username||'';}
 loadUserHomeData();loadAvatarShop();}
 function initEmailShortcut(){
-  if(document.getElementById('emailShortcutBtn'))return;
+  var old=document.getElementById('emailShortcutBtn');if(old)old.remove();
   var grid=document.querySelector('.home-shortcut-grid');
   if(!grid)return;
   var btn=document.createElement('div');btn.id='emailShortcutBtn';btn.className='home-shortcut-btn';
