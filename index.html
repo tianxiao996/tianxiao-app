@@ -3067,6 +3067,9 @@ GitHub
 <div class="home-shortcut-btn" onclick="openMailPanel()">
 <span class="btn-icon">📧</span>消息中心
 </div>
+<div class="home-shortcut-btn" onclick="handleEmailBind()">
+<span class="btn-icon">📧</span>绑定邮箱
+</div>
 <div class="home-shortcut-btn" onclick="doLogout()" style="color:#aaa;">
 <span class="btn-icon">🚪</span>退出登录
 </div>
@@ -3235,6 +3238,7 @@ const homeModal=document.getElementById('userHomeModal');if(homeModal&&homeModal
 const detailPage=document.getElementById('cardDetailPage');if(detailPage&&detailPage.style.display!=='none'){closeCardDetail();return;}});function openUserHome(){if(!currentUser){openUserModal();return;}
 const modal=document.getElementById('userHomeModal');modal.classList.add('show');document.getElementById('redeemResult').style.display='none';history.pushState({page:'userHome'},'');document.getElementById('homeUserId').textContent=currentUser.userId||'';if(_userHomeData){renderUserHome(_userHomeData);}else{document.getElementById('homeUsername').textContent=currentUser.username||'';}
 loadUserHomeData();loadAvatarShop();}
+function handleEmailBind(){if(_userHomeData&&_userHomeData.email){showToast('已绑定: '+_userHomeData.email);}else{openHomeSubpage('email');}}
 function initEmailShortcut(){
   var old=document.getElementById('emailShortcutBtn');if(old)old.remove();
   var grid=document.querySelector('.home-shortcut-grid');
