@@ -3238,7 +3238,7 @@ const homeModal=document.getElementById('userHomeModal');if(homeModal&&homeModal
 const detailPage=document.getElementById('cardDetailPage');if(detailPage&&detailPage.style.display!=='none'){closeCardDetail();return;}});function openUserHome(){if(!currentUser){openUserModal();return;}
 const modal=document.getElementById('userHomeModal');modal.classList.add('show');document.getElementById('redeemResult').style.display='none';history.pushState({page:'userHome'},'');document.getElementById('homeUserId').textContent=currentUser.userId||'';if(_userHomeData){renderUserHome(_userHomeData);}else{document.getElementById('homeUsername').textContent=currentUser.username||'';}
 loadUserHomeData();loadAvatarShop();}
-function handleEmailBind(){if(_userHomeData&&_userHomeData.email){showToast('已绑定: '+_userHomeData.email);}else{openHomeSubpage('email');}}
+function handleEmailBind(){if(_userHomeData&&_userHomeData.email){showToast('已绑定: '+_userHomeData.email);return;}initEmailShortcut();openHomeSubpage('email');}
 function initEmailShortcut(){
   if(document.getElementById('subpage-email'))return;
   var sp=document.createElement('div');sp.id='subpage-email';sp.className='home-subpage';
