@@ -3241,7 +3241,7 @@ function initEmailShortcut(){
   var grid=document.querySelector('.home-shortcut-grid');
   if(!grid)return;
   var btn=document.createElement('div');btn.id='emailShortcutBtn';btn.className='home-shortcut-btn';
-  btn.onclick=function(){if(!_userHomeData)return;if(_userHomeData.email){showToast('已绑定: '+_userHomeData.email);}else{openHomeSubpage('email');}};
+  btn.onclick=function(){openHomeSubpage('email');};
   btn.innerHTML='<span class="btn-icon">📧</span>绑定邮箱';
   grid.appendChild(btn);
   if(document.getElementById('subpage-email'))return;
