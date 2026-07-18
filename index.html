@@ -3240,13 +3240,6 @@ const modal=document.getElementById('userHomeModal');modal.classList.add('show')
 loadUserHomeData();loadAvatarShop();}
 function handleEmailBind(){if(_userHomeData&&_userHomeData.email){showToast('已绑定: '+_userHomeData.email);}else{openHomeSubpage('email');}}
 function initEmailShortcut(){
-  var old=document.getElementById('emailShortcutBtn');if(old)old.remove();
-  var grid=document.querySelector('.home-shortcut-grid');
-  if(!grid)return;
-  var btn=document.createElement('div');btn.id='emailShortcutBtn';btn.className='home-shortcut-btn';
-  btn.onclick=function(){if(_userHomeData&&_userHomeData.email){showToast('已绑定: '+_userHomeData.email);}else{openHomeSubpage('email');}};
-  btn.innerHTML='<span class="btn-icon">📧</span>绑定邮箱';
-  grid.appendChild(btn);
   if(document.getElementById('subpage-email'))return;
   var sp=document.createElement('div');sp.id='subpage-email';sp.className='home-subpage';
   sp.innerHTML='<div class="home-topbar"><button class="home-topbar-back" onclick="closeHomeSubpage(\'email\')">←</button><div class="home-topbar-title">📧 绑定邮箱</div></div><div class="home-scroll"><div class="user-home-section"><div class="user-field"><label>邮箱地址</label><input type="email" id="bindEmailInput" placeholder="请输入要绑定的邮箱" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:0;background:transparent;color:var(--text);box-sizing:border-box;"></div><div class="user-field"><label>验证码</label><div style="display:flex;gap:6px;"><input type="text" id="bindCodeInput" placeholder="6位验证码" maxlength="6" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:0;background:transparent;color:var(--text);box-sizing:border-box;"><button id="bindSendBtn" onclick="sendBindEmailCode()" style="padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:bold;cursor:pointer;white-space:nowrap;">发送</button></div></div><button class="user-submit-btn" onclick="doBindEmailVerify()">验证并绑定</button></div></div>';
