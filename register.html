@@ -98,6 +98,14 @@ h1{font-size:17px;font-weight:bold;color:var(--primary);margin-bottom:16px;text-
     <button class="btn btn-em" onclick="doResetPwd()">重置密码</button>
     <button onclick="hideResetPwd()" style="background:none;border:none;color:#aaa;font-size:12px;margin-top:8px;cursor:pointer;width:100%">返回注册</button>
   </div>
+  <!-- 绑定邮箱（GitHub用户） -->
+  <div id="bindBox" style="display:none">
+    <div class="field"><label>绑定邮箱（GitHub账号转邮箱账号）</label><input type="email" id="bEmail" placeholder="请输入要绑定的邮箱" autocomplete="off"></div>
+    <div class="field"><label>验证码</label><div class="code-row"><input type="text" id="bCode" placeholder="请输入验证码" maxlength="6"><button id="bSendBtn" onclick="sendBindCode()">发送</button></div></div>
+    <div id="bTsBox"></div>
+    <button class="btn btn-em" onclick="doBindEmail()">绑定邮箱</button>
+    <div class="note">绑定后可用邮箱登录和找回密码</div>
+  </div>
 </div>
 <div class="card" id="successCard" style="display:none">
   <div id="successBox" style="display:block">
@@ -199,7 +207,35 @@ async function doResetPwd(){
   }catch(e){toast('网络错误');}
 }
 (function(){if(location.search.includes('reset')){document.getElementById('mainCard').querySelector('.tabs').style.display='none';document.getElementById('panelGithub').style.display='none';document.getElementById('panelEmail').style.display='none';document.getElementById('resetBox').style.display='block';setTimeout(function(){loadTs('rTsBox');},1200);}
-var q=new URLSearchParams(location.search);if(q.get('reg_ok')==='1'){var uid=q.get('userId');if(uid){showSuccess(uid);window.history.replaceState({},'',location.pathname);}}})();
+var q=new URLSearchParams(location.search);if(q.get('reg_ok')==='1'){var uid=q.get('userId');if(uid){showSuccess(uid);window.history.replaceState({},'',location.pathname);}}
+if(location.search.includes('bind')){document.getElementById('mainCard').querySelector('.tabs').style.display='none';document.getElementById('panelGithub').style.display='none';document.getElementById('panelEmail').style.display='none';document.getElementById('resetBox').style.display='none';document.getElementById('bindBox').style.display='block';loadTs('bTsBox');}})();
+// 绑定邮箱
+function sendBindCode(){
+  var em=document.getElementById('bEmail').value.trim();
+  if(!em||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){toast('请输入有效邮箱');return;}
+  var btn=document.getElementById('bSendBtn');btn.disabled=true;
+  var ts=document.getElementById('bTsBox').dataset.token||'';
+  if(!ts){toast('请完成人机验证');btn.disabled=false;return;}
+  var u=localStorage.getItem('tx_user');var token=u?JSON.parse(u).sessionToken:'';
+  if(!token){toast('请先在主站登录GitHub账号');btn.disabled=false;return;}
+  fetch(API+'/api/user/bind-email',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({email:em,turnstileToken:ts})})
+  .then(function(r){return r.json();}).then(function(d){
+    if(d.success){toast('验证码已发送');startCd(btn);}
+    else{toast(d.error||'发送失败');btn.disabled=false;}
+  }).catch(function(){toast('网络错误');btn.disabled=false;});
+}
+async function doBindEmail(){
+  var em=document.getElementById('bEmail').value.trim(),c=document.getElementById('bCode').value.trim();
+  if(!em||!c){toast('请填写完整');return;}
+  var u=localStorage.getItem('tx_user');var token=u?JSON.parse(u).sessionToken:'';
+  if(!token){toast('请先在主站登录GitHub账号');return;}
+  try{
+    var r=await fetch(API+'/api/user/bind-email',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({email:em,code:c})});
+    var d=await r.json();
+    if(d.success){toast('邮箱绑定成功！现在可用邮箱登录');}
+    else toast(d.error||'绑定失败');
+  }catch(e){toast('网络错误');}
+}
 setTimeout(function(){loadTs('tsBox');},1200);
 </script>
 </body>
