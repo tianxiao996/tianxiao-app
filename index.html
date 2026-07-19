@@ -3291,7 +3291,7 @@ async function sendBindEmailCode(){
     var d=await r.json();
     if(d.success){showToast('验证码已发送');var s=60;if(_bindCdTimer)clearInterval(_bindCdTimer);btn.textContent=s+'s';_bindCdTimer=setInterval(function(){s--;if(s<=0){clearInterval(_bindCdTimer);btn.disabled=false;btn.textContent='重新发送';}else{btn.textContent=s+'s';}},1000);}
     else{showToast(d.error||'发送失败');btn.disabled=false;}
-  }catch(e){showToast('网络错误');btn.disabled=false;}
+  }catch(e){showToast('错误: '+(e.message||e));btn.disabled=false;}
 }
 async function doBindEmailVerify(){
   var em=document.getElementById('bindEmailInput').value.trim(),c=document.getElementById('bindCodeInput').value.trim();
