@@ -2943,14 +2943,11 @@ overscroll-behavior-y:contain;position:relative;z-index:1;"></div>
 <button class="user-submit-btn" onclick="doEmailLogin()">验证登录</button>
 <div style="text-align:center;margin:12px 0;font-size:12px;color:#aaa;">────────── 或 ──────────</div>
 </div>
-<button class="user-submit-btn" style="background:#4a90d9;" onclick="toggleEmailLogin()">Email Login</button>
+<button class="user-submit-btn" style="background:#4a90d9;" onclick="toggleEmailLogin()">📧 邮箱登录</button>
 </div>
 <div id="resetPwdBox" style="display:none"><div class="user-field"><label>注册邮箱</label><input type="email" id="rpEmail" placeholder="请输入注册邮箱" autocomplete="off"></div><div id="rpTsContainer"></div><div class="user-field"><label>验证码</label><div style="display:flex;gap:6px"><input type="text" id="rpCode" placeholder="6位验证码" maxlength="6" style="flex:1"><button id="rpSendBtn" onclick="rpSendCode()" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:bold;cursor:pointer;white-space:nowrap">发送</button></div></div><div class="user-field"><label>新密码（8位以上含字母）</label><input type="password" id="rpNewPwd" placeholder="请输入新密码" autocomplete="off"></div><button class="user-submit-btn" onclick="rpDoReset()">重置密码</button><button onclick="hideResetPwdUI()" style="background:none;border:none;color:#aaa;font-size:12px;margin-top:6px;cursor:pointer;width:100%">← 返回登录</button></div><!-- 注册表单 -->
 <div id="userRegisterForm" style="display:none;">
-<div style="display:flex;gap:8px;margin-bottom:12px;">
 
-<button id="regEmailTab" class="user-submit-btn" style="flex:1;font-size:13px;background:#4a90d9;" onclick="toggleRegMode('email')">📧 邮箱注册</button>
-</div>
 <div id="regGithubFields" style="display:none">
 <div class="user-field">
 <label>邀请码</label>
