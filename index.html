@@ -2907,9 +2907,6 @@ overscroll-behavior-y:contain;position:relative;z-index:1;"></div>
 </div>
 <!-- 注册表单 -->
 <div id="userRegisterForm" style="display:none;">
-<div style="display:flex;gap:8px;margin-bottom:12px;">
-<button id="regEmailTab" class="user-submit-btn" style="flex:1;font-size:13px;background:#4a90d9;" onclick="toggleRegMode('email')">📧 邮箱注册</button>
-</div>
 <div id="regGithubFields" style="display:none">
 <div class="user-field">
 <label>邀请码</label>
@@ -2938,7 +2935,7 @@ overscroll-behavior-y:contain;position:relative;z-index:1;"></div>
 </button>
 <div id="regGithubNote" style="font-size:11px;color:#aaa;text-align:center;margin-top:8px;">GitHub授权仅用于验证身份防止小号，不会获取敏感信息</div>
 </div>
-<div id="regEmailFields" style="display:none;">
+<div id="regEmailFields">
 <div class="user-field">
 <label>邮箱</label>
 <input type="email" id="regEmailInput" placeholder="请输入邮箱" autocomplete="off">
