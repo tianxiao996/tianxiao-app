@@ -829,7 +829,7 @@ button:active,.link-jump-btn:active,.gate-btn:active{
 /* 夜间模式评分颜色 */
 [data-theme="dark"] .score-stats-big{color:#fff!important}
 [data-theme="dark"] .score-stat-stars{color:#f5a623!important}
-</style></head>
+</style><style>.gh-hidden{display:none !important}</style></head>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer onerror="window._tsLoadFailed=true">var _rpTsToken='';
 function showResetPwdUI(){document.getElementById('userLoginForm').style.display='none';document.getElementById('userRegisterForm').style.display='none';document.getElementById('resetPwdBox').style.display='block';document.getElementById('userModalTabs').style.display='none';setTimeout(function(){var el=document.getElementById('rpTsContainer');if(el&&typeof turnstile!=='undefined'){el.innerHTML='';turnstile.render(el,{sitekey:'0x4AAAAAACxkhwPrw1gO9XFQ',theme:'auto',callback:function(t){_rpTsToken=t}})}},300)}
 function hideResetPwdUI(){document.getElementById('resetPwdBox').style.display='none';document.getElementById('userLoginForm').style.display='block';document.getElementById('userModalTabs').style.display='flex';switchUserTab('login')}
@@ -2056,7 +2056,7 @@ let deferredPrompt;window.addEventListener('beforeinstallprompt',(e)=>{e.prevent
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>此页面坏掉了</title>
 <style>body{margin:0;background:#fff;display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;font-family:system-ui,sans-serif;color:#000}.icon{font-size:72px;margin-bottom:12px}h2{margin:0 0 8px;font-size:22px;font-weight:normal}p{margin:0;color:#888;font-size:14px}button{margin-top:20px;padding:10px 28px;background:#555;color:#fff;border:0;border-radius:4px;font-size:14px;cursor:pointer}</style>
-</head>
+<style>.gh-hidden{display:none !important}</style></head>
 <body>
 <div class="icon">😵</div>
 <h2>此页面坏掉了</h2>
@@ -2943,12 +2943,50 @@ overscroll-behavior-y:contain;position:relative;z-index:1;"></div>
 <button class="user-submit-btn" onclick="doEmailLogin()">验证登录</button>
 <div style="text-align:center;margin:12px 0;font-size:12px;color:#aaa;">────────── 或 ──────────</div>
 </div>
-<button class="user-submit-btn" style="background:#4a90d9;" onclick="toggleEmailLogin()">📧 邮箱登录</button>
+<div style="display:flex;gap:8px;">
+<button class="user-submit-btn" style="background:#24292e;display:flex;align-items:center;justify-content:center;gap:8px;flex:1;" onclick="doGithubLogin()" class="gh-hidden">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+GitHub
+</button>
+<button class="user-submit-btn" style="background:#4a90d9;display:flex;align-items:center;justify-content:center;gap:8px;flex:1;font-size:13px;" onclick="toggleEmailLogin()">
+📧 邮箱登录
+</button>
 </div>
-<div id="resetPwdBox" style="display:none"><div class="user-field"><label>注册邮箱</label><input type="email" id="rpEmail" placeholder="请输入注册邮箱" autocomplete="off"></div><div id="rpTsContainer"></div><div class="user-field"><label>验证码</label><div style="display:flex;gap:6px"><input type="text" id="rpCode" placeholder="6位验证码" maxlength="6" style="flex:1"><button id="rpSendBtn" onclick="rpSendCode()" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:bold;cursor:pointer;white-space:nowrap">发送</button></div></div><div class="user-field"><label>新密码（8位以上含字母）</label><input type="password" id="rpNewPwd" placeholder="请输入新密码" autocomplete="off"></div><button class="user-submit-btn" onclick="rpDoReset()">重置密码</button><button onclick="hideResetPwdUI()" style="background:none;border:none;color:#aaa;font-size:12px;margin-top:6px;cursor:pointer;width:100%">← 返回登录</button></div><!-- 注册表单 -->
+</div>
+<div id="resetPwdBox" style="display:none"><div class="user-field"><label>注册邮箱</label><input type="email" id="rpEmail" placeholder="请输入注册邮箱" autocomplete="off"></div><div id="rpTsContainer"></div><div class="user-field"><label>验证码</label><div style="display:flex;gap:6px"><input type="text" id="rpCode" placeholder="6位验证码" maxlength="6" style="flex:1"><button id="rpSendBtn" onclick="rpSendCode()" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:bold;cursor:pointer;white-space:nowrap">发送</button></div></div><div class="user-field"><label>新密码（8位以上含字母）</label><input type="password" id="rpNewPwd" placeholder="请输入新密码" autocomplete="off"></div><button class="user-submit-btn" onclick="rpDoReset()">重置密码</button><button onclick="hideResetPwdUI()" style="background:none;border:none;color:#aaa;font-size:12px;margin-top:6px;cursor:pointer;width:100%">返回登录</button></div><!-- 注册表单 -->
 <div id="userRegisterForm" style="display:none;">
-
-<div id="regGithubFields" style="display:none"></div>
+<div style="display:flex;gap:8px;margin-bottom:12px;">
+<button id="regGithubTab" class="gh-hidden" class="user-submit-btn" style="flex:1;font-size:13px;background:#24292e;" onclick="toggleRegMode('github')">GitHub注册</button>
+<button id="regEmailTab" class="gh-hidden" class="user-submit-btn" style="flex:1;font-size:13px;background:#4a90d9;" onclick="toggleRegMode('email')">📧 邮箱注册</button>
+</div>
+<div id="regGithubFields" class="gh-hidden">
+<div class="user-field">
+<label>邀请码</label>
+<input type="text" id="regInviteCode" placeholder="请输入邀请码" autocomplete="off" oninput="onRegInviteInput()">
+</div>
+<div class="user-field">
+<label>用户名（1-8个字符，中英文数字下划线）</label>
+<input type="text" id="regUsername" placeholder="请输入用户名" autocomplete="off" maxlength="8">
+</div>
+<div class="user-field">
+<label>密码（8位以上含字母）</label>
+<input type="password" id="regPassword" maxlength="50" maxlength="50" placeholder="请输入密码">
+</div>
+<div class="user-field">
+<label>确认密码</label>
+<input type="password" id="regPassword2" maxlength="50" maxlength="50" placeholder="再次输入密码">
+</div>
+<div class="user-field" id="regSuperQuestionBox" style="display:none;">
+<label>📝 回答问题：最帅的群主是谁？</label>
+<input type="text" id="regSuperAnswer" placeholder="请输入答案" autocomplete="off">
+</div>
+<div class="cf-turnstile" id="regTurnstile" data-sitekey="" data-theme="light" style="margin:10px 0;"></div>
+<button id="regSubmitBtn" class="user-submit-btn" style="background:#24292e;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="doRegister()">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+<span id="regBtnText">立即注册</span>
+</button>
+<div id="regGithubNote" class="gh-hidden" style="font-size:11px;color:#aaa;text-align:center;margin-top:8px;">GitHub授权仅用于验证身份防止小号，不会获取敏感信息</div>
+</div>
 <div id="regEmailFields">
 <div class="user-field">
 <label>邮箱</label>
@@ -2964,7 +3002,7 @@ overscroll-behavior-y:contain;position:relative;z-index:1;"></div>
 </div>
 <div class="user-field">
 <label>邀请码</label>
-<div class="user-field"><label>邀请码</label><input type="text" id="regEmailInviteCode" placeholder="请输入邀请码" autocomplete="off"></div><div class="user-field"><label>密码（8位以上含字母）</label><input type="password" id="regEmailPassword" placeholder="请输入密码" autocomplete="off"></div><div class="user-field"><label>确认密码</label><input type="password" id="regEmailPassword2" placeholder="再次输入密码" autocomplete="off"></div> placeholder="请输入邀请码" autocomplete="off">
+<input type="text" id="regEmailInviteCode" placeholder="请输入邀请码" autocomplete="off">
 </div>
 <button class="user-submit-btn" onclick="doEmailRegister()">注册</button>
 </div>
