@@ -925,7 +925,6 @@ async function rpDoReset(){var e=document.getElementById('rpEmail').value.trim()
   el.addEventListener('touchstart',function(e){onStart(e.touches[0].clientX);e.preventDefault()},{passive:false});
   el.addEventListener('touchmove',function(e){onMove(e.touches[0].clientX);e.preventDefault()},{passive:false});
   el.addEventListener('touchend',onEnd);
-  el.addEventListener('click',function(e){if(!dragging&&!unlocked&&confirm('点击直接解锁（测试用）？')){setPos(maxLeft+2,true)}});
 })();
 var _rpTsToken='';
 function showResetPwdUI(){document.getElementById('userLoginForm').style.display='none';document.getElementById('userRegisterForm').style.display='none';document.getElementById('resetPwdBox').style.display='block';document.getElementById('userModalTabs').style.display='none';setTimeout(function(){var el=document.getElementById('rpTsContainer');if(el&&typeof turnstile!=='undefined'){el.innerHTML='';turnstile.render(el,{sitekey:'0x4AAAAAACxkhwPrw1gO9XFQ',theme:'auto',callback:function(t){_rpTsToken=t}})}},300)}
@@ -2855,7 +2854,7 @@ async function rpDoReset(){var e=document.getElementById('rpEmail').value.trim()
 <!-- Turnstile 人机验证弹窗 -->
 <div id="turnstileModal">
 <div id="turnstileBox">
-<div class="ts-title">🔒 请完成验证</div>
+<div class="ts-title">请完成验证</div>
 <div class="ts-sub">验证通过后即可获取下载链接</div>
 <div id="turnstileWidget"></div>
 <button class="ts-cancel" onclick="cancelTurnstile()">取消</button>
