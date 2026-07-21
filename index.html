@@ -823,7 +823,7 @@ button:active,.link-jump-btn:active,.gate-btn:active{
 /* 夜间模式评分颜色 */
 [data-theme="dark"] .score-stats-big{color:#fff!important}
 [data-theme="dark"] .score-stat-stars{color:#f5a623!important}
-</style><style>.force-hide,.force-hide *{display:none !important;visibility:hidden !important;height:0 !important;overflow:hidden !important}</style></head>
+</style><style>.fav-heart{width:15px;height:15px;display:block;fill:none;stroke:#fff;stroke-width:2.4px;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s ease}.fav-heart.faved{fill:#ff3b5c;stroke:#ff3b5c;animation:favPop .25s ease}#cardDetailFavBtn .fav-heart{width:19px;height:19px}@keyframes favPop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}</style><style>.force-hide,.force-hide *{display:none !important;visibility:hidden !important;height:0 !important;overflow:hidden !important}</style></head>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer onerror="window._tsLoadFailed=true">
 </script>
 <script>
@@ -952,190 +952,14 @@ setTimeout(function(){if(typeof turnstile==='undefined'){window._tsLoadFailed=tr
 <div class="site-title">天笑の窝</div>
 </div>
 <div class="search-row" style="display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:10px;padding:10px 14px 0 14px;">
-<input type="text" id="search" maxlength="50" maxlength="50" placeholder="🔍 搜搜看..." oninput="refreshUI(1); checkSearchEgg(this.value)" style="margin-bottom:0;flex:1;">
+<input type="text" id="search" maxlength="50" placeholder="🔍 搜搜看..." oninput="refreshUI(1); checkSearchEgg(this.value)" style="margin-bottom:0;flex:1;">
 <button id="filterBtn" onclick="openFilterPanel()" style="flex-shrink:0;padding:9px 14px;border:1px solid rgba(255,255,255,0.5);border-radius:10px;background:rgba(255,255,255,0.35);color:#333;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;touch-action:manipulation;transition:all 0.2s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);" title="设置屏蔽标签">🚫 过滤</button>
 </div>
 <div id="filterTagsBar" style="display:none;flex-wrap:wrap;gap:6px;padding:0 14px 8px 14px;"></div>
 <div id="nav" style="padding-left:14px;padding-right:14px;">
 <!-- 由 renderNav() 动态生成 -->
 </div>
-<div id="adminBar" style="display: none;">
-<div id="adminBarToggleRow" style="max-width:900px;margin:0 auto 8px auto;display:flex;justify-content:center;">
-<button id="adminBarToggleBtn" onclick="toggleAdminBarCollapse()" style="background:#555!important;padding:4px 20px;font-size:12px;border-radius:20px;min-width:unset!important;max-width:unset!important;flex:unset!important;">▲ 收起面板</button>
-</div>
-<!-- 确保面板默认展开：不设置 style="display:none" -->
-<div id="adminBarBtns" data-force-visible="true">
-<button onclick="addCard()">➕ 新增</button>
-<button class="btn-save" onclick="saveToCloud()">☁️ 保存云端</button>
-<button onclick="toggleCatPanel()" style="background:#333!important;">🏷️ 分类</button>
-<button onclick="toggleBannerEdit()" style="background:#878787!important;">🖼️ 轮播图</button>
-<button onclick="openGalleryPanel()" style="background:#673ab7!important;">📖 傻子必看</button>
-<button onclick="toggleShortlinkPanel()" style="background:#7b7b7b!important;">🔗 短链</button>
-<button onclick="exportHTML()" style="background:#17a2b8!important;">💾 导出备份</button>
-<button onclick="migrateAllLinksToKV()" style="background:#c62828!important;">🔒 迁移链接</button>
-<button onclick="recoverLinks()" style="background:#ff5722!important;">🔄 恢复链接</button>
-<button onclick="debugCardStructure()" style="background:#333!important;">🐛 调试</button>
-<button onclick="setInviteCode()" style="background:#673ab7!important;">🎫 邀请码</button>
-<button onclick="openUserQueryPanel()" style="background:#2196f3!important;">🔍 查用户</button>
-<button onclick="openWordlistPanel()" style="background:#00796b!important;">🚫 屏蔽词</button>
-<select id="imgbedFolderSelect" onchange="localStorage.setItem('imgbed_folder',this.value)" style="flex:1 1 calc(33.333% - 7px);min-width:calc(33.333% - 7px);max-width:calc(33.333% - 7px);cursor:pointer;border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:10px;background:#607d8b;color:#fff;font-weight:bold;font-size:12px;box-sizing:border-box;text-align:center;text-align-last:center"><option value="">📂 图床文件夹</option></select>
-<button onclick="openAvatarShopPage()" style="background:#333!important;">🎨 装扮商店</button>
-<button onclick="openMailManagePanel()" style="background:#7d7d7d!important;">📧 发邮件</button>
-<button onclick="openLinkProxyPanel()" style="background:#555!important;">🔗 链接代理</button>
-<button onclick="openProxyManagePanel()" style="background:#795548!important;">📋 管理代理链接</button>
-<button id="adminAuditBtn" onclick="toggleAdminAuditMode()" style="background:#7d7d7d!important;">💬 审核评论</button>
-<button onclick="openVerifyQuestionsPanel()" style="background:#009688!important;">📝 导入验证问题</button>
-<button onclick="fixLinkFormatV2()" style="background:#ff9800!important">🔧 修复格式</button>
-<button class="btn-exit" onclick="exitAdmin()">🚪 退出</button></div>
-</div>
-<!-- 🏷️ 分类管理面板 -->
-<!-- 🎫 邀请码管理面板 -->
-<div id="inviteCodePanel" style="display:none; background:#efefef; border:1px dashed #7b7b7b; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:600px;">
-<div style="font-size:13px; font-weight:bold; color:#6a1b9a; margin-bottom:10px;">🎫 邀请码管理</div>
-<!-- 永久邀请码 -->
-<div style="background:#fff; border-radius:10px; padding:12px; margin-bottom:10px; border:1px solid #aaa;">
-<div style="font-size:12px; font-weight:bold; color:#6a1b9a; margin-bottom:6px;">🔑 永久邀请码（可重复使用，手动更换才失效）</div>
-<div style="font-size:13px; margin-bottom:8px;">当前：<b id="permanentInviteDisplay" style="font-family:monospace;color:#6a1b9a;">加载中...</b></div>
-<div style="display:flex; gap:8px;">
-<input type="text" id="permanentInviteInput" placeholder="输入新的永久邀请码" style="flex:1;border:1px solid #aaa;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;min-width:0;">
-<button onclick="setPermanentInvite()" style="background:#7b7b7b;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;flex-shrink:0;">更新</button>
-
-</div>
-</div>
-<!-- 一次性邀请码 -->
-<div style="background:#fff; border-radius:10px; padding:12px; margin-bottom:10px; border:1px solid #aaa;">
-<div style="font-size:12px; font-weight:bold; color:#6a1b9a; margin-bottom:6px;">🎟️ 一次性邀请码（用完即失效）<span id="onetimeInviteCount" style="font-weight:normal;color:#aaa;margin-left:6px;">共 0 个</span></div>
-<div style="display:flex; gap:8px; margin-bottom:10px; align-items:center;">
-<span style="font-size:12px;color:#666;flex-shrink:0;">生成数量：</span>
-<input type="number" id="onetimeCount" value="1" min="1" max="20" style="width:60px;border:1px solid #aaa;border-radius:8px;padding:6px 8px;font-size:13px;outline:none;">
-<button onclick="genOnetimeInvites()" style="background:#7b7b7b;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;">生成</button>
-<button onclick="loadOnetimeInvites()" style="background:#7b1fa2;color:#fff;border:none;border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;">🔄</button>
-</div>
-<div id="onetimeInviteList" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;">
-<span style="font-size:12px;color:#aaa;">点击刷新查看列表</span>
-</div>
-</div>
-</div>
-<!-- 🔍 用户查询面板（管理员） -->
-<div id="userQueryPanel" style="display:none; background:#e3f2fd; border:1px dashed #2196f3; border-radius:12px; padding:12px; margin:0 auto 12px auto; max-width:550px;">
-<div style="font-size:13px; font-weight:bold; color:#1565c0; margin-bottom:10px;">🔍 用户查询</div>
-<div style="display:flex; gap:8px; margin-bottom:10px;">
-<input type="text" id="userQueryInput" placeholder="输入用户名或账号ID..." style="flex:1; border:1px solid #90caf9; border-radius:8px; padding:8px 10px; font-size:13px; outline:none; min-width:0;">
-<button onclick="queryUser()" style="background:#2196f3; color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:bold; cursor:pointer; flex-shrink:0;">查询</button>
-</div>
-<div id="userQueryResult" style="display:none; flex-direction:column; gap:8px;"></div>
-</div>
-<!-- 🚫 屏蔽词管理面板（管理员） -->
-<div id="wordlistPanel" style="display:none; background:#eee; border:1px dashed #388e3c; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:560px;">
-<div style="font-size:13px; font-weight:bold; color:#1b5e20; margin-bottom:10px;">🚫 评论屏蔽词管理</div>
-<div style="background:#fff; border-radius:10px; padding:12px; margin-bottom:10px; border:1px solid #bbb;">
-<div style="font-size:12px; font-weight:bold; color:#2e7d32; margin-bottom:8px;">📥 导入 TXT 文件（每行一个词，文件名即合集名）屏蔽词同时作用于评论和用户名注册</div>
-<label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1.5px dashed #999; border-radius:8px; cursor:pointer; font-size:13px; color:#555; background:#f3f3f3;">
-<span style="font-size:18px;">📂</span>
-<span id="wordlistFileName">点击选择 .txt 文件</span>
-<input type="file" id="wordlistFileInput" accept=".txt" style="display:none;" onchange="onWordlistFileSelect(this)">
-</label>
-<div id="wordlistPreview" style="display:none; margin-top:8px; font-size:12px; color:#555; background:#f0f0f0; border-radius:8px; padding:8px 10px;">
-合集名：<b id="wordlistPreviewName" style="color:#2e7d32;"></b> &nbsp;·&nbsp; 词数：<b id="wordlistPreviewCount" style="color:#2e7d32;"></b>
-</div>
-<button onclick="uploadWordlist()" style="margin-top:10px; width:100%; background:#388e3c; color:#fff; border:none; border-radius:8px; padding:9px; font-size:13px; font-weight:bold; cursor:pointer;">⬆️ 导入合集</button>
-</div>
-<div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #bbb;">
-<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-<div style="font-size:12px; font-weight:bold; color:#2e7d32;">📋 已有合集</div>
-<button onclick="loadWordlistCollections()" style="background:#555; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer;">🔄 刷新</button>
-</div>
-<div id="wordlistCollectionList" style="display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto;">
-<div style="font-size:12px; color:#aaa; text-align:center; padding:10px;">点击刷新查看</div>
-</div>
-</div>
-</div>
-<div id="catPanel">
-<div class="cat-panel-title">🏷️ 分类管理（新增 / 排序 / 删除）</div>
-<div class="cat-add-row">
-<input type="text" id="catEmojiInput" placeholder="emoji（可选）" style="max-width:80px;">
-<input type="text" id="catNameInput" placeholder="分类名称（必填）">
-<button class="cat-add-btn" onclick="addCategory()">＋ 添加</button>
-</div>
-<div class="cat-list" id="catList"></div>
-<button class="cat-save-btn" onclick="saveCategoryOrder()">✅ 保存并更新导航</button>
-</div>
-<!-- 📧 邮件管理面板（管理员） -->
-<div id="mailManagePanel" style="display:none; background:#f0f0f0; border:1px dashed #878787; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:600px;">
-<div style="font-size:13px; font-weight:bold; color:#333; margin-bottom:10px;">📧 发送邮件</div>
-<div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #ababab;">
-<div style="display:flex; flex-direction:column; gap:6px;">
-<input type="text" id="mailTitleInput" placeholder="邮件标题" style="border:1px solid #ababab;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
-<textarea id="mailContentInput" placeholder="邮件内容" rows="4" style="border:1px solid #ababab;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;resize:vertical;"></textarea>
-<div style="display:flex; gap:8px;">
-<input type="number" id="mailExpireInput" placeholder="有效期(天)，0=永久" min="0" value="7" style="flex:1;border:1px solid #ababab;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
-<input type="number" id="mailFishInput" placeholder="小鱼干奖励" min="0" value="0" style="flex:1;border:1px solid #ababab;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
-</div>
-<input type="text" id="mailAvatarNameInput" placeholder="限定头像名称（如限定头像必填）" style="border:1px solid #ababab;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
-<input type="text" id="mailAvatarInput" placeholder="限定头像图床URL（可选）" style="border:1px solid #ababab;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;">
-<button onclick="sendAdminMail()" style="background:#878787;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;">📧 发送给所有用户</button>
-</div>
-</div>
-<div style="font-size:12px; font-weight:bold; color:#333; margin:10px 0 8px;display:flex;align-items:center;justify-content:space-between;">
-📋 已发送邮件
-<button onclick="cleanupExpiredMails()" style="background:#f2f2f2;color:#333;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;">🗑️ 清理过期邮件</button>
-</div>
-<div id="adminMailList" style="max-height:200px;overflow-y:auto;"></div>
-</div>
-<!-- 📋 代理链接批量管理面板（管理员）— 独立面板，管理所有已保存的代理链接 -->
-<div id="proxyManagePanel" style="display:none; background:#ddd; border:1px dashed #795548; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:600px;">
-<div style="font-size:13px; font-weight:bold; color:#333; margin-bottom:10px;">📋 代理链接批量管理</div>
-<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; padding:8px 10px; background:#f0f0f0; border-radius:8px; border:1px solid #ddd;">
-<input type="checkbox" id="proxyManageSelectAll" onchange="toggleProxyManageSelectAll(this)" style="cursor:pointer; width:16px; height:16px;">
-<label for="proxyManageSelectAll" style="font-size:12px; color:#333; cursor:pointer; font-weight:bold;">全选</label>
-<span id="proxyManageCount" style="font-size:11px; color:#888; margin-left:4px;">(0/0)</span>
-<button onclick="batchDeleteProxyManage()" style="margin-left:auto; background:#333; color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:12px; cursor:pointer; font-weight:bold;">🗑️ 批量删除</button>
-</div>
-<div id="proxyManageList" style="display:flex; flex-direction:column; gap:6px; max-height:400px; overflow-y:auto;">
-<div style="font-size:12px; color:#aaa; text-align:center; padding:20px;">点击刷新按钮加载列表</div>
-</div>
-<div style="display:flex; gap:8px; margin-top:10px;">
-<button onclick="loadProxyManageList()" style="flex:1; background:#795548; color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; font-weight:bold;">🔄 刷新列表</button>
-</div>
-</div>
-<!-- 🔗 链接代理面板（管理员）— 将GitHub等链接转换为你的域名代理链接，抹除源站痕迹 -->
-<div id="linkProxyPanel" style="display:none; background:#eee; border:1px dashed #555; border-radius:12px; padding:14px; margin:0 auto 12px auto; max-width:600px;">
-<div style="font-size:13px; font-weight:bold; color:#2e7d32; margin-bottom:10px;">🔗 链接代理转换（隐藏真实来源）</div>
-<div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #bbb;">
-<div style="font-size:12px; color:#666; margin-bottom:8px;">输入GitHub等直链，转换为你的域名代理链接，F12也追踪不到源站</div>
-<div style="display:flex; flex-direction:column; gap:6px;">
-<input type="text" id="linkProxyInput" placeholder="粘贴原始链接（如 https://github.com/...）" style="border:1px solid #bbb;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;font-family:inherit;">
-<input type="text" id="linkProxyName" placeholder="文件名（可选，如 A146.dat）" style="border:1px solid #bbb;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;font-family:inherit;">
-<button onclick="convertLinkProxy()" style="background:#555;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;">🔄 转换链接</button>
-</div>
-<div id="linkProxyResult" style="display:none; margin-top:10px; padding:10px; background:#f0f0f0; border-radius:8px; border:1px solid #ccc;">
-<div style="font-size:11px; color:#558b2f; font-weight:bold; margin-bottom:4px;">✅ 转换成功！复制下方链接使用：</div>
-<div id="linkProxyOutput" style="font-size:12px; color:#2e7d32; word-break:break-all; background:#fff; padding:6px 8px; border-radius:4px; border:1px solid #bbb; font-family:monospace;"></div>
-<div style="display:flex; gap:6px; margin-top:8px;">
-<button onclick="copyLinkProxy()" style="flex:1; background:#555;color:#fff;border:none;border-radius:6px;padding:6px;font-size:12px;cursor:pointer;">📋 复制链接</button>
-<button onclick="useLinkProxyInCard()" style="flex:1; background:#42a5f5;color:#fff;border:none;border-radius:6px;padding:6px;font-size:12px;cursor:pointer;">📥 填入当前卡片下载框</button>
-</div>
-</div>
-</div>
-<!-- ⏱️ 临时直链生成工具 -->
-<div style="background:#fff; border-radius:10px; padding:12px; border:1px solid #bbb; margin-top:10px;">
-<div style="font-size:12px; font-weight:bold; color:#333; margin-bottom:8px;">⏱️ 临时直链生成（30分钟有效期）</div>
-<div style="font-size:11px; color:#666; margin-bottom:8px;">输入原始链接，生成30分钟有效的临时下载直链（无需保存到数据库）</div>
-<div style="display:flex; flex-direction:column; gap:6px;">
-<input type="text" id="tempLinkInput" placeholder="粘贴原始链接（如 https://huggingface.co/...）" style="border:1px solid #c3c3c3;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;font-family:inherit;">
-<input type="text" id="tempLinkName" placeholder="文件名（可选）" style="border:1px solid #c3c3c3;border-radius:8px;padding:8px 10px;font-size:13px;outline:none;font-family:inherit;">
-<button onclick="generateTempProxyLink()" style="background:#878787;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;">⏱️ 生成30分钟临时直链</button>
-</div>
-<div id="tempLinkResult" style="display:none; margin-top:10px; padding:10px; background:#f2f2f2; border-radius:8px; border:1px solid #ddd;">
-<div style="font-size:11px; color:#333; font-weight:bold; margin-bottom:4px;">✅ 临时直链已生成（30分钟内有效）：</div>
-<div id="tempLinkOutput" style="font-size:12px; color:#333; word-break:break-all; background:#fff; padding:6px 8px; border-radius:4px; border:1px solid #c3c3c3; font-family:monospace;"></div>
-<div style="display:flex; gap:6px; margin-top:8px;">
-<button onclick="copyTempLink()" style="flex:1; background:#999999;color:#fff;border:none;border-radius:6px;padding:6px;font-size:12px;cursor:pointer;">📋 复制链接</button>
-<button onclick="useTempLinkInCard()" style="flex:1; background:#42a5f5;color:#fff;border:none;border-radius:6px;padding:6px;font-size:12px;cursor:pointer;">📥 填入当前卡片下载框</button>
-</div>
-</div>
-</div>
-</div>
+<div id="adminHeaderSlot"></div>
 </header>
 <!-- 🚫 过滤面板 -->
 <div id="filterPanel" style="display:none;" onclick="if(event.target===this)closeFilterPanel()">
@@ -1174,42 +998,7 @@ onkeydown="if(event.key==='Enter')addBlockedTag()">
 </div>
 <div class="banner-dots" id="bannerDots"></div>
 </div>
-<!-- 管理员Banner编辑面板（仅管理模式显示） -->
-<div id="bannerEditPanel">
-<div class="banner-edit-title">🖼️ 轮播图管理（点击图片可跳转链接）</div>
-<div id="bannerSlideList"></div>
-<button class="banner-add-btn" onclick="addBannerSlide()">＋ 添加一张图片</button>
-<button class="banner-save-btn" onclick="saveBannerConfig()">💾 保存轮播图</button>
-</div>
-<!-- 短链管理面板（仅管理模式显示） -->
-<div id="shortlinkPanel">
-<div class="sl-title">🔗 蓝奏云短链管理（隐藏真实链接）</div>
-<div class="sl-input-row">
-<input type="text" id="slInputUrl" placeholder="粘贴蓝奏云链接...">
-</div>
-<div class="sl-input-row">
-<input type="text" id="slInputLabel" placeholder="备注（可选，如：A46游戏本体）">
-</div>
-<button class="sl-btn sl-btn-add" onclick="addShortlink()">⚡ 生成短链</button>
-<div class="sl-result" id="slResult">
-<div class="sl-result-url" id="slResultUrl"></div>
-<button class="sl-result-copy" onclick="copyShortlink()">📋 复制短链（粘贴到卡片链接里）</button>
-</div>
-<!-- HF文件直链区域 -->
-<div style="border-top:1px dashed #aaa;margin:12px 0 10px 0;"></div>
-<div class="sl-title">☁️ HF文件直链（私有仓库，隐藏真实地址）</div>
-<div class="sl-input-row">
-<input type="text" id="hfInputFilename" placeholder="文件名，如：game_v1.0.zip">
-</div>
-<div class="sl-input-row">
-<input type="text" id="hfInputLabel" placeholder="备注（可选）">
-</div>
-<button class="sl-btn sl-btn-add" style="background:#2196f3;" onclick="addHFLink()">☁️ 生成HF直链</button>
-<div class="sl-result" id="hfResult">
-<div class="sl-result-url" id="hfResultUrl"></div>
-<button class="sl-result-copy" onclick="copyHFLink()">📋 复制直链（粘贴到卡片直链里）</button>
-</div>
-</div>
+<div id="adminMainSlot"></div>
 <div class="grid" id="box"></div>
 <div id="pagination" class="pagination"><div class="page-numbers"><div class="page-item active" onclick="refreshUI(1)">1</div><div class="page-item " onclick="refreshUI(2)">2</div><div class="page-item " onclick="refreshUI(3)">3</div><div class="page-item " onclick="refreshUI(4)">4</div></div>
 <div class="page-jump-row">
@@ -1273,16 +1062,6 @@ onkeydown="if(event.key==='Enter')addBlockedTag()">
 <div class="gallery-edit-hint" id="galleryEditHint"></div>
 <button class="gallery-save-btn" onclick="saveGalleryContent()">💾 保存内容</button>
 <button class="gallery-insert-img-btn" id="galleryInsertImgBtn" onclick="insertGalleryImage()">🖼️ 插入图片</button>
-</div>
-</div>
-</div>
-<div id="loginModal" class="modal-overlay" style="display: none;">
-<div class="modal-box">
-<div class="modal-title">🔑 验证管理身份：</div>
-<input type="password" id="passInput" maxlength="50" maxlength="50" class="modal-input" placeholder="天笑的管理暗号">
-<div class="modal-btns">
-<button class="modal-btn btn-cancel" onclick="closeLogin()">取消</button>
-<button class="modal-btn btn-confirm" onclick="checkPass()">确定</button>
 </div>
 </div>
 </div>
@@ -1441,10 +1220,10 @@ resetAllCardStates();stripCompactCardElements();await uploadNewCardLinksToKV(tok
 const cardsData=[];document.querySelectorAll('.card').forEach(card=>{const infoBox=card.querySelector('.info-box');const sliderBox=card.querySelector('.slider-box');const imgs=sliderBox?Array.from(sliderBox.querySelectorAll('img')).map(img=>img.getAttribute('src')||''):[];const linkEl=infoBox?.querySelector('.link-text');const linkText=linkEl?linkEl.textContent.trim():'';const dlInput=card.querySelector('.direct-dl-input');const directDl=dlInput?dlInput.value.trim():'';cardsData.push({id:card.dataset.cardId||'',title:(infoBox?.querySelector('.g-name')?.textContent||'').trim(),tags:(infoBox?.querySelector('.g-tags')?.textContent||'').trim(),/*⛔[BUG-004]禁止用innerHTML提取，必须用getDomTextWithNewlines*/desc:getDomTextWithNewlines(infoBox?.querySelector('.desc-text')||{childNodes:[]}).replace(/^\n+|\n+$/g,''),images:imgs,linkText:linkText,isPinned:card.classList.contains('is-pinned'),isFav:card.classList.contains('is-fav'),directDl:directDl});});
 const noticeContent=localStorage.getItem(NOTICE_KEY)||'';const galleryData=localStorage.getItem(GALLERY_KEY)||'';
 // === 发送结构化数据到后端，由后端渲染HTML ===
-showToast("⏳ 正在保存到云端...",0);const controller=new AbortController();const timeoutId=setTimeout(()=>controller.abort(),10000);try{const res=await fetch(WORKER_BASE+'/api/save',{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({cards:cardsData,banner:bannerSlides||[],notice:noticeContent,categories:categoryList||[],galleryContent:galleryData}),signal:controller.signal});clearTimeout(timeoutId);if(res.ok){const json=await res.json();window._ghSha=json.content?.sha||Date.now().toString();localStorage.setItem("TX_CACHE",document.getElementById("box").innerHTML);showToast("✅ 已同步到云端！所有人将看到最新内容");refreshUI();document.querySelectorAll('.card').forEach(function(c){c.classList.add('card-expanded');});}else{const err=await res.json();if(res.status===401){adminToken=null;sessionStorage.removeItem('ADMIN_TOKEN');showToast("❌ 登录已过期，请重新登录");exitAdmin();}else{throw new Error(err.error||"保存失败");}}}catch(e){clearTimeout(timeoutId);localStorage.setItem("TX_CACHE",document.getElementById("box").innerHTML);if(e.name==='AbortError'){showToast("⚠️ 网络超时，已保存到本地");}else{showToast("⚠️ 云端保存失败："+e.message);}
+showToast("⏳ 正在保存到云端...",0);try{const _pingCtrl=new AbortController();const _pingT=setTimeout(()=>_pingCtrl.abort(),6000);await fetch(WORKER_BASE+'/api/config',{cache:'no-store',signal:_pingCtrl.signal});clearTimeout(_pingT);}catch(_pe){localStorage.setItem("TX_CACHE",document.getElementById("box").innerHTML);showToast("🌐 连不上云端服务器：请检查网络或开启梯子后再试（内容已保留在本地）",6000);return;}const controller=new AbortController();const timeoutId=setTimeout(()=>controller.abort(),60000);try{const res=await fetch(WORKER_BASE+'/api/save',{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({cards:cardsData,banner:bannerSlides||[],notice:noticeContent,categories:categoryList||[],galleryContent:galleryData}),signal:controller.signal});clearTimeout(timeoutId);if(res.ok){const json=await res.json();window._ghSha=json.content?.sha||Date.now().toString();localStorage.setItem("TX_CACHE",document.getElementById("box").innerHTML);showToast("✅ 已同步到云端！所有人将看到最新内容");refreshUI();document.querySelectorAll('.card').forEach(function(c){c.classList.add('card-expanded');});}else{const err=await res.json();if(res.status===401){adminToken=null;sessionStorage.removeItem('ADMIN_TOKEN');showToast("❌ 登录已过期，请重新登录");exitAdmin();}else{throw new Error(err.error||"保存失败");}}}catch(e){clearTimeout(timeoutId);localStorage.setItem("TX_CACHE",document.getElementById("box").innerHTML);if(e.name==='AbortError'){showToast("⚠️ 保存超时（60秒）：网络太慢或代理不稳定，内容已保存到本地，请稍后重试",6000);}else{showToast("⚠️ 云端保存失败："+e.message+"（内容已保留在本地；若提示 Failed to fetch，请检查梯子/网络后重试）",6000);}
 console.error("保存错误:",e);}}
 function exportHTML(){const was=isEditMode;if(was){document.querySelectorAll(".g-name, .g-tags, .link-text, .desc-text").forEach(el=>{el.contentEditable="false";el.removeAttribute("contenteditable");});}
-const gate=document.getElementById("gateKeeper");const wasGate=gate.style.display;gate.style.display="flex";const clone=document.documentElement.cloneNode(true);clone.querySelector("#search").value="";clone.querySelector("body").classList.remove("admin-mode");clone.querySelector("#adminBar").style.display="none";const blob=new Blob(["<!DOCTYPE html>\n"+clone.outerHTML],{type:"text/html"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tianxiao-backup-"+Date.now()+".html";a.click();gate.style.display=wasGate;if(was){document.querySelectorAll(".g-name, .g-tags, .link-text").forEach(el=>{el.contentEditable="true";});}
+const gate=document.getElementById("gateKeeper");const wasGate=gate.style.display;gate.style.display="flex";const clone=document.documentElement.cloneNode(true);clone.querySelector("#search").value="";clone.querySelector("body").classList.remove("admin-mode");const _cab=clone.querySelector("#adminBar");if(_cab)_cab.style.display="none";const blob=new Blob(["<!DOCTYPE html>\n"+clone.outerHTML],{type:"text/html"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tianxiao-backup-"+Date.now()+".html";a.click();gate.style.display=wasGate;if(was){document.querySelectorAll(".g-name, .g-tags, .link-text").forEach(el=>{el.contentEditable="true";});}
 showToast("✅ 备份已导出");}
 
 let _toastTimer=null;function debugCardStructure(){const cards=document.querySelectorAll('.card');let report=`共 ${cards.length} 张卡片\n\n`;cards.forEach((card,i)=>{const cardId=card.dataset.cardId||'无';const useKv=card.dataset.useKv||'无';const hasWrap=!!card.querySelector('.link-wrap');const hasLinkText=!!card.querySelector('.link-text');const hasActions=!!card.querySelector('.link-actions');const hasEditBtn=!!card.querySelector('.edit-kv-btn');const name=(card.querySelector('.g-name')||{}).textContent||'?';report+=`[${i+1}] ${name.substring(0,15)}\n`;report+=`  cardId=${cardId.substring(0,20)}\n`;report+=`  useKv=${useKv} wrap=${hasWrap} lt=${hasLinkText}\n`;report+=`  actions=${hasActions} editBtn=${hasEditBtn}\n\n`;});const modal=document.createElement('div');modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;overflow:auto;padding:20px;';const pre=document.createElement('pre');pre.style.cssText='background:#fff;padding:15px;border-radius:8px;font-size:11px;white-space:pre-wrap;word-break:break-all;';pre.textContent=report;const closeBtn=document.createElement('button');closeBtn.textContent='关闭';closeBtn.style.cssText='position:fixed;top:20px;right:20px;padding:10px 20px;background:#aaaaaa;color:#fff;border:none;border-radius:8px;font-size:14px;z-index:10000;';closeBtn.onclick=()=>modal.remove();modal.appendChild(closeBtn);modal.appendChild(pre);document.body.appendChild(modal);}
@@ -1495,7 +1274,7 @@ function openFavoritePanel(){const panel=document.getElementById('favoritePanelP
 favCards.forEach(card=>{const cardId=card.dataset.cardId;const nameEl=card.querySelector('.g-name');const tagsEl=card.querySelector('.g-tags');const descEl=card.querySelector('.desc-text');const imgEl=card.querySelector('.slider-box img');const name=nameEl?nameEl.textContent.trim():'未知游戏';const tags=tagsEl?tagsEl.textContent.replace(/^标签[：:]\s*/,'').trim():'';const desc=descEl?descEl.textContent.trim():'';const thumb=imgEl?imgEl.getAttribute('src'):'';const row=document.createElement('div');row.style.cssText='display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:10px; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:pan-y;';const thumbWrap=document.createElement('div');thumbWrap.style.cssText='width:70px; height:70px; flex-shrink:0; border-radius:8px; overflow:hidden; background:#f0f0f0; display:flex; align-items:center; justify-content:center; pointer-events:none;';if(thumb&&!thumb.includes('via.placeholder')){const img=document.createElement('img');img.src=thumb;img.style.cssText='width:70px; height:70px; object-fit:cover; display:block; pointer-events:none;';img.onerror=()=>{img.style.display='none';thumbWrap.innerHTML='<span style="font-size:28px;color:#bbb;">🖼️</span>';};thumbWrap.appendChild(img);}else{thumbWrap.innerHTML='<span style="font-size:28px;color:#bbb;">🖼️</span>';}
 row.appendChild(thumbWrap);const info=document.createElement('div');info.style.cssText='flex:1; min-width:0; overflow:hidden;';const title=document.createElement('div');title.style.cssText='font-size:13px; font-weight:bold; color:var(--text); margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';title.textContent=name;info.appendChild(title);if(tags){const tagEl=document.createElement('div');tagEl.style.cssText='font-size:11px; color:var(--primary); margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';tagEl.textContent=tags;info.appendChild(tagEl);}
 if(desc){const descDiv=document.createElement('div');descDiv.style.cssText='font-size:11px; color:#888; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';descDiv.textContent=desc;info.appendChild(descDiv);}
-row.appendChild(info);const unfavBtn=document.createElement('button');unfavBtn.style.cssText='flex-shrink:0; background:none; border:none; font-size:20px; cursor:pointer; padding:4px; line-height:1; touch-action:manipulation;';unfavBtn.textContent='💖';unfavBtn.title='取消收藏';unfavBtn.addEventListener('click',function(e){e.stopPropagation();const realFavBtn=card.querySelector('.fav-btn');if(realFavBtn){toggleFavorite(realFavBtn);}else{const cardId=card.dataset.cardId;if(cardId){favorites.delete(cardId);saveFavorites();}}
+row.appendChild(info);const unfavBtn=document.createElement('button');unfavBtn.style.cssText='flex-shrink:0; background:none; border:none; font-size:20px; cursor:pointer; padding:4px; line-height:1; touch-action:manipulation;';unfavBtn.innerHTML=heartSvg(true);unfavBtn.title='取消收藏';unfavBtn.addEventListener('click',function(e){e.stopPropagation();const realFavBtn=card.querySelector('.fav-btn');if(realFavBtn){toggleFavorite(realFavBtn);}else{const cardId=card.dataset.cardId;if(cardId){favorites.delete(cardId);saveFavorites();}}
 row.remove();if(grid.children.length===0){grid.innerHTML='<div class="fav-panel-empty">💔 还没有收藏任何游戏哦~</div>';}});row.appendChild(unfavBtn);row.addEventListener('click',function(){closeFavoritePanel();currentCat='all';document.querySelectorAll('#nav li').forEach(l=>l.classList.remove('active'));const allTab=document.querySelector('#nav li');if(allTab)allTab.classList.add('active');const allCardsForNav=Array.from(document.querySelectorAll('#box .card'));let filteredForNav=allCardsForNav.filter(c=>{const blockedTags=getBlockedTags();if(blockedTags.length>0){const st=((c.querySelector('.g-name')||{}).textContent||'')+((c.querySelector('.g-tags')||{}).textContent||'');if(blockedTags.some(tag=>st.toUpperCase().includes(tag.toUpperCase())))return false;}
 return true;});filteredForNav.sort((a,b)=>{const aP=a.classList.contains('is-pinned')?1:0;const bP=b.classList.contains('is-pinned')?1:0;return bP-aP;});const idx=filteredForNav.indexOf(card);const targetPage=idx>=0?Math.floor(idx/PAGE_SIZE)+1:1;refreshUI(targetPage);setTimeout(()=>{if(card.classList.contains('active-render')){card.scrollIntoView({behavior:'smooth',block:'center'});card.classList.add('card-shake');setTimeout(()=>{card.classList.remove('card-shake');},2000);}},200);});grid.appendChild(row);});panel.style.display='flex';requestAnimationFrame(()=>{const hdr=panel.querySelector('.fullpage-header');const body=panel.querySelector('.fullpage-body');if(hdr&&body)body.style.top=hdr.offsetHeight+'px';});}
 function closeFavoritePanel(){document.getElementById('favoritePanelPage').style.display='none';}
@@ -1531,19 +1310,6 @@ function cancelMomentum(){if(_favRafId){cancelAnimationFrame(_favRafId);_favRafI
 document.addEventListener('DOMContentLoaded',function(){const panel=document.getElementById('favoritePanelPage');if(!panel)return;panel.addEventListener('touchstart',onTouchStart,{passive:true});panel.addEventListener('touchmove',onTouchMove,{passive:false});panel.addEventListener('touchend',onTouchEnd,{passive:true});panel.addEventListener('touchcancel',onTouchEnd,{passive:true});});})();function handleScroll(){const main=document.getElementById("mainScroll");const rocket=document.getElementById("rocket");if(main.scrollTop>300)rocket.classList.add("show");else rocket.classList.remove("show");const azBall=document.getElementById("azBall");if(azBall){if(main.scrollTop>300)azBall.classList.add("show");else azBall.classList.remove("show");}
 const isDesktop=window.matchMedia('(hover: hover) and (pointer: fine)').matches;if(isDesktop){const bgLayer=document.getElementById('bg-layer');if(bgLayer){const scrollable=main.scrollHeight-main.clientHeight;const pct=scrollable>0?(main.scrollTop/scrollable)*100:0;bgLayer.style.backgroundPosition='center '+pct+'%';}}}
 function goTop(){document.getElementById("mainScroll").scrollTo({top:0,behavior:'smooth'});}
-async function openLogin(){if(isEditMode)return;const lockMsg=checkLocked();if(lockMsg){alert(`🔒 ${lockMsg}`);return;}
-showToast('⏳ 正在完成人机验证...');try{await requestTurnstileToken(30000);showToast('✅ 验证通过');}catch(e){showToast('❌ '+e.message);return;}
-document.getElementById("loginModal").style.display="flex";}
-function closeLogin(){document.getElementById("loginModal").style.display="none";document.getElementById("passInput").value="";}
-const LOCK_MAX_ATTEMPTS=5;const LOCK_DURATION=30*60*1000;function getLockInfo(){try{return JSON.parse(localStorage.getItem('tianxiao_lock')||'{"attempts":0,"lockedUntil":0}');}catch(e){return{attempts:0,lockedUntil:0};}}
-function saveLockInfo(info){localStorage.setItem('tianxiao_lock',JSON.stringify(info));}
-function checkLocked(){const info=getLockInfo();const now=Date.now();if(info.lockedUntil&&now<info.lockedUntil){const remain=Math.ceil((info.lockedUntil-now)/60000);return`封禁中，请 ${remain} 分钟后再试`;}
-if(info.lockedUntil&&now>=info.lockedUntil){saveLockInfo({attempts:0,lockedUntil:0});}
-return null;}
-async function checkPass(){const lockMsg=checkLocked();if(lockMsg){alert(`🔒 ${lockMsg}`);return;}
-const inputPassword=document.getElementById("passInput").value;if(!inputPassword){alert("请输入密码！");return;}
-try{const response=await fetch(WORKER_API.replace('/api/data','/api/verify'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:inputPassword})});const result=await response.json();if(result.success&&result.token){saveLockInfo({attempts:0,lockedUntil:0});adminToken=result.token;sessionStorage.setItem('ADMIN_TOKEN',result.token);await enterAdmin();closeLogin();}else if(result.locked){saveLockInfo({attempts:LOCK_MAX_ATTEMPTS,lockedUntil:Date.now()+LOCK_DURATION});alert(`🔒 ${result.message}`);closeLogin();}else{const info=getLockInfo();info.attempts+=1;const remaining=LOCK_MAX_ATTEMPTS-info.attempts;if(info.attempts>=LOCK_MAX_ATTEMPTS){info.lockedUntil=Date.now()+LOCK_DURATION;saveLockInfo(info);alert(`🔒 密码错误次数过多，已封禁30分钟！`);}else{saveLockInfo(info);alert(`你还想冒充天笑我？去鹿吧你！\n（还剩 ${remaining} 次机会）`);}
-closeLogin();}}catch(error){console.error("密码验证失败:",error);alert("验证失败，请检查网络连接");closeLogin();}}
 function toggleAdminBarCollapse(){const btns=document.getElementById('adminBarBtns');const btn=document.getElementById('adminBarToggleBtn');if(!btns||!btn)return;const collapsed=btns.style.display==='none';btns.style.display=collapsed?'':'none';btn.textContent=collapsed?'▲ 收起面板':'▼ 展开面板';}
 function closeAllAdminPanels(exceptId){['inviteCodePanel','userQueryPanel','wordlistPanel','mailManagePanel','linkProxyPanel','proxyManagePanel','adminAuditPanel'].forEach(id=>{if(id!==exceptId){const el=document.getElementById(id);if(el)el.style.display='none';}});}
 function toggleAdminAuditMode(){adminAuditMode=!adminAuditMode;const btn=document.getElementById('adminAuditBtn');if(adminAuditMode){document.body.classList.remove('admin-mode');document.querySelectorAll('.card').forEach(c=>{c.classList.remove('card-expanded');const sb=c.querySelector('.slider-box');if(sb){sb.dataset.slideIdx='0';const track=sb.querySelector('.slider-track');if(track)track.style.transform='translateX(0%)';}});if(btn)btn.textContent='📝 编辑模式';refreshUI();showToast('💬 审核模式：点击卡片查看评论、删评论、封号');}else{document.body.classList.add('admin-mode');document.querySelectorAll('.card').forEach(c=>{c.classList.add('card-expanded');const sb=c.querySelector('.slider-box');if(sb){initSliderTrack(sb);requestAnimationFrame(()=>requestAnimationFrame(()=>updateSliderTrack(sb)));}});if(btn)btn.textContent='💬 审核评论';refreshUI();showToast('📝 编辑模式');}}
@@ -1559,11 +1325,11 @@ const lockData=await lockRes.json();if(lockData.lid){lockId=lockData.lid;session
 catch(e){alert('⚠️ 编辑锁服务异常，请刷新重试');return}
 // 关闭页面/浏览器时自动释放锁
 window.addEventListener('beforeunload',()=>{if(lockId){fetch(WORKER_BASE+'/api/admin/lock',{method:'DELETE',keepalive:true,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({lid:lockId})})}});
-isEditMode=true;document.body.classList.add('admin-mode');document.getElementById('adminBar').style.display='flex';const adminBarBtns=document.getElementById('adminBarBtns');const adminToggleBtn=document.getElementById('adminBarToggleBtn');if(adminBarBtns&&adminBarBtns.style.display==='none'){adminBarBtns.style.display='';if(adminToggleBtn)adminToggleBtn.textContent='▲ 收起面板';}
+try{showToast('⏳ 正在加载管理面板...');const _panelRes=await fetch(WORKER_BASE+'/api/admin/panel',{headers:{'Authorization':'Bearer '+token},cache:'no-store'});if(!_panelRes.ok){alert('❌ 管理面板加载失败（'+(_panelRes.status===401?'登录已过期，请重新登录':'服务器错误 '+_panelRes.status)+'）');return;}const _panelData=await _panelRes.json();document.getElementById('adminHeaderSlot').innerHTML=_panelData.header||'';document.getElementById('adminMainSlot').innerHTML=_panelData.main||'';}catch(_pe){alert('⚠️ 管理面板加载失败：'+_pe.message+'（请检查网络/代理）');return;}isEditMode=true;document.body.classList.add('admin-mode');const _admBar=document.getElementById('adminBar');if(_admBar)_admBar.style.display='flex';const adminBarBtns=document.getElementById('adminBarBtns');const adminToggleBtn=document.getElementById('adminBarToggleBtn');if(adminBarBtns&&adminBarBtns.style.display==='none'){adminBarBtns.style.display='';if(adminToggleBtn)adminToggleBtn.textContent='▲ 收起面板';}
 document.querySelectorAll('.card').forEach(prepareCardForAdmin);document.querySelectorAll('.g-name, .link-text, .desc-text').forEach(el=>{el.contentEditable='true';el.onpaste=handlePlainPaste;});document.querySelectorAll('.g-tags').forEach(el=>{el.contentEditable='true';el.addEventListener('keydown',function(e){const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);const offset=range.startOffset;const text=el.textContent;if((e.key==='Backspace'||e.key==='Delete')&&offset<4&&text.startsWith('标签')){e.preventDefault();}});});document.querySelectorAll('.g-tags').forEach(el=>{el.onpaste=handleTagPaste;protectTagPrefix(el);});initImagePreview();updateSidebarAdminUI();refreshUI();}
 function exitAdmin(){const token=adminToken||sessionStorage.getItem('ADMIN_TOKEN');const lid=sessionStorage.getItem('ADMIN_LOCK_ID');if(token){try{fetch(WORKER_BASE+'/api/admin/lock',{method:'DELETE',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({lid:lid||''})})}catch(e){}}
 sessionStorage.removeItem('ADMIN_LOCK_ID');
-isEditMode=false;document.body.classList.remove("admin-mode");document.getElementById("adminBar").style.display="none";const bp=document.getElementById("bannerEditPanel");if(bp)bp.classList.remove("show");const sp=document.getElementById("shortlinkPanel");if(sp)sp.classList.remove("show");const cp=document.getElementById("catPanel");if(cp)cp.classList.remove("show");const ip=document.getElementById("inviteCodePanel");if(ip)ip.style.display="none";const uqp=document.getElementById("userQueryPanel");if(uqp)uqp.style.display="none";const wp=document.getElementById("wordlistPanel");if(wp)wp.style.display="none";const mp=document.getElementById("mailManagePanel");if(mp)mp.style.display="none";const lpp=document.getElementById("linkProxyPanel");if(lpp)lpp.style.display="none";const pmp=document.getElementById("proxyManagePanel");if(pmp)pmp.style.display="none";updateSidebarAdminUI();adminToken=null;sessionStorage.removeItem('ADMIN_TOKEN');document.querySelectorAll(".g-name, .g-tags, .link-text, .desc-text").forEach(el=>{el.contentEditable="false";el.removeAttribute("contenteditable");});resetAllCardStates();stripCompactCardElements();const data=document.getElementById("box").innerHTML;localStorage.setItem("TX_CACHE",data);addLinkJumpButtons();initImagePreview();refreshUI();}
+isEditMode=false;document.body.classList.remove("admin-mode");const _ab=document.getElementById("adminBar");if(_ab)_ab.style.display="none";const _ahs=document.getElementById('adminHeaderSlot');if(_ahs)_ahs.innerHTML='';const _ams=document.getElementById('adminMainSlot');if(_ams)_ams.innerHTML='';const bp=document.getElementById("bannerEditPanel");if(bp)bp.classList.remove("show");const sp=document.getElementById("shortlinkPanel");if(sp)sp.classList.remove("show");const cp=document.getElementById("catPanel");if(cp)cp.classList.remove("show");const ip=document.getElementById("inviteCodePanel");if(ip)ip.style.display="none";const uqp=document.getElementById("userQueryPanel");if(uqp)uqp.style.display="none";const wp=document.getElementById("wordlistPanel");if(wp)wp.style.display="none";const mp=document.getElementById("mailManagePanel");if(mp)mp.style.display="none";const lpp=document.getElementById("linkProxyPanel");if(lpp)lpp.style.display="none";const pmp=document.getElementById("proxyManagePanel");if(pmp)pmp.style.display="none";updateSidebarAdminUI();adminToken=null;sessionStorage.removeItem('ADMIN_TOKEN');document.querySelectorAll(".g-name, .g-tags, .link-text, .desc-text").forEach(el=>{el.contentEditable="false";el.removeAttribute("contenteditable");});resetAllCardStates();stripCompactCardElements();const data=document.getElementById("box").innerHTML;localStorage.setItem("TX_CACHE",data);addLinkJumpButtons();initImagePreview();refreshUI();}
 function setInviteCode(){const panel=document.getElementById('inviteCodePanel');if(!panel)return;const isOpen=panel.style.display!=='none';closeAllAdminPanels(isOpen?null:'inviteCodePanel');panel.style.display=isOpen?'none':'block';if(!isOpen)loadInvitePanel();}
 async function loadInvitePanel(){const token=adminToken||sessionStorage.getItem('ADMIN_TOKEN');if(!token)return;try{const res=await fetch(WORKER_BASE+'/api/admin/invite',{headers:{'Authorization':'Bearer '+token}});const data=await res.json();const el=document.getElementById('permanentInviteDisplay');if(el)el.textContent=data.inviteCode||'未设置';}catch(e){}
 loadOnetimeInvites();}
@@ -1584,17 +1350,6 @@ async function loadOnetimeInvites(){const token=adminToken||sessionStorage.getIt
 document.getElementById('onetimeInviteCount').textContent=`共 ${data.total || 0} 个`;}catch(e){}}
 async function deleteOnetimeInvite(code,el){const token=adminToken||sessionStorage.getItem('ADMIN_TOKEN');if(!token)return;try{const res=await fetch(WORKER_BASE+'/api/admin/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({action:'delete_onetime',inviteCode:code})});const data=await res.json();if(data.success){el?.parentElement?.remove();const listEl=document.getElementById('onetimeInviteList');const countEl=document.getElementById('onetimeInviteCount');if(listEl&&countEl){const remaining=listEl.querySelectorAll('span[data-code]').length;countEl.textContent=`共 ${remaining} 个`;if(remaining===0){listEl.innerHTML='<span style="font-size:12px;color:#aaa;">暂无一次性邀请码</span>';}}
 showToast('✅ 已删除：'+code);}else{showToast('❌ '+(data.error||'删除失败'));}}catch(e){showToast('❌ 网络错误');}}
-async function genSuperInvites(){const token=adminToken||sessionStorage.getItem('ADMIN_TOKEN');if(!token){showToast('❌ 请先登录管理员');return;}
-const countEl=document.getElementById('superCount');const count=parseInt(countEl?.value)||1;try{const res=await fetch(WORKER_BASE+'/api/admin/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({action:'gen_super',count})});const data=await res.json();if(data.success){showToast('✅ '+data.message);const listEl=document.getElementById('superInviteList');if(listEl&&data.codes&&data.codes.length>0){const placeholder=listEl.querySelector('span[style*="color:#aaa"]');if(placeholder&&placeholder.textContent.includes('暂无'))placeholder.remove();data.codes.forEach(c=>{const tag=document.createElement('span');tag.style.cssText='background:#f0f0f0;border:1px solid #ababab;border-radius:6px;padding:3px 8px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-family:monospace;';tag.dataset.scode=c;tag.innerHTML=`${c}
-                        <span onclick="copyText('${c}')" style="cursor:pointer;color:#333;font-size:11px;">📋</span>
-                        <span onclick="deleteSuperInvite('${c}',this)" style="cursor:pointer;color:#333;font-weight:bold;font-size:14px;line-height:1;">×</span>`;listEl.appendChild(tag);});}}else{showToast('❌ '+data.error);}}catch(e){showToast('❌ 网络错误');}}
-async function loadSuperInvites(){const token=adminToken||sessionStorage.getItem('ADMIN_TOKEN');if(!token)return;try{const res=await fetch(WORKER_BASE+'/api/admin/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({action:'list_super'})});const data=await res.json();const listEl=document.getElementById('superInviteList');if(!listEl)return;if(!data.codes||data.codes.length===0){listEl.innerHTML='<span style="font-size:12px;color:#aaa;">暂无超级邀请码</span>';}else{listEl.innerHTML=data.codes.map(c=>`
-                <span style="background:#f0f0f0;border:1px solid #ababab;border-radius:6px;padding:3px 8px;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-family:monospace;" data-scode="${c}">
-                    ${c}
-                    <span onclick="copyText('${c}')" style="cursor:pointer;color:#333;font-size:11px;">📋</span>
-                    <span onclick="deleteSuperInvite('${c}',this)" style="cursor:pointer;color:#333;font-weight:bold;font-size:14px;line-height:1;">×</span>
-                </span>
-            `).join('');}}catch(e){}}
 function openAvatarShopPage(){const page=document.getElementById('avatarShopPage');if(!page)return;closeUserModal();closeMailPanel();page.style.display='flex';requestAnimationFrame(()=>requestAnimationFrame(()=>page.classList.add('show')));loadAvatarShopPage();}
 function onShopFabClick(){const isAdmin=isEditMode||adminToken||sessionStorage.getItem('ADMIN_TOKEN');if(isAdmin){toggleShopAdminPanel();}}
 function toggleShopAdminPanel(){const panel=document.getElementById('shopAdminSection');if(!panel)return;if(panel.style.display==='none'||!panel.style.display){panel.style.display='block';panel.scrollIntoView({behavior:'smooth',block:'start'});}else{panel.style.display='none';}}
@@ -1728,8 +1483,6 @@ async function loadAdminMails(){const token=adminToken||sessionStorage.getItem('
 async function cleanupExpiredMails(){const token=adminToken||sessionStorage.getItem('ADMIN_TOKEN');if(!token){showToast('请先登录管理员');return;}
 try{const res=await fetch(WORKER_BASE+'/api/admin/mail/cleanup',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}});const data=await res.json();if(data.success){showToast('✅ '+data.message);loadAdminMails();}
 else{showToast('❌ '+(data.error||'清理失败'));}}catch(e){showToast('❌ 网络错误');}}
-async function deleteSuperInvite(code,el){const token=adminToken||sessionStorage.getItem('ADMIN_TOKEN');if(!token)return;try{const res=await fetch(WORKER_BASE+'/api/admin/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({action:'delete_super',inviteCode:code})});const data=await res.json();if(data.success){el?.parentElement?.remove();const listEl=document.getElementById('superInviteList');if(listEl&&listEl.querySelectorAll('span[data-scode]').length===0){listEl.innerHTML='<span style="font-size:12px;color:#aaa;">暂无超级邀请码</span>';}
-showToast('✅ 已删除：'+code);}else{showToast('❌ '+(data.error||'删除失败'));}}catch(e){showToast('❌ 网络错误');}}
 function togglePin(btn){const card=btn.parentElement;const isPinned=card.classList.toggle("is-pinned");if(isPinned){card.dataset.pinTime=Date.now();}else{delete card.dataset.pinTime;}
 refreshUI();autoSave();}
 function deleteCard(btn){const card=btn.parentElement;const cardName=card.querySelector('.g-name').innerText;if(confirm(`⚠️ 确定要删除资源【${cardName}】吗？`)){card.remove();alert("✅ 已成功删除！");refreshUI();autoSave();}}
@@ -1744,8 +1497,8 @@ function addCard(){const div=document.createElement("div");div.className="card";
             <img loading="lazy" src="https://via.placeholder.com">
             <button class="slide-btn next" onclick="changeSlide(this, 1)">›</button>
             <div class="img-index">1 / 3</div>
-            <div class="fav-btn" onclick="toggleFavorite(this)">🤍</div>
-            <div class="fav-btn" onclick="toggleFavorite(this)">🤍</div>
+            <div class="fav-btn" onclick="toggleFavorite(this)"><svg class="fav-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>
+            <div class="fav-btn" onclick="toggleFavorite(this)"><svg class="fav-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>
             <button class="img-add-btn" onclick="addImgSlot(this)">➕ 加图</button>
             <button class="img-del-btn" onclick="delImgSlot(this)">🗑️ 删图</button>
         </div>
@@ -1884,9 +1637,9 @@ function protectTagPrefix(el){el.addEventListener('keydown',function(e){const PR
 if((e.key==='Backspace'||e.key==='Delete')&&sel&&sel.toString().includes('标签:')){e.preventDefault();}});el.addEventListener('blur',function(){const PREFIX='标签: ';if(!el.textContent.startsWith(PREFIX)){const body=el.textContent.replace(/^标签[：:]\s*/,'');el.textContent=PREFIX+body;}
 const card=el.closest('.card');if(card)renderTagPills(card);autoSave();});}
 function initCardFavorites(){const allCards=document.querySelectorAll('.card');allCards.forEach((card,index)=>{if(!card.dataset.cardId){card.dataset.cardId='card_'+Date.now()+'_'+index;}
-const cardId=card.dataset.cardId;const isFaved=favorites.has(cardId);const existingBtns=card.querySelectorAll('.fav-btn');if(existingBtns.length>0){existingBtns.forEach(b=>{b.innerHTML=isFaved?'💖':'🤍';b.classList.toggle('favorited',isFaved);b.onclick=function(){toggleFavorite(this);};});}else{const favBtn=document.createElement('div');favBtn.className='fav-btn';favBtn.innerHTML=isFaved?'💖':'🤍';if(isFaved)favBtn.classList.add('favorited');favBtn.onclick=function(){toggleFavorite(this);};const sliderBox=card.querySelector('.slider-box');if(sliderBox)sliderBox.appendChild(favBtn);else card.prepend(favBtn);}});}
-function toggleFavorite(btn){if(!currentUser||!currentUser.sessionToken){showToast('❤️ 请先登录后再收藏');setTimeout(()=>openUserModal(),800);return;}
-const card=btn.closest('.card');if(!card)return;const cardId=card.dataset.cardId;if(!cardId)return;const isFaved=favorites.has(cardId);if(isFaved){favorites.delete(cardId);card.querySelectorAll('.fav-btn').forEach(b=>{b.innerHTML='🤍';b.classList.remove('favorited');});const overlay=card.querySelector('.card-thumb-fav');if(overlay)overlay.classList.add('hidden');syncFavoriteToCloud(cardId,'remove');}else{favorites.add(cardId);card.querySelectorAll('.fav-btn').forEach(b=>{b.innerHTML='💖';b.classList.add('favorited');});const overlay=card.querySelector('.card-thumb-fav');if(overlay)overlay.classList.remove('hidden');syncFavoriteToCloud(cardId,'add');}
+const cardId=card.dataset.cardId;const isFaved=favorites.has(cardId);const existingBtns=card.querySelectorAll('.fav-btn');if(existingBtns.length>0){existingBtns.forEach(b=>{b.innerHTML=heartSvg(isFaved);b.classList.toggle('favorited',isFaved);b.onclick=function(){toggleFavorite(this);};});}else{const favBtn=document.createElement('div');favBtn.className='fav-btn';favBtn.innerHTML=heartSvg(isFaved);if(isFaved)favBtn.classList.add('favorited');favBtn.onclick=function(){toggleFavorite(this);};const sliderBox=card.querySelector('.slider-box');if(sliderBox)sliderBox.appendChild(favBtn);else card.prepend(favBtn);}});}
+const TX_HEART_PATH='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';function heartSvg(faved){return '<svg class="fav-heart'+(faved?' faved':'')+'" viewBox="0 0 24 24" aria-hidden="true"><path d="'+TX_HEART_PATH+'"/></svg>';}function toggleFavorite(btn){if(!currentUser||!currentUser.sessionToken){showToast('❤️ 请先登录后再收藏');setTimeout(()=>openUserModal(),800);return;}
+const card=btn.closest('.card');if(!card)return;const cardId=card.dataset.cardId;if(!cardId)return;const isFaved=favorites.has(cardId);if(isFaved){favorites.delete(cardId);card.querySelectorAll('.fav-btn').forEach(b=>{b.innerHTML=heartSvg(false);b.classList.remove('favorited');});const overlay=card.querySelector('.card-thumb-fav');if(overlay)overlay.classList.add('hidden');syncFavoriteToCloud(cardId,'remove');}else{favorites.add(cardId);card.querySelectorAll('.fav-btn').forEach(b=>{b.innerHTML=heartSvg(true);b.classList.add('favorited');});const overlay=card.querySelector('.card-thumb-fav');if(overlay)overlay.classList.remove('hidden');syncFavoriteToCloud(cardId,'add');}
 saveFavorites();if(currentCat==='收藏'){refreshUI();}}
 function saveFavorites(){localStorage.setItem(FAV_KEY,JSON.stringify([...favorites]));}
 async function syncFavoriteToCloud(cardId,action){if(!currentUser||!currentUser.sessionToken)return;try{await fetch(`${USER_API}/api/user/favorite`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${currentUser.sessionToken}`},body:JSON.stringify({cardId,action})});}catch(e){}}
@@ -2198,7 +1951,7 @@ function copyText(text){if(navigator.clipboard){navigator.clipboard.writeText(te
 <img src="images/sticker.png" alt="" style="width: 85%; max-width: 220px; display: block; margin: 0 auto; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));">
 </div>
 </div>
-<script>let _cardDetailSource=null;function openCardDetail(card){try{_cardDetailSource=card;const page=document.getElementById('cardDetailPage');const loadLayer=document.getElementById('detailLoading');history.pushState({page:'cardDetail'},'');page.style.display='flex';if(loadLayer)loadLayer.classList.remove('hidden');const b2=document.getElementById('cardDetailBody');if(b2)b2.scrollTop=0;const isDark2=document.documentElement.getAttribute('data-theme')==='dark';(new Image()).src=isDark2?'images/夜间下载页.jpg':'images/日间下载页.jpg';const bodyEl=document.getElementById('cardDetailBody');if(bodyEl)bodyEl.scrollTop=0;requestAnimationFrame(()=>page.style.transform='translateX(0)');const sliderBox=card.querySelector('.slider-box');const infoBox=card.querySelector('.info-box');const nameEl=card.querySelector('.g-name');const tagsEl=card.querySelector('.g-tags');const descEl=card.querySelector('.desc-text');const title=(nameEl?.textContent||'').trim()||'未命名';const tagsRaw=(tagsEl?.textContent||'').trim().replace(/^标签[：:]\s*/,'');const descFull=descEl?(descEl.innerHTML||'').trim():'';const imgs=sliderBox?[...sliderBox.querySelectorAll('img')]:[];const imgSrcs=imgs.map(i=>i.getAttribute('src')).filter(Boolean);const cid=card.dataset.cardId;const faved=cid&&favorites.has(cid);document.getElementById('cardDetailHeaderTitle').textContent=title;document.getElementById('cardDetailFavBtn').textContent=faved?'💖':'🤍';const body=document.getElementById('cardDetailBody');body.innerHTML='';body.scrollTop=0;if(imgSrcs.length>0){const galleryWrap=document.createElement('div');galleryWrap.style.cssText='position:relative;width:calc(100% - 40px);max-width:560px;margin:16px auto 10px;overflow:hidden;background:#111;border:3px solid #c6c6c6;border-radius:14px;box-sizing:border-box;';galleryWrap.className='detail-gallery-wrap';const aspect=document.createElement('div');aspect.style.cssText='width:100%;padding-top:75%;position:relative;overflow:hidden;background:#111;border-radius:11px;';let curIdx=0;const track=document.createElement('div');track.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;display:flex;transition:transform 0.3s ease;';imgSrcs.forEach((src,idx)=>{const slide=document.createElement('div');slide.style.cssText='flex-shrink:0;width:100%;height:100%;overflow:hidden;cursor:zoom-in;position:relative;';const img=document.createElement('img');img.src=src;img.loading='lazy';img.style.cssText='width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;position:relative;z-index:2;opacity:0;transition:opacity 0.3s;';bindImgEvents(img);slide.addEventListener('click',()=>{const modal=document.getElementById('imagePreviewModal');const previewImg=document.getElementById('previewImage');if(modal&&previewImg){previewImg.src=src;modal.style.display='flex';}});const imgWrap=document.createElement('div');imgWrap.className='img-wrap';imgWrap.appendChild(img);imgWrap.appendChild(imgSkeletonFrag());slide.appendChild(imgWrap);track.appendChild(slide);});aspect.appendChild(track);const counter=document.createElement('div');counter.style.cssText='position:absolute;bottom:8px;right:10px;background:rgba(0,0,0,0.5);color:#fff;font-size:12px;padding:2px 8px;border-radius:10px;z-index:2;pointer-events:none;';counter.textContent=imgSrcs.length>1?'1 / '+imgSrcs.length:'';aspect.appendChild(counter);const goTo=(idx)=>{curIdx=(idx+imgSrcs.length)%imgSrcs.length;track.style.transform='translateX(-'+(curIdx*100)+'%)';counter.textContent=imgSrcs.length>1?(curIdx+1)+' / '+imgSrcs.length:'';};if(imgSrcs.length>1){['←','→'].forEach((arrow,dir)=>{const btn=document.createElement('div');btn.textContent=arrow;btn.style.cssText='position:absolute;top:50%;transform:translateY(-50%);'+(dir===0?'left:8px':'right:8px')+';z-index:3;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.45);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;touch-action:manipulation;';btn.addEventListener('click',e=>{e.stopPropagation();goTo(dir===0?curIdx-1:curIdx+1);});aspect.appendChild(btn);});let tx=0;aspect.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;},{passive:true});aspect.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>40)goTo(dx<0?curIdx+1:curIdx-1);},{passive:true});}
+<script>let _cardDetailSource=null;function openCardDetail(card){try{_cardDetailSource=card;const page=document.getElementById('cardDetailPage');const loadLayer=document.getElementById('detailLoading');history.pushState({page:'cardDetail'},'');page.style.display='flex';if(loadLayer)loadLayer.classList.remove('hidden');const b2=document.getElementById('cardDetailBody');if(b2)b2.scrollTop=0;const isDark2=document.documentElement.getAttribute('data-theme')==='dark';(new Image()).src=isDark2?'images/夜间下载页.jpg':'images/日间下载页.jpg';const bodyEl=document.getElementById('cardDetailBody');if(bodyEl)bodyEl.scrollTop=0;requestAnimationFrame(()=>page.style.transform='translateX(0)');const sliderBox=card.querySelector('.slider-box');const infoBox=card.querySelector('.info-box');const nameEl=card.querySelector('.g-name');const tagsEl=card.querySelector('.g-tags');const descEl=card.querySelector('.desc-text');const title=(nameEl?.textContent||'').trim()||'未命名';const tagsRaw=(tagsEl?.textContent||'').trim().replace(/^标签[：:]\s*/,'');const descFull=descEl?(descEl.innerHTML||'').trim():'';const imgs=sliderBox?[...sliderBox.querySelectorAll('img')]:[];const imgSrcs=imgs.map(i=>i.getAttribute('src')).filter(Boolean);const cid=card.dataset.cardId;const faved=cid&&favorites.has(cid);document.getElementById('cardDetailHeaderTitle').textContent=title;document.getElementById('cardDetailFavBtn').innerHTML=heartSvg(faved);const body=document.getElementById('cardDetailBody');body.innerHTML='';body.scrollTop=0;if(imgSrcs.length>0){const galleryWrap=document.createElement('div');galleryWrap.style.cssText='position:relative;width:calc(100% - 40px);max-width:560px;margin:16px auto 10px;overflow:hidden;background:#111;border:3px solid #c6c6c6;border-radius:14px;box-sizing:border-box;';galleryWrap.className='detail-gallery-wrap';const aspect=document.createElement('div');aspect.style.cssText='width:100%;padding-top:75%;position:relative;overflow:hidden;background:#111;border-radius:11px;';let curIdx=0;const track=document.createElement('div');track.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;display:flex;transition:transform 0.3s ease;';imgSrcs.forEach((src,idx)=>{const slide=document.createElement('div');slide.style.cssText='flex-shrink:0;width:100%;height:100%;overflow:hidden;cursor:zoom-in;position:relative;';const img=document.createElement('img');img.src=src;img.loading='lazy';img.style.cssText='width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;position:relative;z-index:2;opacity:0;transition:opacity 0.3s;';bindImgEvents(img);slide.addEventListener('click',()=>{const modal=document.getElementById('imagePreviewModal');const previewImg=document.getElementById('previewImage');if(modal&&previewImg){previewImg.src=src;modal.style.display='flex';}});const imgWrap=document.createElement('div');imgWrap.className='img-wrap';imgWrap.appendChild(img);imgWrap.appendChild(imgSkeletonFrag());slide.appendChild(imgWrap);track.appendChild(slide);});aspect.appendChild(track);const counter=document.createElement('div');counter.style.cssText='position:absolute;bottom:8px;right:10px;background:rgba(0,0,0,0.5);color:#fff;font-size:12px;padding:2px 8px;border-radius:10px;z-index:2;pointer-events:none;';counter.textContent=imgSrcs.length>1?'1 / '+imgSrcs.length:'';aspect.appendChild(counter);const goTo=(idx)=>{curIdx=(idx+imgSrcs.length)%imgSrcs.length;track.style.transform='translateX(-'+(curIdx*100)+'%)';counter.textContent=imgSrcs.length>1?(curIdx+1)+' / '+imgSrcs.length:'';};if(imgSrcs.length>1){['←','→'].forEach((arrow,dir)=>{const btn=document.createElement('div');btn.textContent=arrow;btn.style.cssText='position:absolute;top:50%;transform:translateY(-50%);'+(dir===0?'left:8px':'right:8px')+';z-index:3;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.45);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;touch-action:manipulation;';btn.addEventListener('click',e=>{e.stopPropagation();goTo(dir===0?curIdx-1:curIdx+1);});aspect.appendChild(btn);});let tx=0;aspect.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;},{passive:true});aspect.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>40)goTo(dx<0?curIdx+1:curIdx-1);},{passive:true});}
 galleryWrap.appendChild(aspect);body.appendChild(galleryWrap);}
 const titleEl=document.createElement('div');titleEl.className='detail-title-gradient';titleEl.style.cssText='padding:16px 20px 12px;font-size:clamp(16px,2vw,22px);font-weight:800;line-height:1.5;max-width:600px;margin:0 auto;';titleEl.textContent=title;body.appendChild(titleEl);if(tagsRaw){const tagsWrap=document.createElement('div');tagsWrap.style.cssText='padding:0 20px 14px;display:flex;flex-wrap:wrap;gap:7px;max-width:600px;margin:0 auto;';tagsRaw.split(/[\s\/]+/).filter(Boolean).forEach(t=>{const chip=document.createElement('span');chip.className='detail-tag-chip';chip.textContent=t;tagsWrap.appendChild(chip);});body.appendChild(tagsWrap);}
 if(descFull){const descWrap=document.createElement('div');descWrap.className='detail-glass';descWrap.style.cssText='margin:0 auto 16px;max-width:560px;width:calc(100% - 40px);border-radius:14px;padding:16px 18px;';const descText=document.createElement('div');descText.className='detail-desc-text';descText.style.cssText='font-size:clamp(13px,1.3vw,16px);line-height:1.9;word-break:break-word;';const safeHtml=sanitizeRichHtml(descFull);descText.innerHTML=safeHtml;descWrap.appendChild(descText);body.appendChild(descWrap);}
@@ -2210,7 +1963,7 @@ const bgImg=new Image();const isDark=document.documentElement.getAttribute('data
 function closeCardDetail(){const page=document.getElementById('cardDetailPage');const body=document.getElementById('cardDetailBody');page.style.transform='translateX(100%)';setTimeout(()=>{page.style.display='none';if(body)body.innerHTML='';const loadLayer=document.getElementById('detailLoading');if(loadLayer)loadLayer.classList.remove('hidden');},230);_cardDetailSource=null;}
 function cardDetailToggleFav(){if(!currentUser||!currentUser.sessionToken){showToast('❤️ 请先登录后再收藏');setTimeout(()=>openUserModal(),800);return;}
 if(!_cardDetailSource)return;const cardId=_cardDetailSource.dataset.cardId;if(!cardId){showToast('❌ 卡片ID无效');return;}
-const isFaved=favorites.has(cardId);if(isFaved){favorites.delete(cardId);document.getElementById('cardDetailFavBtn').textContent='🤍';_cardDetailSource.querySelectorAll('.fav-btn').forEach(b=>{b.innerHTML='🤍';b.classList.remove('favorited');});syncFavoriteToCloud(cardId,'remove');}else{favorites.add(cardId);document.getElementById('cardDetailFavBtn').textContent='💖';_cardDetailSource.querySelectorAll('.fav-btn').forEach(b=>{b.innerHTML='💖';b.classList.add('favorited');});syncFavoriteToCloud(cardId,'add');}
+const isFaved=favorites.has(cardId);if(isFaved){favorites.delete(cardId);document.getElementById('cardDetailFavBtn').innerHTML=heartSvg(false);_cardDetailSource.querySelectorAll('.fav-btn').forEach(b=>{b.innerHTML=heartSvg(false);b.classList.remove('favorited');});syncFavoriteToCloud(cardId,'remove');}else{favorites.add(cardId);document.getElementById('cardDetailFavBtn').innerHTML=heartSvg(true);_cardDetailSource.querySelectorAll('.fav-btn').forEach(b=>{b.innerHTML=heartSvg(true);b.classList.add('favorited');});syncFavoriteToCloud(cardId,'add');}
 saveFavorites();if(currentCat==='收藏'){refreshUI();}}
 function clearAllData(){if(!confirm('⚠️ 确定要清理全部本地数据吗？\n\n将清除：本地缓存、收藏、分类配置、公告、轮播图等所有本地存储。\n\n云端数据不受影响，刷新后会重新从云端加载。'))return;localStorage.clear();sessionStorage.clear();closeSidebar();location.reload(true);}
 const COMMENT_URL_KEY='TX_COMMENT_URL';function sidebarGoFavorite(){closeSidebar();document.getElementById('sidebarHome').classList.remove('active');openFavoritePanel();}
@@ -2809,8 +2562,8 @@ touch-action:manipulation;">←</div>
 overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
 <div id="cardDetailFavBtn" style="width:36px;height:36px;display:flex;align-items:center;
 justify-content:center;font-size:20px;cursor:pointer;touch-action:manipulation;border-radius:50%;
-background:rgba(128,128,128,0.22);border:1.5px solid rgba(128,128,128,0.45);"
-onclick="cardDetailToggleFav()">🤍</div>
+background:rgba(118,118,118,0.6);border:1.5px solid rgba(255,255,255,0.65);flex-shrink:0;"
+onclick="cardDetailToggleFav()"><svg class="fav-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>
 </div>
 <!-- 详情页背景图层 -->
 <div id="detailBgLayer"></div>
@@ -2846,7 +2599,7 @@ overscroll-behavior-y:contain;position:relative;z-index:1;"></div>
 </div>
 <div class="user-field">
 <label>密码</label>
-<input type="password" id="loginPassword" maxlength="50" maxlength="50" placeholder="请输入密码">
+<input type="password" id="loginPassword" maxlength="50" placeholder="请输入密码">
 </div>
 <button class="user-submit-btn" onclick="doLogin()">登录</button>
 <a href="javascript:void(0)" onclick="showResetPwdUI()" style="display:block;text-align:right;font-size:11px;color:#aaa;margin:6px 0;text-decoration:underline">忘记密码？</a>
@@ -2880,11 +2633,11 @@ overscroll-behavior-y:contain;position:relative;z-index:1;"></div>
 </div>
 <div class="user-field">
 <label>密码（8位以上含字母）</label>
-<input type="password" id="regPassword" maxlength="50" maxlength="50" placeholder="请输入密码">
+<input type="password" id="regPassword" maxlength="50" placeholder="请输入密码">
 </div>
 <div class="user-field">
 <label>确认密码</label>
-<input type="password" id="regPassword2" maxlength="50" maxlength="50" placeholder="再次输入密码">
+<input type="password" id="regPassword2" maxlength="50" placeholder="再次输入密码">
 </div>
 <div class="cf-turnstile" id="regTurnstile" data-sitekey="" data-theme="light" style="margin:10px 0;"></div>
 <button id="regSubmitBtn" class="user-submit-btn" style="background:#24292e;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="doRegister()">
@@ -3415,7 +3168,7 @@ async function removeHomeFav(cardId){if(!currentUser)return;try{const res=await 
 updateCardFavState(cardId,false);if(_userHomeData){_userHomeData.favorites=data.favorites||[];renderUserFavorites(_userHomeData.favorites);}
 showToast('已取消收藏');}}catch(e){showToast('❌ 网络错误');}}
 function openCardDetailById(cardId){const card=document.querySelector(`.card[data-card-id="${CSS.escape(cardId)}"]`);if(card){closeUserHome();openCardDetail(card);}else{showToast('该卡片不在当前页面，请切换分类后重试');}}
-function updateCardFavState(cardId,isFaved){document.querySelectorAll('.card').forEach(card=>{if(card.dataset.cardId===cardId){const heart=card.querySelector('.card-fav-heart');if(heart){heart.textContent=isFaved?'💖':'🤍';heart.classList.toggle('fav-active',isFaved);}}});}
+function updateCardFavState(cardId,isFaved){document.querySelectorAll('.card').forEach(card=>{if(card.dataset.cardId===cardId){const heart=card.querySelector('.card-fav-heart');if(heart){heart.innerHTML=heartSvg(isFaved);heart.classList.toggle('fav-active',isFaved);}}});}
 function switchUserTab(tab){resetGithubLoginForm();resetRegisterForm();document.querySelectorAll('.user-tab-btn').forEach((btn,i)=>{btn.classList.toggle('active',(tab==='login'&&i===0)||(tab==='register'&&i===1));});document.getElementById('userLoginForm').style.display=tab==='login'?'block':'none';document.getElementById('userRegisterForm').style.display=tab==='register'?'block':'none';document.getElementById('userLoggedIn').style.display='none';document.getElementById('userRegSuccess').style.display='none';document.getElementById('userModalTabs').style.display='flex';var regTsEl=document.getElementById('regTurnstile');if(regTsEl&&typeof turnstile!=='undefined'){try{turnstile.reset(regTsEl);}catch(e){}regTsEl.dataset.token='';}if(tab==='register'){document.getElementById('regEmailFields').style.display='block';document.getElementById('regGithubFields').style.display='none';if(regTsEl&&typeof turnstile!=='undefined'){const sitekey=TURNSTILE_SITE_KEY||regTsEl.getAttribute('data-sitekey');if(sitekey){try{turnstile.render(regTsEl,{sitekey,theme:'auto',callback:function(t){regTsEl.dataset.token=t;}});}catch(e){/*已渲染则忽略*/}}}}}
 function onRegInviteInput(){const code=document.getElementById('regInviteCode')?.value?.trim()||'';const isSuper=false;const hint=document.getElementById('regHint');const btn=document.getElementById('regSubmitBtn');const btnText=document.getElementById('regBtnText');const note=document.getElementById('regGithubNote');const qBox=document.getElementById('regSuperQuestionBox');const tsBox=document.getElementById('regTurnstile');if(isSuper){if(hint){hint.textContent='\u2b50 超级邀请码：只需用户名 + 密码 + 回答问题即可注册，无需GitHub授权！';hint.style.background='#f0f0f0';hint.style.color='#333';}btn.style.background='#878787';if(btnText)btnText.textContent='\u7acb\u5373\u6ce8\u518c';if(note)note.style.display='none';if(qBox){qBox.style.display='block';fetch(`${WORKER_BASE}/api/user/reg-question`).then(r=>r.json()).then(d=>{const lb=document.getElementById('regQuestionLabel');if(lb&&d.question)lb.textContent='📝 回答问题：'+d.question;}).catch(()=>{});}if(tsBox)tsBox.style.display='none';}else{if(hint){hint.textContent='\u6ce8\u518c\u9700\u8981\uff1a\u9080\u8bf7\u7801 + \u7528\u6237\u540d + \u5bc6\u7801 + GitHub\u6388\u6743\uff0c\u7f3a\u4e00\u4e0d\u53ef';hint.style.background='';hint.style.color='';}btn.style.background='#24292e';if(btnText)btnText.textContent='\u9a8c\u8bc1\u901a\u8fc7\u540e\u8df3\u8f6c GitHub \u5b8c\u6210\u6ce8\u518c';if(note)note.style.display='block';if(qBox)qBox.style.display='none';if(tsBox)tsBox.style.display='block';}}
 function showLoggedInState(){document.getElementById('userModalTabs').style.display='none';document.getElementById('userLoginForm').style.display='none';document.getElementById('userRegisterForm').style.display='none';document.getElementById('userRegSuccess').style.display='none';document.getElementById('userLoggedIn').style.display='block';document.getElementById('loggedUsername').textContent=currentUser.username||'';document.getElementById('loggedUserId').textContent=currentUser.userId||'';}
