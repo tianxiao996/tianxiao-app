@@ -14,11 +14,3 @@ database_id = "d7c21845-7bde-4cf8-9d83-ad0c17421b29"
 [[r2_buckets]]
 binding = "R2"
 bucket_name = "tianxiao-storage"
-
-[[durable_objects.bindings]]
-name = "FISH_COINS"
-class_name = "FishCoinObject"
-
-[[migrations]]
-tag = "v1"
-new_classes = ["FishCoinObject"]
