@@ -1235,6 +1235,7 @@ function showToast(msg,duration=2500){let toast=document.getElementById("_ghToas
             white-space:nowrap;pointer-events:none;
         `;document.body.appendChild(toast);}
 toast.textContent=msg;toast.style.opacity="1";if(_toastTimer)clearTimeout(_toastTimer);if(duration>0){_toastTimer=setTimeout(()=>{toast.style.opacity="0";},duration);}}
+function autoSave(){try{localStorage.setItem("TX_CACHE",document.getElementById("box").innerHTML);}catch(e){console.warn("autoSave 失败:",e);}}
 function refreshUI(targetPage){if(targetPage){currentPage=targetPage;if(!window._addingNewCard){goTop();}}
 const searchVal=document.getElementById("search").value.trim();const box=document.getElementById("box");const allCards=Array.from(box.querySelectorAll(".card"));const keywords=searchVal.split(/\s+/).filter(k=>k.length>0).map(k=>k.toUpperCase());let filtered=allCards.filter(c=>{const nameElem=c.querySelector('.g-name');const tagsElem=c.querySelector('.g-tags');const name=nameElem?nameElem.textContent.toUpperCase():'';const tags=tagsElem?tagsElem.textContent.toUpperCase():'';const searchText=name+' '+tags;const matchCat=(currentCat==="all"||searchText.includes(currentCat));const matchSearch=keywords.length===0||keywords.every(kw=>searchText.includes(kw));if(currentCat==='收藏'){const cardId=c.dataset.cardId;return cardId&&favorites.has(cardId)&&matchSearch;}
 const blockedTags=getBlockedTags();if(blockedTags.length>0){const hasBlocked=blockedTags.some(tag=>searchText.includes(tag.toUpperCase()));if(hasBlocked)return false;}
