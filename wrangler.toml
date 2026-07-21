@@ -5,6 +5,10 @@ compatibility_date = "2024-01-01"
 [vars]
 CALLBACK_DOMAIN = "https://api.tian-xiao.com"
 
+routes = [
+  { pattern = "tian-xiao.com/api/*", zone_name = "tian-xiao.com" }
+]
+
 [[kv_namespaces]]
 binding = "STORAGE"
 id = "7c48d1144b414dc2b04b7b7ef6cddfaa"
