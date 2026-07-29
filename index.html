@@ -2359,8 +2359,7 @@ function txnavRenderTabs(){const wrap=document.getElementById('txnavTabs');const
         onclick="txnavSwitchCat('all',this)">全部</div>`;const catTabs=cats.map(c=>`
         <div class="txnav-tab${txnavCurrentCat === c.id ? ' active' : ''}"
              onclick="txnavSwitchCat(${jsArg(c.id)},this)"
-             ondblclick="txnavRenameCat(${jsArg(c.id)})"
-            ${escapeHtml(c.name)}
+             ondblclick="txnavRenameCat(${jsArg(c.id)})">${escapeHtml(c.name)}
             <span class="txnav-tab-del" onclick="event.stopPropagation();txnavDeleteCat(${jsArg(c.id)})">×</span>
         </div>`).join('');wrap.innerHTML=allTab+catTabs;}
 function txnavRenderGrid(){const grid=document.getElementById('txnavGrid');const sites=txnavData.sites||[];const list=txnavCurrentCat==='all'?sites:sites.filter(s=>s.catId===txnavCurrentCat);if(list.length===0){grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;color:#bbb;
