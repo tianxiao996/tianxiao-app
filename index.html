@@ -949,9 +949,18 @@ body.view-mode #mainScroll,
 
 /* 隐藏原顶栏与 Banner（侧栏已替代） */
 header:not(#libHeader),
-.header-top,
-#bannerSection {
+.header-top {
   display: none !important;
+}
+/* 轮播图保留，正常显示 */
+#bannerSection {
+  display: block !important;
+  margin: 8px 14px 12px !important;
+  max-width: none !important;
+  width: auto !important;
+}
+#bannerSection.has-slides {
+  display: block !important;
 }
 
 /* 搜索 Hero */
