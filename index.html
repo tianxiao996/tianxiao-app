@@ -831,7 +831,468 @@ button:active,.link-jump-btn:active,.gate-btn:active{
 // Turnstile 加载超时降级（国内被墙）
 setTimeout(function(){if(typeof turnstile==='undefined'){window._tsLoadFailed=true;var el=document.getElementById('turnstileWidget');if(el&&!el.innerHTML.trim())el.innerHTML='<div style="text-align:center;padding:20px;color:#888;font-size:13px">⚠️ 验证组件加载失败<br><small>请检查网络或使用代理</small><br><button onclick="location.reload()" style="margin-top:10px;padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🔄 刷新重试</button></div>';}},10000);
 </script>
+
+<style id="tx-library-layout">
+
+/* 天笑の窝 · 仅布局壳（侧栏+搜索），卡片完全沿用原版样式 */
+
+:root {
+  --sidebar-w: 200px;
+}
+
+/* 左侧分类侧栏 */
+#binderSidebar {
+  position: fixed !important;
+  left: 0; top: 0; bottom: 0;
+  width: var(--sidebar-w);
+  z-index: 50;
+  pointer-events: auto !important;
+  background: var(--pixel-white, #f5f5f5);
+  border-right: 2px solid var(--border, #333);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 3px 0 12px rgba(0,0,0,0.06);
+  font-family: var(--font-crayon), "ZCOOL KuaiLe", "Ma Shan Zheng", "Long Cang", cursive, sans-serif;
+}
+[data-theme="dark"] #binderSidebar {
+  background: #141414;
+  border-right-color: #333;
+}
+
+#sidebarInner {
+  padding: 14px 10px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+#sidebarLogo {
+  font-size: 17px;
+  font-weight: bold;
+  color: var(--primary, #2a2a2a);
+  margin-bottom: 2px;
+}
+#sidebarSub {
+  font-size: 10px;
+  color: #999;
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+.side-section-title {
+  font-size: 11px;
+  color: #aaa;
+  margin: 12px 0 6px 4px;
+  letter-spacing: 1px;
+}
+#sidebarNav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+}
+#sidebarNav::-webkit-scrollbar { width: 3px; }
+#sidebarNav::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+
+.side-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text, #1a1a1a);
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 2px;
+  border: 1.5px solid transparent;
+  user-select: none;
+}
+.side-item:hover { background: var(--pixel-soft, #eee); }
+.side-item.active {
+  background: rgba(42,42,42,0.08);
+  border-color: var(--primary, #2a2a2a);
+  font-weight: bold;
+  color: var(--primary, #2a2a2a);
+}
+[data-theme="dark"] .side-item.active {
+  background: rgba(255,255,255,0.08);
+  color: var(--primary, #888);
+  border-color: #666;
+}
+.side-item .count {
+  margin-left: auto;
+  font-size: 11px;
+  color: #999;
+  background: var(--pixel-soft, #eee);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+.side-item.active .count {
+  background: var(--primary, #2a2a2a);
+  color: #fff;
+}
+#sidebarFooter {
+  padding-top: 8px;
+  border-top: 1px solid rgba(0,0,0,0.08);
+  font-size: 11px;
+  color: #999;
+}
+[data-theme="dark"] #sidebarFooter { border-top-color: rgba(255,255,255,0.1); }
+
+/* 主内容区给侧栏让位 */
+body.view-mode #mainScroll,
+#mainScroll {
+  margin-left: var(--sidebar-w) !important;
+  width: calc(100% - var(--sidebar-w)) !important;
+  box-sizing: border-box !important;
+}
+
+/* 隐藏原顶栏与 Banner（侧栏已替代） */
+header:not(#libHeader),
+.header-top,
+#bannerSection {
+  display: none !important;
+}
+
+/* 搜索 Hero */
+#catalogHeroInject { display: block; }
+#catalogHero {
+  margin: 10px 14px 8px;
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+}
+.binder-sleeve {
+  flex: 1;
+  background: var(--pixel-white, #f5f5f5);
+  border: 2px solid var(--border, #333);
+  border-radius: 14px;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
+  position: relative;
+  padding: 16px 18px;
+  display: flex;
+  gap: 14px;
+  font-family: var(--font-crayon), "ZCOOL KuaiLe", "Ma Shan Zheng", "Long Cang", cursive, sans-serif;
+}
+[data-theme="dark"] .binder-sleeve {
+  background: #1a1a1a;
+  border-color: #444;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.35);
+}
+.binder-rings {
+  position: absolute;
+  left: -12px;
+  top: 20px;
+  bottom: 20px;
+  width: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  pointer-events: none;
+}
+.binder-ring {
+  width: 18px;
+  height: 18px;
+  border: 3px solid #888;
+  border-radius: 50%;
+  background: var(--bg, #e8e8e8);
+  box-shadow: inset 0 0 0 2px var(--pixel-white, #f5f5f5);
+}
+[data-theme="dark"] .binder-ring {
+  background: #1a1a1a;
+  box-shadow: inset 0 0 0 2px #1a1a1a;
+}
+.catalog-card-mini {
+  width: 90px;
+  flex-shrink: 0;
+  background: linear-gradient(145deg, #f0f4ff, #e8eeff);
+  border: 1.5px solid #c5d0ef;
+  border-radius: 10px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 11px;
+  color: #5a6a9a;
+}
+[data-theme="dark"] .catalog-card-mini {
+  background: linear-gradient(145deg, #1a1a28, #151520);
+  border-color: #333;
+  color: #99a;
+}
+.catalog-card-mini .cat-logo { font-size: 20px; margin-bottom: 4px; }
+.catalog-card-mini .cat-no { font-size: 10px; opacity: 0.7; margin-top: 2px; }
+.catalog-search-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.catalog-search-area h2 {
+  font-size: 18px;
+  margin: 0 0 8px;
+  color: var(--primary, #2a2a2a);
+}
+#libSearchSlot #search,
+#catalogHero #search {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--border, #333);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--pixel-soft, #eee);
+  color: var(--text, #1a1a1a);
+  outline: none;
+  box-sizing: border-box;
+  margin-bottom: 8px !important;
+}
+.hot-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.hot-tag {
+  padding: 3px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  background: var(--pixel-soft, #eee);
+  border: 1px solid var(--border, #333);
+  cursor: pointer;
+  color: var(--text, #1a1a1a);
+}
+.hot-tag:hover {
+  background: var(--primary, #2a2a2a);
+  color: #fff;
+  border-color: var(--primary, #2a2a2a);
+}
+.search-btn-main {
+  align-self: flex-start;
+  padding: 8px 18px;
+  background: var(--primary, #2a2a2a);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: bold;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.12);
+}
+.mascot-area {
+  width: 120px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+.mascot-bubble {
+  background: var(--pixel-white, #f5f5f5);
+  border: 2px solid var(--border, #333);
+  border-radius: 12px;
+  padding: 6px 10px;
+  font-size: 12px;
+  margin-bottom: 6px;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.08);
+  text-align: center;
+  max-width: 110px;
+}
+[data-theme="dark"] .mascot-bubble {
+  background: #1a1a1a;
+  border-color: #444;
+}
+
+/* 移动端侧栏收起 */
+@media (max-width: 860px) {
+  #binderSidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+  #binderSidebar.open {
+    transform: translateX(0);
+  }
+  body.view-mode #mainScroll,
+  #mainScroll {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+  .mascot-area { display: none; }
+  .catalog-card-mini { display: none; }
+  #catalogHero { margin: 8px 10px; }
+}
+
+/* ========== 卡片：不覆盖任何原版样式 ========== */
+/* 不写 .card / .grid / .slider-box / .link-wrap 等规则 */
+
+</style>
 <body class="view-mode">
+
+<aside id="binderSidebar">
+  </div>
+  <div id="sidebarInner">
+    <div id="sidebarLogo">天笑の窝</div>
+    <div id="sidebarSub">TIAN XIAO LIBRARY</div>
+    <div class="side-section-title">分类索引</div>
+    <div id="sidebarNav">
+      <div class="side-item active" data-cat="all" onclick="libFilterCat('all',this)"><span>全部</span><span class="count" id="cnt-all">-</span></div>
+      <div class="side-item" data-cat="安卓" onclick="libFilterCat('安卓',this)"><span>安卓</span><span class="count">-</span></div>
+      <div class="side-item" data-cat="PC" onclick="libFilterCat('PC',this)"><span>PC</span><span class="count">-</span></div>
+      <div class="side-item" data-cat="ACT" onclick="libFilterCat('ACT',this)"><span>ACT</span><span class="count">-</span></div>
+      <div class="side-item" data-cat="SLG" onclick="libFilterCat('SLG',this)"><span>SLG</span><span class="count">-</span></div>
+      <div class="side-item" data-cat="RPG" onclick="libFilterCat('RPG',this)"><span>RPG</span><span class="count">-</span></div>
+      <div class="side-item" data-cat="GAL" onclick="libFilterCat('GAL',this)"><span>GAL</span><span class="count">-</span></div>
+      <div class="side-item" data-cat="ADV" onclick="libFilterCat('ADV',this)"><span>ADV</span><span class="count">-</span></div>
+      <div class="side-item" data-cat="动画" onclick="libFilterCat('动画',this)"><span>动画</span><span class="count">-</span></div>
+      <div class="side-item" data-cat="本子" onclick="libFilterCat('本子',this)"><span>本子</span><span class="count">-</span></div>
+      <div class="side-item" data-cat="其他软件" onclick="libFilterCat('其他软件',this)"><span>其他软件</span><span class="count">-</span></div>
+      <div class="side-item" data-cat="充电视频" onclick="libFilterCat('充电视频',this)"><span>充电视频</span><span class="count">-</span></div>
+      <div class="side-section-title">快捷</div>
+      <div class="side-item" onclick="typeof randomGame==='function'&&randomGame()"><span>🎲 随机抽一个</span></div>
+      <div class="side-item" onclick="typeof openMailPanel==='function'&&openMailPanel()"><span>✉️ 邮件</span></div>
+      <div class="side-item" onclick="typeof toggleDarkMode==='function'&&toggleDarkMode()"><span>🌙 夜间模式</span></div>
+    </div>
+    <div id="sidebarFooter">云端同步 · 天笑の窝</div>
+  </div>
+</aside>
+
+<!-- 图书馆风格搜索 Hero（会把原 #search 挪进来） -->
+<div id="catalogHeroInject" style="display:none;">
+  <section id="catalogHero" style="margin:12px 16px 8px;">
+    <div class="binder-sleeve">
+      <div class="binder-rings">
+        <div class="binder-ring"></div><div class="binder-ring"></div>
+        <div class="binder-ring"></div><div class="binder-ring"></div>
+      </div>
+      <div class="catalog-card-mini">
+        <div class="cat-logo">📚</div>
+        <div>天笑の窝</div>
+        <div class="cat-no">CATALOG</div>
+      </div>
+      <div class="catalog-search-area">
+        <h2>全站搜索</h2>
+        <div id="libSearchSlot"></div>
+        <div class="hot-tags">
+          <span class="hot-tag" data-q="RPG">RPG</span>
+          <span class="hot-tag" data-q="GAL">GAL</span>
+          <span class="hot-tag" data-q="安卓">安卓</span>
+          <span class="hot-tag" data-q="PC">PC</span>
+          <span class="hot-tag" data-q="本子">本子</span>
+          <span class="hot-tag" data-q="ACT">ACT</span>
+        </div>
+        <button class="search-btn-main" type="button" onclick="typeof refreshUI==='function'&&refreshUI(1)">搜索档案</button>
+      </div>
+    </div>
+    <div class="mascot-area">
+      <div class="mascot-bubble">有什么想找的吗？</div>
+      <div style="font-size:64px;line-height:1;filter:drop-shadow(3px 4px 0 rgba(0,0,0,0.12));">🐱</div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  function libFilterCat(cat, el){
+    try {
+      cat = cat || 'all';
+      // 设置全局分类（兼容 let currentCat）
+      try { currentCat = cat; } catch(e1) {
+        try { window.currentCat = cat; } catch(e2) {}
+      }
+      document.querySelectorAll('#sidebarNav .side-item').forEach(function(i){
+        i.classList.remove('active');
+      });
+      if (el) el.classList.add('active');
+      else {
+        var t = document.querySelector('#sidebarNav .side-item[data-cat="'+cat+'"]');
+        if (t) t.classList.add('active');
+      }
+      // 同步顶部芯片
+      var label = (cat === 'all') ? '全部' : cat;
+      document.querySelectorAll('#nav li').forEach(function(li){
+        var text = (li.textContent || '').replace(/\s+/g,'').trim();
+        if (text === label || (label !== '全部' && text.indexOf(label) >= 0)) {
+          li.classList.add('active');
+        } else {
+          li.classList.remove('active');
+        }
+      });
+      if (typeof refreshUI === 'function') refreshUI(1);
+    } catch(err) {
+      console.warn('libFilterCat error', err);
+    }
+  }
+  window.libFilterCat = libFilterCat;
+
+  function setupHero(){
+    var main = document.getElementById('mainScroll');
+    var inject = document.getElementById('catalogHeroInject');
+    var slot = document.getElementById('libSearchSlot');
+    var search = document.getElementById('search');
+    if (!main || !inject) return;
+    if (inject.parentNode !== main) {
+      inject.style.display = 'block';
+      main.insertBefore(inject, main.firstChild);
+    }
+    if (search && slot && !slot.contains(search)) {
+      slot.appendChild(search);
+      search.placeholder = '输入作品名、关键词、标签...';
+      search.style.marginBottom = '10px';
+    }
+    document.querySelectorAll('.hot-tag[data-q]').forEach(function(tag){
+      tag.onclick = function(){
+        var s = document.getElementById('search');
+        if (s) {
+          s.value = tag.getAttribute('data-q');
+          if (typeof refreshUI === 'function') refreshUI(1);
+        }
+      };
+    });
+  }
+
+  // 事件委托：分类索引点击一定能响应
+  document.addEventListener('click', function(ev){
+    var item = ev.target.closest('#sidebarNav .side-item');
+    if (!item) return;
+    var cat = item.getAttribute('data-cat');
+    if (cat != null) {
+      ev.preventDefault();
+      libFilterCat(cat, item);
+    }
+  }, true);
+
+  function trySetup(){
+    var gate = document.getElementById('gateKeeper');
+    if (!gate || gate.style.display === 'none' || getComputedStyle(gate).display === 'none') {
+      setupHero();
+      return true;
+    }
+    return false;
+  }
+  if (!trySetup()) {
+    var gate = document.getElementById('gateKeeper');
+    if (gate) {
+      new MutationObserver(function(){ trySetup(); }).observe(gate, {attributes:true, attributeFilter:['style','class']});
+    }
+    setTimeout(setupHero, 3000);
+    setTimeout(setupHero, 8000);
+  }
+
+  function updateCounts(){
+    var box = document.getElementById('box');
+    if (!box) return;
+    var cards = box.querySelectorAll('.card');
+    var el = document.getElementById('cnt-all');
+    if (el) el.textContent = cards.length || '-';
+  }
+  setInterval(updateCounts, 2000);
+})();
+</script>
+
+
 <div id="gateKeeper" style="display: flex;">
 <div class="gate-box">
 <!-- 可滚动内容区 -->
