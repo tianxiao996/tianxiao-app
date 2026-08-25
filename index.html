@@ -834,11 +834,9 @@ setTimeout(function(){if(typeof turnstile==='undefined'){window._tsLoadFailed=tr
 
 <style id="tx-library-layout">
 
-/* 天笑の窝 · 仅电脑端布局调整，手机端保持原版 */
+/* 天笑の窝 · 电脑端仅加左侧分类栏，其余全部原版 */
 
-/* ===== 电脑端 (≥861px) ===== */
 @media (min-width: 861px) {
-  /* 左侧分类侧栏 */
   #binderSidebar {
     position: fixed !important;
     left: 0; top: 0; bottom: 0;
@@ -856,7 +854,6 @@ setTimeout(function(){if(typeof turnstile==='undefined'){window._tsLoadFailed=tr
     background: #141414;
     border-right-color: #333;
   }
-
   #sidebarInner {
     padding: 14px 10px 14px 12px;
     display: flex;
@@ -874,7 +871,6 @@ setTimeout(function(){if(typeof turnstile==='undefined'){window._tsLoadFailed=tr
     font-size: 10px;
     color: #999;
     margin-bottom: 12px;
-    letter-spacing: 0.5px;
   }
   .side-section-title {
     font-size: 11px;
@@ -890,7 +886,6 @@ setTimeout(function(){if(typeof turnstile==='undefined'){window._tsLoadFailed=tr
   }
   #sidebarNav::-webkit-scrollbar { width: 3px; }
   #sidebarNav::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
-
   .side-item {
     display: flex;
     align-items: center;
@@ -937,201 +932,39 @@ setTimeout(function(){if(typeof turnstile==='undefined'){window._tsLoadFailed=tr
   }
   [data-theme="dark"] #sidebarFooter { border-top-color: rgba(255,255,255,0.1); }
 
-  /* 主内容给侧栏让位 */
+  /* 主内容与顶栏给侧栏让位 */
   body.view-mode #mainScroll,
   #mainScroll {
     margin-left: 200px !important;
     width: calc(100% - 200px) !important;
     box-sizing: border-box !important;
   }
-
-  /* 顶栏也右移，保留原版图标与动画 */
   header {
     margin-left: 200px !important;
     width: calc(100% - 200px) !important;
     box-sizing: border-box !important;
   }
 
-  /* 轮播：原版尺寸，居中 */
+  /* 轮播保持原版尺寸居中 */
   #bannerSection {
-    display: block !important;
     max-width: 550px !important;
-    width: 100% !important;
-    margin: 12px auto 16px auto !important;
-  }
-  #bannerSection.has-slides {
-    display: block !important;
-  }
-
-  /* 电脑端显示搜索 Hero */
-  #catalogHeroInject {
-    display: block !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
 }
 
-/* ===== 手机端 (≤860px)：完全原版，隐藏我们加的侧栏和 Hero ===== */
+/* 手机端：隐藏侧栏，完全原版 */
 @media (max-width: 860px) {
   #binderSidebar {
     display: none !important;
   }
-  #catalogHeroInject {
-    display: none !important;
-  }
-  /* 不碰 margin、header、banner，全部走原版 */
 }
 
-/* 搜索 Hero 样式（仅电脑端会显示） */
+/* 确保不残留 Hero */
+#catalogHeroInject,
 #catalogHero {
-  margin: 10px 14px 8px;
-  display: flex;
-  gap: 16px;
-  align-items: stretch;
+  display: none !important;
 }
-.binder-sleeve {
-  flex: 1;
-  background: var(--pixel-white, #f5f5f5);
-  border: 2px solid var(--border, #333);
-  border-radius: 14px;
-  box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
-  position: relative;
-  padding: 16px 18px;
-  display: flex;
-  gap: 14px;
-  font-family: var(--font-crayon), "ZCOOL KuaiLe", "Ma Shan Zheng", "Long Cang", cursive, sans-serif;
-}
-[data-theme="dark"] .binder-sleeve {
-  background: #1a1a1a;
-  border-color: #444;
-  box-shadow: 4px 4px 0 rgba(0,0,0,0.35);
-}
-.binder-rings {
-  position: absolute;
-  left: -12px;
-  top: 20px;
-  bottom: 20px;
-  width: 24px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  pointer-events: none;
-}
-.binder-ring {
-  width: 18px;
-  height: 18px;
-  border: 3px solid #888;
-  border-radius: 50%;
-  background: var(--bg, #e8e8e8);
-  box-shadow: inset 0 0 0 2px var(--pixel-white, #f5f5f5);
-}
-[data-theme="dark"] .binder-ring {
-  background: #1a1a1a;
-  box-shadow: inset 0 0 0 2px #1a1a1a;
-}
-.catalog-card-mini {
-  width: 90px;
-  flex-shrink: 0;
-  background: linear-gradient(145deg, #f0f4ff, #e8eeff);
-  border: 1.5px solid #c5d0ef;
-  border-radius: 10px;
-  padding: 10px 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  font-size: 11px;
-  color: #5a6a9a;
-}
-[data-theme="dark"] .catalog-card-mini {
-  background: linear-gradient(145deg, #1a1a28, #151520);
-  border-color: #333;
-  color: #99a;
-}
-.catalog-card-mini .cat-logo { font-size: 20px; margin-bottom: 4px; }
-.catalog-card-mini .cat-no { font-size: 10px; opacity: 0.7; margin-top: 2px; }
-.catalog-search-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.catalog-search-area h2 {
-  font-size: 18px;
-  margin: 0 0 8px;
-  color: var(--primary, #2a2a2a);
-}
-#libSearchSlot #search,
-#catalogHero #search {
-  width: 100%;
-  padding: 10px 14px;
-  border: 2px solid var(--border, #333);
-  border-radius: 10px;
-  font-size: 14px;
-  font-family: inherit;
-  background: var(--pixel-soft, #eee);
-  color: var(--text, #1a1a1a);
-  outline: none;
-  box-sizing: border-box;
-  margin-bottom: 8px !important;
-}
-.hot-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-.hot-tag {
-  padding: 3px 10px;
-  border-radius: 16px;
-  font-size: 12px;
-  background: var(--pixel-soft, #eee);
-  border: 1px solid var(--border, #333);
-  cursor: pointer;
-  color: var(--text, #1a1a1a);
-}
-.hot-tag:hover {
-  background: var(--primary, #2a2a2a);
-  color: #fff;
-  border-color: var(--primary, #2a2a2a);
-}
-.search-btn-main {
-  align-self: flex-start;
-  padding: 8px 18px;
-  background: var(--primary, #2a2a2a);
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: bold;
-  font-family: inherit;
-  cursor: pointer;
-  box-shadow: 2px 2px 0 rgba(0,0,0,0.12);
-}
-.mascot-area {
-  width: 120px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-}
-.mascot-bubble {
-  background: var(--pixel-white, #f5f5f5);
-  border: 2px solid var(--border, #333);
-  border-radius: 12px;
-  padding: 6px 10px;
-  font-size: 12px;
-  margin-bottom: 6px;
-  box-shadow: 2px 2px 0 rgba(0,0,0,0.08);
-  text-align: center;
-  max-width: 110px;
-}
-[data-theme="dark"] .mascot-bubble {
-  background: #1a1a1a;
-  border-color: #444;
-}
-
-/* 不覆盖任何 .card / 按钮 / 图标 原版样式 */
 
 </style>
 <body class="view-mode">
@@ -1164,49 +997,12 @@ setTimeout(function(){if(typeof turnstile==='undefined'){window._tsLoadFailed=tr
   </div>
 </aside>
 
-<!-- 图书馆风格搜索 Hero（会把原 #search 挪进来） -->
-<div id="catalogHeroInject" style="display:none;">
-  <section id="catalogHero" style="margin:12px 16px 8px;">
-    <div class="binder-sleeve">
-      <div class="binder-rings">
-        <div class="binder-ring"></div><div class="binder-ring"></div>
-        <div class="binder-ring"></div><div class="binder-ring"></div>
-      </div>
-      <div class="catalog-card-mini">
-        <div class="cat-logo">📚</div>
-        <div>天笑の窝</div>
-        <div class="cat-no">CATALOG</div>
-      </div>
-      <div class="catalog-search-area">
-        <h2>全站搜索</h2>
-        <div id="libSearchSlot"></div>
-        <div class="hot-tags">
-          <span class="hot-tag" data-q="RPG">RPG</span>
-          <span class="hot-tag" data-q="GAL">GAL</span>
-          <span class="hot-tag" data-q="安卓">安卓</span>
-          <span class="hot-tag" data-q="PC">PC</span>
-          <span class="hot-tag" data-q="本子">本子</span>
-          <span class="hot-tag" data-q="ACT">ACT</span>
-        </div>
-        <button class="search-btn-main" type="button" onclick="typeof refreshUI==='function'&&refreshUI(1)">搜索档案</button>
-      </div>
-    </div>
-    <div class="mascot-area">
-      <div class="mascot-bubble">有什么想找的吗？</div>
-      <div style="font-size:64px;line-height:1;filter:drop-shadow(3px 4px 0 rgba(0,0,0,0.12));">🐱</div>
-    </div>
-  </section>
-</div>
-
 <script>
 (function(){
   function libFilterCat(cat, el){
     try {
       cat = cat || 'all';
-      // 设置全局分类（兼容 let currentCat）
-      try { currentCat = cat; } catch(e1) {
-        try { window.currentCat = cat; } catch(e2) {}
-      }
+      try { currentCat = cat; } catch(e1) { try { window.currentCat = cat; } catch(e2) {} }
       document.querySelectorAll('#sidebarNav .side-item').forEach(function(i){
         i.classList.remove('active');
       });
@@ -1215,7 +1011,6 @@ setTimeout(function(){if(typeof turnstile==='undefined'){window._tsLoadFailed=tr
         var t = document.querySelector('#sidebarNav .side-item[data-cat="'+cat+'"]');
         if (t) t.classList.add('active');
       }
-      // 同步顶部芯片
       var label = (cat === 'all') ? '全部' : cat;
       document.querySelectorAll('#nav li').forEach(function(li){
         var text = (li.textContent || '').replace(/\s+/g,'').trim();
@@ -1232,33 +1027,7 @@ setTimeout(function(){if(typeof turnstile==='undefined'){window._tsLoadFailed=tr
   }
   window.libFilterCat = libFilterCat;
 
-  function setupHero(){
-    var main = document.getElementById('mainScroll');
-    var inject = document.getElementById('catalogHeroInject');
-    var slot = document.getElementById('libSearchSlot');
-    var search = document.getElementById('search');
-    if (!main || !inject) return;
-    if (inject.parentNode !== main) {
-      inject.style.display = 'block';
-      main.insertBefore(inject, main.firstChild);
-    }
-    if (search && slot && !slot.contains(search)) {
-      slot.appendChild(search);
-      search.placeholder = '输入作品名、关键词、标签...';
-      search.style.marginBottom = '10px';
-    }
-    document.querySelectorAll('.hot-tag[data-q]').forEach(function(tag){
-      tag.onclick = function(){
-        var s = document.getElementById('search');
-        if (s) {
-          s.value = tag.getAttribute('data-q');
-          if (typeof refreshUI === 'function') refreshUI(1);
-        }
-      };
-    });
-  }
-
-  // 事件委托：分类索引点击一定能响应
+  // 事件委托：侧栏分类点击
   document.addEventListener('click', function(ev){
     var item = ev.target.closest('#sidebarNav .side-item');
     if (!item) return;
@@ -1268,23 +1037,6 @@ setTimeout(function(){if(typeof turnstile==='undefined'){window._tsLoadFailed=tr
       libFilterCat(cat, item);
     }
   }, true);
-
-  function trySetup(){
-    var gate = document.getElementById('gateKeeper');
-    if (!gate || gate.style.display === 'none' || getComputedStyle(gate).display === 'none') {
-      setupHero();
-      return true;
-    }
-    return false;
-  }
-  if (!trySetup()) {
-    var gate = document.getElementById('gateKeeper');
-    if (gate) {
-      new MutationObserver(function(){ trySetup(); }).observe(gate, {attributes:true, attributeFilter:['style','class']});
-    }
-    setTimeout(setupHero, 3000);
-    setTimeout(setupHero, 8000);
-  }
 
   function updateCounts(){
     var box = document.getElementById('box');
