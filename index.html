@@ -3619,6 +3619,7 @@ async function rpDoReset(){var e=document.getElementById('rpEmail').value.trim()
   .grid{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:16px !important;max-width:1240px !important;padding:0 24px;box-sizing:border-box;}
   .grid .card{width:auto !important;margin:0 !important;}
   .grid .card.card-expanded{grid-column:1 / -1;}
+  .grid .card .card-preview-tags{height:auto !important;max-height:48px !important;}
   body.admin-mode .grid .card{grid-column:1 / -1;}
   #adminBar,.fav-panel-grid{max-width:1240px !important;}
 }
@@ -3640,7 +3641,7 @@ async function rpDoReset(){var e=document.getElementById('rpEmail').value.trim()
         labelEl.className = 'pc-cat-label';
         labelEl.textContent = '分类索引';
       }
-      if(homeEl.nextSibling !== labelEl) homeEl.parentNode.insertBefore(labelEl, homeEl.nextSibling);
+      if(labelEl.parentNode !== menuEl || labelEl !== menuEl.firstChild) menuEl.insertBefore(labelEl, menuEl.firstChild);
       if(navEl.parentNode !== menuEl || navEl.previousSibling !== labelEl){
         menuEl.insertBefore(navEl, labelEl.nextSibling);
       }
