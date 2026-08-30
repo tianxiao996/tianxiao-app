@@ -556,7 +556,7 @@ button:active,.link-jump-btn:active,.gate-btn:active{
   background:#1e1c18!important;
 }
 [data-theme="dark"] .card{
-  background:rgba(32,30,25,0.96)!important;
+  background:#201e19!important;
   border-color:#666!important;
   box-shadow:4px 5px 0 rgba(0,0,0,0.5)!important;
 }
@@ -1609,7 +1609,7 @@ if(!card.querySelector('.card-preview')){const preview=document.createElement('d
             </div>
             <div class="card-preview-bottom">
                 <div class="card-preview-desc">${descText}</div>
-                <div class="card-view-count" data-vc>👁 0</div>
+                <div class="card-view-count" data-vc></div>
                 <div class="card-expand-hint">点击查看 ▸</div>
             </div>
         `;card.insertBefore(preview,sliderBox);}}
@@ -3587,7 +3587,8 @@ async function rpDoReset(){var e=document.getElementById('rpEmail').value.trim()
 </script>
 
 <style id="pcRedesignStyle">
-.card-view-count{font-size:11px;color:var(--text);flex-shrink:0;font-weight:700;letter-spacing:.3px;}
+.card-view-count{font-size:11px;color:var(--text);flex-shrink:0;font-weight:700;letter-spacing:.3px;display:inline-flex;align-items:center;gap:3px;}
+.card-view-count svg{display:block;}
 [data-theme="dark"] .card-view-count{color:var(--text);}
 @media (min-width:1024px){
   /* ── 侧栏固定 ── */
@@ -3664,12 +3665,13 @@ async function rpDoReset(){var e=document.getElementById('rpEmail').value.trim()
 <script>
 /* ── 卡片查看数 ── */
 var _viewMap = {};
+var EYE_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 function fmtViews(n){ n = parseInt(n, 10) || 0; return n >= 10000 ? (n/10000).toFixed(1).replace(/\.0$/, '') + '万' : String(n); }
 function applyViewCounts(){
   document.querySelectorAll('#box .card').forEach(function(c){
     var el = c.querySelector('[data-vc]');
     var id = c.dataset.cardId;
-    if (el && id && _viewMap[id] != null) el.textContent = '👁 ' + fmtViews(_viewMap[id]);
+    if (el && id) el.innerHTML = EYE_SVG + '<span>' + fmtViews(_viewMap[id] || 0) + '</span>';
   });
 }
 function loadViewCounts(){
