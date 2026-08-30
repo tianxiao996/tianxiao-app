@@ -3584,5 +3584,78 @@ function hideResetPwdUI(){document.getElementById('resetPwdBox').style.display='
 async function rpSendCode(){var e=document.getElementById('rpEmail').value.trim();if(!e||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)){showToast('请输入有效邮箱');return}if(!_rpTsToken){showToast('请完成人机验证');return}var b=document.getElementById('rpSendBtn');b.disabled=true;try{var r=await fetch(USER_API+'/api/user/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,turnstileToken:_rpTsToken})});var d=await r.json();if(d.success){showToast('验证码已发送');var s=60;b.textContent=s+'s';var t=setInterval(function(){s--;if(s<=0){clearInterval(t);b.disabled=false;b.textContent='重新发送'}else{b.textContent=s+'s'}},1000)}else{showToast(d.error||'发送失败');b.disabled=false}}catch(ex){showToast('网络错误');b.disabled=false}}
 async function rpDoReset(){var e=document.getElementById('rpEmail').value.trim();var c=document.getElementById('rpCode').value.trim();var p=document.getElementById('rpNewPwd').value.trim();if(!e||!c||!p){showToast('请填写完整');return}if(p.length<8||!/[a-zA-Z]/.test(p)){showToast('密码须8位以上且包含字母');return}try{var r=await fetch(USER_API+'/api/user/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,code:c,newPassword:p})});var d=await r.json();if(d.success){showToast('密码已重置，请登录');hideResetPwdUI()}else{showToast(d.error||'重置失败')}}catch(ex){showToast('网络错误')}}
 </script>
-</body></html>
 
+<style id="pcRedesignStyle">
+@media (min-width:1024px){
+  /* ── 侧栏固定 ── */
+  #sidebar{left:0 !important;width:250px !important;border-right:1px solid var(--primary-light) !important;}
+  #sidebarOverlay{display:none !important;}
+  .sidebar-burger{display:none !important;}
+  header{margin-left:250px !important;}
+  #mainScroll{margin-left:250px !important;}
+
+  /* ── 侧栏菜单云尾化 ── */
+  .sidebar-menu{padding:10px 10px 20px !important;}
+  .sidebar-menu .sidebar-item{border-radius:10px;margin-bottom:2px;transition:background .15s;}
+  .sidebar-menu .sidebar-item:hover{background:rgba(120,120,120,0.12);}
+  .pc-cat-label{font-size:12px;font-weight:700;color:var(--primary);padding:14px 12px 6px;letter-spacing:1px;opacity:.75;}
+
+  /* ── 分类导航移入侧栏后竖排 ── */
+  #nav{display:flex !important;flex-direction:column !important;gap:2px !important;padding:0 10px !important;overflow:visible !important;background:transparent !important;border:none !important;}
+  #nav li{list-style:none;display:flex !important;align-items:center;width:100% !important;box-sizing:border-box;padding:9px 14px !important;margin:0 !important;border:none !important;border-radius:10px !important;background:transparent !important;box-shadow:none !important;font-size:14px !important;text-align:left;cursor:pointer;transition:background .15s;color:var(--text);}
+  #nav li:hover{background:rgba(120,120,120,0.12) !important;}
+  #nav li.active{background:var(--primary) !important;color:var(--pixel-white) !important;font-weight:700;}
+  [data-theme="dark"] #nav li.active{color:#111 !important;}
+
+  /* ── 搜索主视觉 ── */
+  .search-row{max-width:640px !important;margin:26px auto 8px !important;padding:20px 24px !important;background:var(--card) !important;border:2px solid var(--primary-light) !important;border-radius:16px !important;box-shadow:0 4px 18px rgba(0,0,0,0.10) !important;flex-wrap:wrap !important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+  .search-row::before{content:'🔍 全站搜索';width:100%;font-size:19px;font-weight:900;color:var(--text);margin-bottom:12px;letter-spacing:1px;}
+  .search-row #search{height:42px;font-size:15px;}
+  #filterTagsBar{max-width:640px;margin:0 auto;}
+
+  /* ── 卡片双列网格 ── */
+  .grid{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:16px !important;max-width:1240px !important;padding:0 24px;box-sizing:border-box;}
+  .grid .card{width:auto !important;margin:0 !important;}
+  .grid .card.card-expanded{grid-column:1 / -1;}
+  body.admin-mode .grid .card{grid-column:1 / -1;}
+  #adminBar,.fav-panel-grid{max-width:1240px !important;}
+}
+@media (min-width:1700px){
+  .grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;max-width:1560px !important;}
+}
+</style>
+<script>
+(function(){
+  var mq = window.matchMedia('(min-width:1024px)');
+  var navEl = document.getElementById('nav');
+  var menuEl = document.querySelector('.sidebar-menu');
+  var homeEl = document.getElementById('sidebarHome');
+  var labelEl = null;
+  var origParent = navEl ? navEl.parentNode : null;
+  var origNext = navEl ? navEl.nextSibling : null;
+  function moveNav(){
+    if(!navEl || !menuEl || !homeEl) return;
+    if(mq.matches){
+      if(!labelEl){
+        labelEl = document.createElement('div');
+        labelEl.className = 'pc-cat-label';
+        labelEl.textContent = '分类索引';
+      }
+      if(homeEl.nextSibling !== labelEl) homeEl.parentNode.insertBefore(labelEl, homeEl.nextSibling);
+      if(navEl.parentNode !== menuEl || navEl.previousSibling !== labelEl){
+        menuEl.insertBefore(navEl, labelEl.nextSibling);
+      }
+    } else {
+      if(labelEl && labelEl.parentNode) labelEl.parentNode.removeChild(labelEl);
+      if(origParent && navEl.parentNode !== origParent){
+        origParent.insertBefore(navEl, origNext);
+      }
+    }
+  }
+  if(mq.addEventListener) mq.addEventListener('change', moveNav);
+  else if(mq.addListener) mq.addListener(moveNav);
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', moveNav);
+  else moveNav();
+})();
+</script>
+</body></html>
