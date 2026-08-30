@@ -507,13 +507,13 @@ button:active,.link-jump-btn:active,.gate-btn:active{
 [data-theme="dark"] .detail-glass .detail-desc-text{color:#e0e0e0!important}
 .detail-title-gradient{
   background:linear-gradient(to bottom,
-    rgba(0,0,0,0.68) 0,
-    rgba(0,0,0,0.38) 55%,
-    rgba(0,0,0,0.06) 85%,
+    rgba(255,255,255,0.72) 0,
+    rgba(255,255,255,0.42) 55%,
+    rgba(255,255,255,0.06) 85%,
     transparent 100%
   )!important;
-  color:#fff!important;
-  text-shadow:2px 2px 0 rgba(0,0,0,0.4), 0 0 8px rgba(0,0,0,0.3)!important;
+  color:#1a1a1a!important;
+  text-shadow:0 1px 2px rgba(255,255,255,0.5)!important;
 }
 
 /* --- 卡片缩略图背景纹理 --- */
@@ -636,13 +636,13 @@ button:active,.link-jump-btn:active,.gate-btn:active{
 }
 [data-theme="dark"] .detail-title-gradient{
   background:linear-gradient(to bottom,
-    rgba(255,255,255,0.72) 0,
-    rgba(255,255,255,0.42) 55%,
-    rgba(255,255,255,0.06) 85%,
+    rgba(0,0,0,0.68) 0,
+    rgba(0,0,0,0.38) 55%,
+    rgba(0,0,0,0.06) 85%,
     transparent 100%
   )!important;
-  color:#1a1a1a!important;
-  text-shadow:none!important;
+  color:#fff!important;
+  text-shadow:2px 2px 0 rgba(0,0,0,0.4), 0 0 8px rgba(0,0,0,0.3)!important;
 }
 [data-theme="dark"] #search{
   background:rgba(32,30,25,0.9)!important;
@@ -3587,8 +3587,8 @@ async function rpDoReset(){var e=document.getElementById('rpEmail').value.trim()
 </script>
 
 <style id="pcRedesignStyle">
-.card-view-count{font-size:11px;color:#999;flex-shrink:0;font-weight:700;letter-spacing:.3px;}
-[data-theme="dark"] .card-view-count{color:#888;}
+.card-view-count{font-size:11px;color:var(--text);flex-shrink:0;font-weight:700;letter-spacing:.3px;}
+[data-theme="dark"] .card-view-count{color:var(--text);}
 @media (min-width:1024px){
   /* ── 侧栏固定 ── */
   #sidebar{left:0 !important;width:250px !important;border-right:1px solid var(--primary-light) !important;}
