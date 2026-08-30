@@ -196,28 +196,6 @@ html,body{
   transform:translate(-1px,-1px);
 }
 
-/* --- 管子搜索框 --- */
-.tube-search{position:relative;flex:1;height:44px;min-width:0;max-width:640px;margin:0 22px;}
-.tube-bg{position:absolute;top:0;left:0;right:0;bottom:0;background:url('images/search_tile.png') repeat-x left top/auto 100%;}
-.tube-char{position:absolute;left:-14px;top:-61px;height:128px;pointer-events:none;z-index:2;user-select:none;-webkit-user-select:none;}
-.tube-fire{position:absolute;right:-14px;top:-32px;height:129px;cursor:pointer;z-index:2;user-select:none;-webkit-user-select:none;transition:transform .15s,filter .15s;}
-.tube-fire:hover{transform:scale(1.08);filter:drop-shadow(0 0 6px rgba(255,140,0,.7));}
-.tube-search #search{position:relative;z-index:1;width:100%;height:44px;margin-bottom:0;padding:0 60px 0 170px;box-sizing:border-box;background:transparent!important;border:none!important;box-shadow:none!important;font-size:15px;color:#333;}
-.tube-search #search:focus{transform:none;outline:none;box-shadow:none!important;}
-[data-theme="dark"] .tube-search #search{color:#e8e8e8;}
-@media (min-width:1024px){
-  .tube-search{height:48px;}
-  .tube-char{left:-15px;top:-67px;height:139px;}
-  .tube-fire{right:-15px;top:-35px;height:141px;}
-  .tube-search #search{height:48px;padding:0 70px 0 210px;}
-}
-@media (max-width:480px){
-  .tube-search{height:38px;}
-  .tube-char{left:-12px;top:-53px;height:111px;}
-  .tube-fire{right:-12px;top:-28px;height:113px;}
-  .tube-search #search{height:38px;padding:0 50px 0 150px;font-size:14px;}
-}
-
 /* --- 通用按钮 --- */
 button,.link-jump-btn,.gate-btn,.modal-btn,.direct-dl-btn{
   border-radius:255px 12px 230px 18px/18px 230px 12px 255px!important;
@@ -975,12 +953,7 @@ setTimeout(function(){if(typeof turnstile==='undefined'){window._tsLoadFailed=tr
 <div class="site-title">天笑の窝</div>
 </div>
 <div class="search-row" style="display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:10px;padding:10px 14px 0 14px;">
-<div class="tube-search">
-<div class="tube-bg"></div>
-<img class="tube-char" src="images/search_left.png" alt="" draggable="false">
-<input type="text" id="search" maxlength="50" placeholder="🔍 搜搜看..." oninput="refreshUI(1); checkSearchEgg(this.value)">
-<img class="tube-fire" src="images/search_fire.png" alt="搜索" title="搜索" draggable="false" onclick="document.getElementById('search').focus();refreshUI(1)">
-</div>
+<input type="text" id="search" maxlength="50" placeholder="🔍 搜搜看..." oninput="refreshUI(1); checkSearchEgg(this.value)" style="margin-bottom:0;flex:1;">
 <button id="filterBtn" onclick="openFilterPanel()" style="flex-shrink:0;padding:9px 14px;border:1px solid rgba(255,255,255,0.5);border-radius:10px;background:rgba(255,255,255,0.35);color:#333;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;touch-action:manipulation;transition:all 0.2s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);" title="设置屏蔽标签">🚫 过滤</button>
 </div>
 <div id="filterTagsBar" style="display:none;flex-wrap:wrap;gap:6px;padding:0 14px 8px 14px;"></div>
