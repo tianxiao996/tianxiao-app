@@ -1612,7 +1612,7 @@ if(!card.querySelector('.card-preview')){const preview=document.createElement('d
                 <div class="card-view-count" data-vc></div>
                 <div class="card-expand-hint">点击查看 ▸</div>
             </div>
-        `;card.insertBefore(preview,sliderBox);}}
+        `;card.insertBefore(preview,sliderBox);if(typeof applyViewCounts==='function')applyViewCounts();}}
 function toggleExpand(btn){let element=btn;let wrap=null;while(element&&element!==document.body){if(element.classList&&element.classList.contains('link-wrap')){wrap=element;break;}
 element=element.parentElement;}
 if(!wrap)return;const isExpanding=!wrap.classList.contains('expanded');wrap.classList.toggle('expanded');btn.innerText=wrap.classList.contains('expanded')?"收起 ▴":"展开 ▾";if(!isExpanding){const mainScroll=document.getElementById('mainScroll');if(mainScroll){const rect=wrap.getBoundingClientRect();const containerRect=mainScroll.getBoundingClientRect();mainScroll.scrollTop+=rect.top-containerRect.top-70;}}}
@@ -3675,7 +3675,11 @@ function applyViewCounts(){
   document.querySelectorAll('#box .card').forEach(function(c){
     var el = c.querySelector('[data-vc]');
     var id = c.dataset.cardId;
-    if (el && id) el.innerHTML = EYE_SVG + '<span>' + fmtViews(_viewMap[id] || 0) + '</span>';
+    if (!el || !id) return;
+    var val = fmtViews(_viewMap[id] || 0);
+    if (el.dataset.v === val) return;
+    el.dataset.v = val;
+    el.innerHTML = EYE_SVG + '<span>' + val + '</span>';
   });
 }
 function loadViewCounts(){
@@ -3726,7 +3730,7 @@ updateNavCounts();
   new MutationObserver(function(){
     clearTimeout(t);
     t = setTimeout(function(){ applyViewCounts(); updateNavCounts(); }, 300);
-  }).observe(box, { childList: true });
+  }).observe(box, { childList: true, subtree: true });
 })();
 </script>
 </body></html>
