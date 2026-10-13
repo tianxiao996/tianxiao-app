@@ -375,7 +375,18 @@ color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex
 <div id="txnavDetailBody"></div>
 </div>
 
-x:2500;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
+
+
+<div id="turnstileModal">
+<div id="turnstileBox">
+<div class="ts-title">请完成验证</div>
+<div class="ts-sub">验证通过后即可获取下载链接</div>
+<div id="turnstileWidget"></div>
+<button class="ts-cancel" onclick="cancelTurnstile()">取消</button>
+</div>
+</div>
+
+<div id="mode2Modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:2500;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
 <div id="mode2Box" style="background:#fff;border-radius:16px;padding:24px;max-width:420px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.2);position:relative;">
 <button onclick="cancelMode2()" style="position:absolute;top:10px;right:10px;width:36px;height:36px;border:none;border-radius:50%;background:rgba(0,0,0,0.08);color:#666;font-size:22px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;touch-action:manipulation;z-index:1;" title="关闭验证">×</button>
 <div id="m2Title" style="font-size:18px;font-weight:bold;color:#333;margin-bottom:6px;">🔐 问答验证</div>
