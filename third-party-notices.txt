@@ -1,0 +1,10 @@
+Profile layout reference: Tabler (MIT)
+https://github.com/tabler/tabler
+The existing account features were adapted into a responsive profile layout.
+License: vendor/tabler-LICENSE.txt
+
+Avatar cropping: Cropper.js 1.6.2 (MIT), locally hosted without an external CDN dependency.
+https://github.com/fengyuanchen/cropperjs/tree/v1.6.2
+License: vendor/cropper-LICENSE.txt
+
+A-resource extraction tutorial: supplied by the website owner, copied unchanged to guides/a.html.
