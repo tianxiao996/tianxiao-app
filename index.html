@@ -3097,6 +3097,45 @@ html:is([data-theme=dark],:not([data-theme=dark])) body .card-thumb img{display:
 html:is([data-theme=dark],:not([data-theme=dark])) body .card-preview-bottom{padding-top:0!important}
 @media(min-width:1024px){html:is([data-theme=dark],:not([data-theme=dark])) body .card:not(.card-expanded){height:166px!important}html:is([data-theme=dark],:not([data-theme=dark])) body .card:not(.card-expanded) .card-thumb{width:210px!important;height:160px!important;flex-basis:210px!important}}
 @media(max-width:1023px){html:is([data-theme=dark],:not([data-theme=dark])) body #box .card.active-render:not(.card-expanded){height:132px!important}html:is([data-theme=dark],:not([data-theme=dark])) body .card:not(.card-expanded) .card-preview-title{-webkit-line-clamp:2!important;margin-bottom:4px!important}html:is([data-theme=dark],:not([data-theme=dark])) body .card-preview-tags{max-height:40px!important}}
+/* Pair foreground and background explicitly; --primary also serves as a text color. */
+html:is([data-theme=dark],:not([data-theme=dark])) body .user-submit-btn,
+html:is([data-theme=dark],:not([data-theme=dark])) body .user-tab-btn.active,
+html:is([data-theme=dark],:not([data-theme=dark])) body .user-id-copy,
+html:is([data-theme=dark],:not([data-theme=dark])) body .user-checkin-btn,
+html:is([data-theme=dark],:not([data-theme=dark])) body .notice-save-btn,
+html:is([data-theme=dark],:not([data-theme=dark])) body .gallery-save-btn,
+html:is([data-theme=dark],:not([data-theme=dark])) body .banner-save-btn,
+html:is([data-theme=dark],:not([data-theme=dark])) body .cat-add-btn,
+html:is([data-theme=dark],:not([data-theme=dark])) body .edit-img-btn,
+html:is([data-theme=dark],:not([data-theme=dark])) body #adminBarBtns button,
+html:is([data-theme=dark],:not([data-theme=dark])) body .txnav-tab.active,
+html:is([data-theme=dark],:not([data-theme=dark])) body .txnav-btn-sm.filled,
+html:is([data-theme=dark],:not([data-theme=dark])) body .txnav-add-fab,
+html:is([data-theme=dark],:not([data-theme=dark])) body .txnav-modal-btns .btn-ok,
+html:is([data-theme=dark],:not([data-theme=dark])) body .comment-avatar-text-small,
+html:is([data-theme=dark],:not([data-theme=dark])) body .comment-avatar-text,
+html:is([data-theme=dark],:not([data-theme=dark])) body .reply-notif-avatar-text,
+html:is([data-theme=dark],:not([data-theme=dark])) body #mailClaimBtn,
+html:is([data-theme=dark],:not([data-theme=dark])) body #rpSendBtn,
+html:is([data-theme=dark],:not([data-theme=dark])) body #sendCodeBtn,
+html:is([data-theme=dark],:not([data-theme=dark])) body #regSendCodeBtn,
+html:is([data-theme=dark],:not([data-theme=dark])) body #shopFabBtn{background:var(--button)!important;color:var(--button-text)!important;-webkit-text-fill-color:currentColor!important;text-shadow:none!important;font-family:var(--font-crayon)!important}
+html:is([data-theme=dark],:not([data-theme=dark])) body .user-submit-btn[onclick="toggleEmailLogin()"]{background:#2f6ea7!important;color:#fff!important}
+html:is([data-theme=dark],:not([data-theme=dark])) body .user-submit-btn:disabled,html:is([data-theme=dark],:not([data-theme=dark])) body #rpSendBtn:disabled,html:is([data-theme=dark],:not([data-theme=dark])) body #sendCodeBtn:disabled,html:is([data-theme=dark],:not([data-theme=dark])) body #regSendCodeBtn:disabled{opacity:1!important;background:var(--soft)!important;color:var(--muted)!important}
+html:is([data-theme=dark],:not([data-theme=dark])) body .user-modal-box{background:var(--surface)!important;color:var(--text)!important;border-color:var(--border)!important;box-shadow:none!important;font-family:var(--font-crayon)!important}
+html:is([data-theme=dark],:not([data-theme=dark])) body .user-modal-title,html:is([data-theme=dark],:not([data-theme=dark])) body .user-field label{color:var(--text)!important;text-shadow:none!important}
+html:is([data-theme=dark],:not([data-theme=dark])) body .user-field input{background:var(--soft)!important;color:var(--text)!important;border-color:var(--primary-light)!important;font-family:var(--font-crayon)!important}
+html:is([data-theme=dark],:not([data-theme=dark])) body .user-field input::placeholder{color:var(--muted)!important;opacity:1!important}
+html:is([data-theme=dark],:not([data-theme=dark])) body .user-modal-close,html:is([data-theme=dark],:not([data-theme=dark])) body #userModal a[onclick="showResetPwdUI()"]{color:var(--muted)!important}
+html:is([data-theme=dark],:not([data-theme=dark])) body #userModal [style*="color:#aaa"],html:is([data-theme=dark],:not([data-theme=dark])) body #userModal [style*="color: #aaa"]{color:var(--muted)!important}
+html:is([data-theme=dark],:not([data-theme=dark])) body .px-title-text,html:is([data-theme=dark],:not([data-theme=dark])) body .sidebar-title,html:is([data-theme=dark],:not([data-theme=dark])) body .user-modal-title{-webkit-text-fill-color:currentColor!important;background:none!important;text-shadow:none!important;filter:none!important}
+/* Desktop only: remove the duplicate centered title and reuse that row for search. */
+@media(min-width:1024px){
+ html:is([data-theme=dark],:not([data-theme=dark])) body header{position:relative!important;padding:14px 20px!important}
+ html:is([data-theme=dark],:not([data-theme=dark])) body header .px-title-text{display:none!important}
+ html:is([data-theme=dark],:not([data-theme=dark])) body header .px-title-bar{position:absolute!important;top:18px!important;right:20px!important;left:auto!important;width:auto!important;min-height:0!important;padding:0!important;z-index:2!important}
+ html:is([data-theme=dark],:not([data-theme=dark])) body header .search-row{width:100%!important;max-width:min(720px,calc(100% - 260px))!important;margin:0 auto!important}
+}
 
 </style>
 <script id="cleanMarkerUI">
