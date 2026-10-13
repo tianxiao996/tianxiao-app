@@ -705,7 +705,7 @@ try{var res=await fetch(WORKER_BASE+'/api/ghdl/auth',{method:'POST',headers:{'Co
 else{showGhdlError(data.error||'验证失败');}
 if(btn){btn.textContent='验证并下载';btn.disabled=false;}
 return;}
-document.getElementById('ghdlStep2').style.display='none';document.getElementById('ghdlStep3').style.display='block';var realUrl=data.githubUrl||_ghdlSession.githubUrl;var consumed=await consumeDownloadLimit();if(!consumed){showGhdlError('下载次数扣除失败，请重试');if(btn){btn.textContent='验证并下载';btn.disabled=false;}
+document.getElementById('ghdlStep2').style.display='none';document.getElementById('ghdlStep3').style.display='block';var realUrl=data.githubUrl||_ghdlSession.githubUrl;var consumed=data.quotaConsumed===true;if(!consumed){showGhdlError('下载次数扣除失败，请重试');if(btn){btn.textContent='验证并下载';btn.disabled=false;}
 return;}
 var tempRes=await fetch(WORKER_BASE+'/api/proxy/temp-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:realUrl,filename:_ghdlSession.filename||'download',dlPass:data.dlPass||''})});var tempData=await tempRes.json();if(tempData.success&&tempData.path){openDownloadPage(WORKER_BASE+tempData.path);}else{showGhdlError('直链生成失败：'+(tempData.error||'未知错误'));if(btn){btn.textContent='验证并下载';btn.disabled=false;}
 return;}
@@ -2248,7 +2248,7 @@ async function sendBindEmailCode(){
   var token=currentUser?currentUser.sessionToken:'';if(!token){showToast('请先登录');return;}
   var btn=document.getElementById('bindSendBtn');btn.disabled=true;
   try{
-    var r=await fetch(USER_API+'/api/user/bind-email',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({email:em,turnstileToken:'bind_home'})});
+    var r=await fetch(USER_API+'/api/user/bind-email',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({email:em,turnstileToken:await requestTurnstileToken(30000)})});
     var d=await r.json();
     if(d.success){showToast('验证码已发送');var s=60;if(_bindCdTimer)clearInterval(_bindCdTimer);btn.textContent=s+'s';_bindCdTimer=setInterval(function(){s--;if(s<=0){clearInterval(_bindCdTimer);btn.disabled=false;btn.textContent='重新发送';}else{btn.textContent=s+'s';}},1000);}
     else{showToast(d.error||'发送失败');btn.disabled=false;}
@@ -2270,7 +2270,7 @@ async function showHomeBindCode(){
   if(!em||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){showToast('请输入有效邮箱');return;}
   var token=currentUser?currentUser.sessionToken:'';if(!token){showToast('请先登录');return;}
   try{
-    var r=await fetch(USER_API+'/api/user/bind-email',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({email:em,turnstileToken:'bind_home'})});
+    var r=await fetch(USER_API+'/api/user/bind-email',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({email:em,turnstileToken:await requestTurnstileToken(30000)})});
     var d=await r.json();
     if(d.success){showToast('验证码已发送');document.getElementById('hmBindCodeRow').style.display='block';
       var btn=document.querySelector('#homeEmailWrap button');if(btn){var s=60;btn.disabled=true;if(_hmCdTimer)clearInterval(_hmCdTimer);btn.textContent=s+'s';_hmCdTimer=setInterval(function(){s--;if(s<=0){clearInterval(_hmCdTimer);btn.disabled=false;btn.textContent='重新发送';}else{btn.textContent=s+'s';}},1000);}
