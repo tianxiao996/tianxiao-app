@@ -1,6 +1,126 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
+async function legacyLinkHash(raw) {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw == null ? 'null' : raw));
+  return Array.from(new Uint8Array(bytes), b => b.toString(16).padStart(2,'0')).join('');
+}
+function validateLinkRecords(records) {
+  if (!Array.isArray(records) || records.length > 64) throw new Error('每个资源最多保存 64 个链接');
+  const ids = new Set();
+  return records.map(record => {
+    if (!record || typeof record !== 'object' || Array.isArray(record)) throw new Error('链接格式无效');
+    const result = {};
+    for (const [key,limit] of Object.entries({id:100,url:4096,driveName:100,remark:2000,extractionCode:500,unzipPassword:2000})) {
+      if (typeof record[key] !== 'string' || record[key].length > limit || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(record[key])) throw new Error('链接字段无效：'+key);
+      result[key] = record[key];
+    }
+    if (!/^lnk_[a-zA-Z0-9_-]{8,96}$/.test(result.id) || ids.has(result.id)) throw new Error('链接 ID 无效或重复');
+    ids.add(result.id);
+    const parsed = new URL(result.url);
+    if (!['https:','http:'].includes(parsed.protocol) || parsed.username || parsed.password || result.url !== result.url.trim()) throw new Error('只支持无内嵌账号密码的 HTTP/HTTPS 链接');
+    return result;
+  });
+}
+
+// R2 is authoritative for complete resources. Immutable objects + one conditional
+// head update make publishing atomic; unused staged objects are retained.
+const RESOURCE_CONTROL='resources-v3/control.json';
+function resourceIdValid(id){return typeof id==='string'&&/^[a-zA-Z0-9_-]{1,160}$/.test(id)}
+function resourceMetadata(card){
+ if(!card||!resourceIdValid(card.id))throw new Error('资源 ID 无效');
+ const text=(key,max)=>{const value=card[key]??'';if(typeof value!=='string'||value.length>max)throw new Error('资源字段过长或无效：'+key);return value};
+ if(!Array.isArray(card.images)||card.images.length>100||card.images.some(u=>typeof u!=='string'||u.length>4096||!/^https?:\/\//i.test(u)))throw new Error('图片列表无效');
+ return {id:card.id,title:text('title',2000),tags:text('tags',4000),desc:text('desc',100000),images:card.images.slice(),isPinned:!!card.isPinned,isFav:!!card.isFav,directDl:text('directDl',4096)};
+}
+async function resourceState(env){
+ const control=await env.R2.get(RESOURCE_CONTROL);
+ if(!control)return {enabled:false};
+ const pointer=JSON.parse(await control.text());
+ if(!pointer.enabled)return {enabled:false,pointer,etag:control.etag};
+ const object=await env.R2.get(pointer.manifestKey);if(!object)throw new Error('资源目录缺失，已停止读取');
+ const manifest=JSON.parse(await object.text());if(manifest.schemaVersion!==3||!manifest.resources||!manifest.page)throw new Error('资源目录格式无效');
+ return {enabled:true,pointer,etag:control.etag,manifest};
+}
+async function readResource(env,state,id){
+ const key=state.manifest.resources[id]?.key;if(!key)return null;
+ const object=await env.R2.get(key);if(!object)throw new Error('资源记录缺失');
+ const resource=JSON.parse(await object.text());if(resource.schemaVersion!==3||resource.id!==id||resource.metadata?.id!==id)throw new Error('资源 ID 不匹配，已阻止读取');
+ return resource;
+}
+async function stageResource(env,resource){
+ const key=`resources-v3/resources/${resource.id}/${crypto.randomUUID()}.json`;
+ const result=await env.R2.put(key,JSON.stringify(resource),{onlyIf:{etagDoesNotMatch:'*'},httpMetadata:{contentType:'application/json'}});
+ if(!result)throw new Error('资源版本写入冲突');return key;
+}
+async function publishResourceManifest(env,state,manifest){
+ const key=`resources-v3/manifests/${crypto.randomUUID()}.json`;
+ manifest.previousManifestKey=state.pointer.manifestKey;manifest.updatedAt=Date.now();
+ const staged=await env.R2.put(key,JSON.stringify(manifest),{onlyIf:{etagDoesNotMatch:'*'},httpMetadata:{contentType:'application/json'}});
+ if(!staged)throw new Error('资源目录写入冲突');
+ const result=await env.R2.put(RESOURCE_CONTROL,JSON.stringify({schemaVersion:3,enabled:true,manifestKey:key}),{onlyIf:{etagMatches:state.etag},httpMetadata:{contentType:'application/json'}});
+ return !!result;
+}
+async function readLinkSet(env,cardId,isAdmin){
+ if(!resourceIdValid(cardId))throw new Error('资源 ID 无效');
+ const state=await resourceState(env);
+ if(!state.enabled){const raw=await kvGet(env,'card_links_'+cardId);return {schemaVersion:1,links:raw?JSON.parse(raw):[],...(isAdmin?{editingEnabled:false,revision:0}:{})}}
+ const resource=await readResource(env,state,cardId);
+ if(!resource)return {schemaVersion:2,records:[],links:[],revision:0,editingEnabled:true,reviewRequired:false};
+ // Pending legacy text is presented separately; it is never matched to URLs by index.
+ const pending=resource.linkState!=='active';
+ const records=resource.downloads;
+ return {schemaVersion:2,records,links:records.map(r=>r.url),revision:resource.revision,reviewRequired:pending,
+  ...(pending?{legacyText:resource.legacy.text}:{}),...(isAdmin?{editingEnabled:true,legacyHash:resource.legacy.hash,metadata:resource.metadata}:{})};
+}
+async function saveLinkSet(env,body){
+ if(!resourceIdValid(body.cardId)||!Number.isSafeInteger(body.baseRevision)||body.baseRevision<0)return {status:400,data:{error:'资源 ID 或版本号无效'}};
+ if('links' in body||!Array.isArray(body.records))return {status:409,data:{error:'旧版链接保存已停用，请刷新后使用完整链接编辑器'}};
+ let records;try{records=validateLinkRecords(body.records)}catch(error){return {status:400,data:{error:error.message}}}
+ for(let attempt=0;attempt<3;attempt++){
+  const state=await resourceState(env);if(!state.enabled)return {status:409,data:{error:'R2 结构化资源尚未启用或已回退'}};
+  const current=await readResource(env,state,body.cardId);
+  if((current?.revision||0)!==body.baseRevision)return {status:409,data:{error:'资源已被其他页面修改，请重新打开编辑器；本次未覆盖数据'}};
+  if(current&&current.linkState!=='active'&&(body.confirmLegacy!==true||body.legacyHash!==current.legacy.hash))return {status:400,data:{error:'请先逐组核对旧资料，再勾选确认转换'}};
+  const legacy=current?.legacy||{text:'',urls:[],hash:await legacyLinkHash(null),source:'new'};
+  // A new draft cannot silently replace an existing legacy-only card.
+  if(!current&&await kvGet(env,'card_links_'+body.cardId))return {status:409,data:{error:'旧资源未完成导入，已阻止创建覆盖记录'}};
+  let metadata;
+  try{metadata=current?.metadata||resourceMetadata(body.card||{id:body.cardId,title:'',tags:'',desc:'',images:[],directDl:''});if(metadata.id!==body.cardId)throw new Error('资源与资料 ID 不匹配')}catch(error){return {status:400,data:{error:error.message}}}
+  const resource={schemaVersion:3,id:body.cardId,revision:body.baseRevision+1,metadata,downloads:records,linkState:'active',legacy,previousKey:state.manifest.resources[body.cardId]?.key||null,updatedAt:Date.now(),operation:body.restoreRevision?'restore-downloads':'edit-downloads'};
+  const key=await stageResource(env,resource);const manifest={...state.manifest,resources:{...state.manifest.resources,[body.cardId]:{key,revision:resource.revision,metadata}}};
+  if(await publishResourceManifest(env,state,manifest))return {status:200,data:{success:true,schemaVersion:2,revision:resource.revision,records,storage:'R2'}};
+ }
+ return {status:409,data:{error:'其他修改正在发布，未覆盖数据，请稍后重试'}};
+}
+async function resourceLinkHistory(env,cardId){
+ const state=await resourceState(env);if(!state.enabled)return [];
+ const versions=[];let key=state.manifest.resources[cardId]?.key;
+ while(key&&versions.length<50){const object=await env.R2.get(key);if(!object)throw new Error('历史版本缺失');const r=JSON.parse(await object.text());if(r.id!==cardId)throw new Error('历史资源 ID 不匹配');versions.push({revision:r.revision,active:r.linkState==='active'?1:0,records:r.downloads,metadata:r.metadata,updated_at:r.updatedAt,actor:r.operation});key=r.previousKey}
+ return versions;
+}
+function resourceEncode(data){const bytes=new TextEncoder().encode(JSON.stringify(data));let binary='';for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+32768));return btoa(binary)}
+async function saveResourceSite(env,body,cards){
+ const state=await resourceState(env);if(!state.enabled)return {status:409,data:{error:'R2 结构化资源尚未启用，已阻止旧方式覆盖'}};
+ if(!Number.isSafeInteger(body.baseSiteRevision)||body.baseSiteRevision!==state.manifest.siteRevision)return {status:409,data:{error:'页面版本已变化，请先导出本地修改，再刷新并核对；云端未被覆盖'}};
+ cards=cards.map(card=>({...card,directDl:!card.directDlTouched&&!card.directDl?(state.manifest.resources[card.id]?.metadata.directDl||''):card.directDl}));
+ let metadata;try{metadata=cards.map(resourceMetadata)}catch(error){return {status:400,data:{error:error.message}}}
+ const changes=metadata.filter(card=>JSON.stringify(card)!==JSON.stringify(state.manifest.resources[card.id]?.metadata));
+ if(changes.length>30)return {status:400,data:{error:'本次有超过 30 个资源的资料变化，请分批编辑保存，避免请求中断'}};
+ const page={cards:renderCardsFromData(cards.map(card=>({...card,linkText:'（链接已安全存储）'}))),banner:body.banner||[],notice:body.notice||'',categories:body.categories||[],commentUrl:'',galleryContent:body.galleryContent||'',updated:new Date().toISOString()};
+ if(body.dryRun===true)return {status:200,data:{success:true,dryRun:true,cardCount:cards.length,changedResources:changes.length}};
+ const resources={...state.manifest.resources};
+ for(const card of changes){
+  const current=await readResource(env,state,card.id);
+  if(!current&&await kvGet(env,'card_links_'+card.id))return {status:409,data:{error:'旧资源没有导入，已阻止按新 ID 覆盖'}};
+  const resource={schemaVersion:3,id:card.id,revision:(current?.revision||0)+1,metadata:card,downloads:current?.downloads||[],linkState:current?.linkState||'active',legacy:current?.legacy||{text:'',urls:[],hash:await legacyLinkHash(null),source:'new'},previousKey:resources[card.id]?.key||null,updatedAt:Date.now(),operation:'edit-metadata'};
+  const key=await stageResource(env,resource);resources[card.id]={key,revision:resource.revision,metadata:card};
+ }
+ const manifest={...state.manifest,resources,page,order:cards.map(c=>c.id),siteRevision:body.baseSiteRevision+1};
+ if(!await publishResourceManifest(env,state,manifest))return {status:409,data:{error:'保存期间有其他修改，云端未被覆盖，请重试'}};
+ return {status:200,data:{success:true,siteRevision:manifest.siteRevision,content:{sha:String(Date.now())},storage:'R2'}};
+}
+
 // worker.js
 var __defProp2 = Object.defineProperty;
 var __name2 = /* @__PURE__ */ __name((target, value) => __defProp2(target, "name", { value, configurable: true }), "__name");
@@ -1700,6 +1820,15 @@ var worker_default = {
     }
     if (request.method === "GET" && url.pathname === "/api/data") {
       try {
+
+        const structured=await resourceState(env);
+        if(structured.enabled){
+          const authorization=request.headers.get('Authorization')||'';
+          const admin=authorization.startsWith('Bearer ')&&await verifyToken(authorization.slice(7),env);
+          const page={...structured.manifest.page};
+          if(!admin)page.cards=page.cards.replace(/\s*data-direct-download="[^"]*"/g,'');
+          return new Response(JSON.stringify({content:resourceEncode(page),siteRevision:structured.manifest.siteRevision,schemaVersion:3}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'https://tian-xiao.com','Cache-Control':'no-store'}});
+        }
         const authHeader0 = request.headers.get("Authorization") || "";
         const token0 = authHeader0.replace("Bearer ", "");
         const isAdmin0 = token0 ? await verifyToken(token0, env) : false;
@@ -1835,9 +1964,14 @@ var worker_default = {
         if (!Array.isArray(cardsData)) {
           return jsonRes({ error: "\u5361\u7247\u6570\u636E\u683C\u5F0F\u9519\u8BEF" }, 400);
         }
+        const resourceIds=new Set();
+        for (const card of cardsData) {
+          if (!card || typeof card.id!=='string'||!/^[a-zA-Z0-9_-]{1,160}$/.test(card.id)||resourceIds.has(card.id)) return jsonRes({error:'资源 ID 缺失或重复，已阻止保存，避免链接错配'},400);
+          resourceIds.add(card.id);
+        }
         const safeCards = cardsData.map((card) => {
           return {
-            id: card.id || "",
+            id: card.id || "",directDlTouched:card.directDlTouched===true,
             title: String(card.title || "").replace(/[<>]/g, ""),
             tags: String(card.tags || "").replace(/[<>]/g, ""),
             desc: String(card.desc || "").replace(/[<>]/g, "").trim(),
@@ -1848,32 +1982,8 @@ var worker_default = {
             directDl: String(card.directDl || "").replace(/[<>]/g, "")
           };
         });
-        const cardsHtml = renderCardsFromData(safeCards);
-        const payload = JSON.stringify({
-          cards: cardsHtml,
-          banner: banner || [],
-          notice: notice || "",
-          categories: categories || [],
-          commentUrl: "",
-          galleryContent: galleryContent || "",
-          updated: (/* @__PURE__ */ new Date()).toISOString()
-        });
-        const bytes = new TextEncoder().encode(payload);
-        let binary = "";
-        const B64_CHUNK = 32768;
-        for (let i = 0; i < bytes.length; i += B64_CHUNK) {
-          binary += String.fromCharCode.apply(null, bytes.subarray(i, i + B64_CHUNK));
-        }
-        const encoded = btoa(binary);
-        if (dryRun === true) {
-          return jsonRes({ success: true, dryRun: true, payloadBytes: bytes.length, encodedBytes: encoded.length, cardCount: safeCards.length, elapsedMs: Date.now() - t0 });
-        }
-        await env.R2.put("tianxiao_data", encoded, { httpMetadata: { contentType: "text/plain" } });
-        const cacheUrl2 = new URL(request.url);
-        cacheUrl2.pathname = "/api/data";
-        cacheUrl2.search = "";
-        await caches.default.delete(new Request(cacheUrl2.toString()));
-        return jsonRes({ success: true, content: { sha: Date.now().toString() }, elapsedMs: Date.now() - t0 });
+        const result=await saveResourceSite(env,body,safeCards);
+        return jsonRes(result.data,result.status);
       } catch (error) {
         return jsonRes({ error: "\u4FDD\u5B58\u5931\u8D25: " + error.message }, 500);
       }
@@ -1896,23 +2006,23 @@ var worker_default = {
       }
       try {
         const body = await request.json();
-        const { cardId, links } = body;
-        if (!cardId || !Array.isArray(links) || links.length === 0) {
-          return new Response(JSON.stringify({ error: "\u53C2\u6570\u9519\u8BEF" }), {
-            status: 400,
-            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://tian-xiao.com" }
-          });
-        }
-        await kvPut(env, `card_links_${cardId}`, JSON.stringify(links));
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://tian-xiao.com" }
-        });
+        const result = await saveLinkSet(env,body);
+        return jsonRes(result.data,result.status);
       } catch (e) {
         return new Response(JSON.stringify({ error: "\u5B58\u50A8\u5931\u8D25: " + e.message }), {
           status: 500,
           headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://tian-xiao.com" }
         });
       }
+    }
+    if (request.method === 'GET' && url.pathname === '/api/links/history') {
+      const auth=request.headers.get('Authorization')||'';
+      if (!auth.startsWith('Bearer ')||!await verifyToken(auth.slice(7),env)) return jsonRes({error:'未授权'},401);
+      try {
+        const cardId=url.searchParams.get('cardId')||'';
+        const versions=await resourceLinkHistory(env,cardId);
+        return new Response(JSON.stringify({versions}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'https://tian-xiao.com','Cache-Control':'no-store'}});
+      } catch(error) {return jsonRes({error:'读取链接历史失败'},500)}
     }
     if (request.method === "GET" && url.pathname === "/api/links/get") {
       const cardId = url.searchParams.get("cardId");
@@ -1977,16 +2087,9 @@ var worker_default = {
         }
       }
       try {
-        const data = await kvGet(env, `card_links_${cardId}`);
-        if (!data) {
-          return new Response(JSON.stringify({ error: "\u94FE\u63A5\u4E0D\u5B58\u5728" }), {
-            status: 404,
-            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://tian-xiao.com" }
-          });
-        }
-        return new Response(JSON.stringify({ links: JSON.parse(data) }), {
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://tian-xiao.com" }
-        });
+        const data = await readLinkSet(env,cardId,isAdmin);
+        if (data.schemaVersion===2 && url.searchParams.get('schema')!=='2') return jsonRes({error:'链接管理已升级，请刷新页面后重新获取'},409);
+        return new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'https://tian-xiao.com','Cache-Control':'no-store'}});
       } catch (e) {
         return new Response(JSON.stringify({ error: "\u8BFB\u53D6\u5931\u8D25: " + e.message }), {
           status: 500,
@@ -2363,57 +2466,7 @@ var worker_default = {
         if (!token || !await verifyToken(token, env)) {
           return jsonRes({ success: false, error: "\u65E0\u6743\u8BBF\u95EE" }, 403);
         }
-        const body = await request.json();
-        const { cardIds } = body;
-        if (!Array.isArray(cardIds) || cardIds.length === 0) {
-          return jsonRes({ success: false, error: "\u8BF7\u63D0\u4F9B\u5361\u7247 ID \u5217\u8868" }, 400);
-        }
-        const list = await kvList(env, "card_links_");
-        const allKeys = (list.keys || []).map((k) => k.name).filter((n) => n.startsWith("card_links_card_"));
-        const indexed = [];
-        const unordered = [];
-        for (const keyName of allKeys) {
-          const m = keyName.match(/^card_links_card_\d+_(\d+)$/);
-          if (m) {
-            indexed.push({ keyName, index: parseInt(m[1], 10) });
-          } else {
-            unordered.push(keyName);
-          }
-        }
-        unordered.sort();
-        unordered.forEach((keyName, i) => {
-          indexed.push({ keyName, index: i });
-        });
-        let migrated = 0, skipped = 0, failed = 0;
-        const details = [];
-        for (const { keyName, index } of indexed) {
-          if (index >= cardIds.length) {
-            skipped++;
-            details.push({ key: keyName, status: "skipped", reason: "\u7D22\u5F15\u8D85\u51FA\u5F53\u524D\u5361\u7247\u8303\u56F4" });
-            continue;
-          }
-          const newCardId = cardIds[index];
-          const newKey = "card_links_" + newCardId;
-          if (newKey === keyName) {
-            skipped++;
-            continue;
-          }
-          try {
-            const data = await kvGet(env, keyName);
-            if (!data) {
-              skipped++;
-              details.push({ key: keyName, status: "skipped", reason: "\u6570\u636E\u4E3A\u7A7A" });
-              continue;
-            }
-            await kvPut(env, newKey, data);
-            migrated++;
-            details.push({ key: keyName, newKey, status: "migrated", linkCount: JSON.parse(data).length });
-          } catch (e) {
-            failed++;
-            details.push({ key: keyName, status: "failed", error: e.message });
-          }
-        }
-        return jsonRes({ success: true, migrated, skipped, failed, total: allKeys.length, details: details.slice(0, 100) });
+        return jsonRes({success:false,error:'按页面顺序恢复链接已停用，避免覆盖其他资源。请按资源 ID 核对备份或使用链接历史版本。'},410);
       } catch (e) {
         return safeJsonRes({ success: false, error: "\u6062\u590D\u5931\u8D25: " + e.message }, 500);
       }
