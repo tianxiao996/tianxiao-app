@@ -1938,7 +1938,7 @@ var worker_default = {
               if (expectedSig === parts[1]) {
                 try {
                   const vData = JSON.parse(decodeURIComponent(escape(atob(parts[0]))));
-                  if (Date.now() - vData.createdAt < 12e4 && vData.cardId && vData.cardId === cardId) valid = true;
+                  if (vData.type === "download-verification" && vData.ip === ip && Date.now() >= vData.createdAt && Date.now() - vData.createdAt < 12e4 && vData.cardId && vData.cardId === cardId) valid = true;
                 } catch (e) {
                 }
               }
@@ -2482,17 +2482,16 @@ var worker_default = {
         const raw = await kvGet(env, "verify_questions");
         if (!raw) return jsonRes({ error: "\u95EE\u9898\u5E93\u6682\u672A\u5F00\u653E" }, 503);
         const allQuestions = JSON.parse(raw);
-        if (allQuestions.length < 4) return jsonRes({ error: "\u95EE\u9898\u5E93\u4E0D\u8DB34\u9898\uFF0C\u8BF7\u8054\u7CFB\u7BA1\u7406\u5458" }, 503);
-        const shuffled = [...Array(allQuestions.length).keys()].sort(() => Math.random() - 0.5);
-        const qIdx = shuffled.slice(0, 4);
-        const math = createMathCaptcha();
-        const ansSec = requireEnvSecret(env.TURNSTILE_SECRET, "TURNSTILE_SECRET");
-        const mathHash = await hmacSha256("ans:" + String(math.answer).trim().toLowerCase(), ansSec);
-        const sessionData = { ip, fpHash, cardId: body.cardId || "", mh: mathHash, qIdx, currentStep: 0, createdAt: Date.now() };
+        const available = Array.isArray(allQuestions) ? allQuestions.map((item,index)=>({item,index})).filter(({item})=>typeof item === "string" && item.lastIndexOf("?") > 0 && item.substring(item.lastIndexOf("?")+1).trim()) : [];
+        if (!available.length) return jsonRes({ error: "问题库暂未开放，请联系管理员" }, 503);
+        const chosen = available[crypto.getRandomValues(new Uint32Array(1))[0] % available.length];
+        const qIdx = [chosen.index];
+        const question = chosen.item.substring(0,chosen.item.lastIndexOf("?")).trim();
+        const sessionData = { version: 2, ip, fpHash, cardId: body.cardId || "", qIdx, currentStep: 1, createdAt: Date.now() };
         const payload = btoa(unescape(encodeURIComponent(JSON.stringify(sessionData))));
         const sig = await hmacSha256(payload, requireEnvSecret(env.TURNSTILE_SECRET, "TURNSTILE_SECRET"));
         const token = payload + "." + sig;
-        return jsonRes({ success: true, sessionId: token, mathQuestion: math.question, totalSteps: 5 });
+        return jsonRes({ success: true, sessionId: token, question, mathQuestion: question, totalSteps: 1 });
       } catch (e) {
         return jsonRes({ success: false, error: "\u9A8C\u8BC1\u670D\u52A1\u5F02\u5E38: " + (e.message || "\u672A\u77E5\u9519\u8BEF") }, 500);
       }
@@ -2518,6 +2517,9 @@ var worker_default = {
         if (session.ip !== ip) return jsonRes({ error: "\u7F51\u7EDC\u73AF\u5883\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u5F00\u59CB" }, 400);
         const failKey = `verify_fail_${ip}_${session.fpHash}`;
         const freezeKey = `verify_freeze_${ip}_${session.fpHash}`;
+        const frozen = await checkAuthFreeze(env, freezeKey);
+        if (frozen.frozen) return jsonRes({ error: "验证已冻结，请稍后重试", frozen: true, retryAfter: frozen.remainMin * 60 }, 403);
+        if (session.version === 2 && (session.currentStep !== 1 || !Array.isArray(session.qIdx) || session.qIdx.length !== 1)) return jsonRes({ error: "会话无效，请重新开始" }, 400);
         let correct = false;
         if (session.currentStep === 0) {
           const ansHash = await hmacSha256("ans:" + String(answer).trim().toLowerCase(), requireEnvSecret(env.TURNSTILE_SECRET, "TURNSTILE_SECRET"));
@@ -2544,8 +2546,8 @@ var worker_default = {
           return jsonRes({ error: "\u7B54\u6848\u9519\u8BEF\uFF0C\u8BF7\u91CD\u65B0\u5F00\u59CB", reset: true, remainingAttempts: Math.max(0, remaining) }, 400);
         }
         session.currentStep++;
-        if (session.currentStep >= 5) {
-          const vData = { ip, cardId: session.cardId || "", createdAt: Date.now() };
+        if (session.version === 2 || session.currentStep >= 5) {
+          const vData = { type: "download-verification", ip, cardId: session.cardId || "", createdAt: Date.now() };
           const vPayload = btoa(unescape(encodeURIComponent(JSON.stringify(vData))));
           const vSig = await hmacSha256(vPayload, requireEnvSecret(env.TURNSTILE_SECRET, "TURNSTILE_SECRET"));
           const vToken = vPayload + "." + vSig;
