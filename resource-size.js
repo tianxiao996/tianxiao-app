@@ -13,7 +13,8 @@ function badge(size){const el=document.createElement('span');el.className='resou
 function render(){
  for(const card of document.querySelectorAll('#box>.card')){
   const size=fromCard(card),tags=card.querySelector('.card-preview-tags');
-  if(tags){tags.querySelector('.resource-size-display')?.remove();const el=badge(size);el.classList.add('pt');tags.prepend(el)}
+  if(tags)tags.querySelectorAll('.resource-size-display').forEach(el=>el.remove());
+  const thumb=card.querySelector('.card-thumb');if(thumb){thumb.querySelector(':scope>.resource-size-caption')?.remove();const el=badge(size);el.classList.add('resource-size-caption');thumb.append(el)}
   const info=card.querySelector('.info-box');if(!info)continue;
   info.querySelector(':scope>.resource-size-display')?.remove();const source=card.querySelector('.g-tags');if(source)source.insertAdjacentElement('afterend',badge(size));
   const allowed=root.isEditMode!==false&&document.body.classList.contains('admin-mode')&&(root.adminProfile?.role==='owner'||card.dataset.adminDraft==='1');
@@ -24,8 +25,14 @@ function render(){
  }
 }
 function detail(card){const body=document.getElementById('cardDetailBody');if(!body)return;body.querySelector('.detail-resource-size')?.remove();const anchor=body.querySelector('.detail-date')||body.querySelector('.detail-title-gradient');if(!anchor)return;const row=document.createElement('div');row.className='detail-resource-size';row.append(badge(fromCard(card)));anchor.insertAdjacentElement('afterend',row);requestAnimationFrame(()=>{const panel=body.querySelector('.quiet-detail-meta');if(panel&&row.isConnected)panel.append(row)})}
+function installTutorialEntry(){
+ if(document.getElementById('compactTutorialFab'))return;
+ const source=document.querySelector('#cardDetailPage .detail-fab');if(!source)return;
+ const entry=source.cloneNode(true);entry.id='compactTutorialFab';entry.classList.add('compact-tutorial-fab');document.body.append(entry);
+}
 root.ResourceSize={parseSize,fromCard,render,detail};
 if(typeof document!=='undefined'){
+ installTutorialEntry();
  const refresh=root.refreshUI;if(typeof refresh==='function')root.refreshUI=function(...args){const result=refresh.apply(this,args);render();return result};
  const open=root.openCardDetail;if(typeof open==='function')root.openCardDetail=function(card,...args){const result=open.call(this,card,...args);detail(card);return result};
  const enter=root.enterAdmin;if(typeof enter==='function')root.enterAdmin=async function(...args){const result=await enter.apply(this,args);render();return result};
