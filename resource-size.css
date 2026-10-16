@@ -6,4 +6,4 @@ html:root body .card-thumb>.resource-size-caption{position:absolute;left:5px;bot
 html[data-theme=dark]:root body .card-thumb>.resource-size-caption{background:rgba(32,34,33,.94);color:#f0f0ec}
 html:root body #compactTutorialFab{position:fixed!important;z-index:1400}
 
-@media(max-width:1023px){html:root body.has-compact-tutorial #rocket{bottom:128px!important}}
+@media(max-width:1023px){}

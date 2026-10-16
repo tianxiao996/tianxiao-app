@@ -25,12 +25,16 @@ function render(){
  }
 }
 function detail(card){const body=document.getElementById('cardDetailBody');if(!body)return;body.querySelector('.detail-resource-size')?.remove();const anchor=body.querySelector('.detail-date')||body.querySelector('.detail-title-gradient');if(!anchor)return;const row=document.createElement('div');row.className='detail-resource-size';row.append(badge(fromCard(card)));anchor.insertAdjacentElement('afterend',row);requestAnimationFrame(()=>{const panel=body.querySelector('.quiet-detail-meta');if(panel&&row.isConnected)panel.append(row)})}
+function dismissTutorial(){document.querySelectorAll('.tutorial-fab-shell').forEach(el=>el.classList.add('tutorial-fab-dismissed'))}
 function installTutorialEntry(){
  if(document.getElementById('compactTutorialFab'))return;
  const source=document.querySelector('#cardDetailPage .detail-fab');if(!source)return;
- const entry=source.cloneNode(true);entry.id='compactTutorialFab';entry.classList.add('compact-tutorial-fab');document.body.append(entry);document.body.classList.add('has-compact-tutorial');
+ const shell=document.createElement('div');shell.className='detail-fab tutorial-fab-shell';source.before(shell);source.classList.remove('detail-fab');source.classList.add('tutorial-fab-open');shell.append(source);
+ const close=document.createElement('button');close.type='button';close.className='tutorial-fab-close';close.setAttribute('aria-label','关闭解压教程入口');close.title='关闭解压教程入口，刷新页面后恢复';close.textContent='×';shell.append(close);
+ const entry=shell.cloneNode(true);entry.id='compactTutorialFab';entry.classList.add('compact-tutorial-fab');document.body.append(entry);document.body.classList.add('has-compact-tutorial');
+ document.querySelectorAll('.tutorial-fab-close').forEach(button=>button.onclick=event=>{event.stopPropagation();dismissTutorial()});
 }
-root.ResourceSize={parseSize,fromCard,render,detail};
+root.ResourceSize={parseSize,fromCard,render,detail,dismissTutorial};
 if(typeof document!=='undefined'){
  installTutorialEntry();
  const refresh=root.refreshUI;if(typeof refresh==='function')root.refreshUI=function(...args){const result=refresh.apply(this,args);render();return result};
