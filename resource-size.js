@@ -28,7 +28,7 @@ function detail(card){const body=document.getElementById('cardDetailBody');if(!b
 function installTutorialEntry(){
  if(document.getElementById('compactTutorialFab'))return;
  const source=document.querySelector('#cardDetailPage .detail-fab');if(!source)return;
- const entry=source.cloneNode(true);entry.id='compactTutorialFab';entry.classList.add('compact-tutorial-fab');document.body.append(entry);
+ const entry=source.cloneNode(true);entry.id='compactTutorialFab';entry.classList.add('compact-tutorial-fab');document.body.append(entry);document.body.classList.add('has-compact-tutorial');
 }
 root.ResourceSize={parseSize,fromCard,render,detail};
 if(typeof document!=='undefined'){
