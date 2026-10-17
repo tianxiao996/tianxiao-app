@@ -65,3 +65,32 @@ html:root body .page-btn.active{background:var(--button)!important;color:var(--b
 html:root body .px-icon-btn,html:root body .sidebar-burger{background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--border)!important;box-shadow:0 2px 6px var(--rain-shadow)!important}
 html:root body .detail-fab{filter:drop-shadow(0 4px 9px rgba(10,22,35,.2))}
 @media(prefers-reduced-motion:reduce){html:root body:not(.admin-mode) #box .card.active-render:not(.card-expanded){transition:none!important;transform:none!important}}
+
+/* Illustrated architecture and storefront surfaces, integrated into the existing UI. */
+html:root{--rain-window:rgba(255,252,239,.93);--rain-window-top:rgba(255,253,241,.97);--rain-sidebar:rgba(236,241,229,.94);--rain-veil:rgba(234,238,224,.68);--rain-veil-bottom:rgba(234,238,224,.85);--rain-fascia:#376d70;--rain-lamp:#f1d3a1}
+html:root[data-theme=dark]{--rain-window:rgba(23,40,51,.91);--rain-window-top:rgba(35,52,60,.94);--rain-sidebar:rgba(17,32,43,.92);--rain-veil:rgba(11,27,40,.20);--rain-veil-bottom:rgba(10,24,37,.72);--rain-fascia:#74aaa3;--rain-lamp:#f4d299}
+html:root body,html:root body #mainScroll{background:linear-gradient(180deg,var(--rain-veil),var(--rain-veil-bottom)),url('images/rainy-store-night-v2.webp') center top/cover fixed!important}
+html:root body #sidebar{background:linear-gradient(180deg,var(--rain-window-top),var(--rain-sidebar))!important;backdrop-filter:blur(14px)!important;border-right:1px solid var(--rain-highlight)!important;box-shadow:10px 0 30px rgba(6,18,29,.22)!important}
+html:root body .sidebar-header{background:linear-gradient(180deg,rgba(255,220,157,.10),transparent),var(--rain-window-top)!important;border-bottom:1px solid var(--rain-amber)!important;box-shadow:inset 0 2px 0 rgba(249,220,170,.3),0 5px 22px rgba(15,29,39,.16)!important}
+html:root body .sidebar-header::before{content:"";position:absolute;left:0;right:0;top:0;height:7px;background:repeating-linear-gradient(100deg,#487f7b 0 18px,#f0d9ad 18px 34px);box-shadow:0 2px 5px rgba(0,0,0,.12)}
+html:root body .sidebar-header::after{height:4px;left:0;right:0;border-radius:0;background:linear-gradient(90deg,#639c94 0 61%,#edce99 61% 82%,#b88172 82%);opacity:1}
+html:root body .sidebar-title{color:var(--rain-amber)!important;text-shadow:0 0 15px rgba(231,182,108,.22)!important;letter-spacing:2px}
+html:root body .sidebar-subtitle::after{content:"OPEN · 24H";display:inline-block;margin-left:6px;padding:1px 4px;border:1px solid var(--primary-light);border-radius:3px;color:var(--primary);font:600 8px/1.6 sans-serif;letter-spacing:.5px;vertical-align:middle}
+html:root body header{position:relative;background:var(--rain-window-top)!important;backdrop-filter:blur(12px)!important;border-bottom:1px solid var(--rain-amber)!important;box-shadow:0 4px 18px rgba(7,20,29,.2)!important}
+html:root body header::after{content:"";position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#568f89 0 66%,#edcc95 66% 88%,#b47f73 88%);opacity:.85;pointer-events:none}
+html:root body .card,html:root body #box .card.active-render{background:linear-gradient(140deg,var(--rain-window-top),var(--rain-window))!important;backdrop-filter:blur(7px)!important;border-color:var(--border)!important;box-shadow:0 5px 12px rgba(6,18,29,.16),0 12px 30px rgba(6,18,29,.18),inset 0 1px 0 rgba(246,216,171,.18)!important}
+html:root body:not(.admin-mode) #box .card.active-render:not(.card-expanded){box-shadow:0 6px 14px rgba(4,17,28,.2),0 14px 26px rgba(4,17,28,.17),inset 0 1px 0 rgba(238,209,162,.17)!important}
+@media(hover:hover)and(pointer:fine){html:root body:not(.admin-mode) #box .card.active-render:not(.card-expanded):hover{border-color:var(--rain-amber)!important;box-shadow:0 8px 18px rgba(4,17,28,.25),0 18px 30px rgba(4,17,28,.2),0 0 0 1px var(--rain-amber),0 0 20px rgba(230,184,112,.08)!important}}
+html:root body .card-preview-btn,html:root body .card-expand-hint{background:var(--button)!important;color:var(--button-text)!important;border-color:var(--rain-amber)!important;box-shadow:0 2px 6px rgba(4,17,28,.12),inset 0 1px 0 rgba(255,244,215,.22)!important}
+html:root body .card-preview-tags span{background:var(--soft)!important}
+html:root body #bannerSection{background:var(--rain-window)!important;border-color:var(--rain-highlight)!important;backdrop-filter:blur(10px)!important;box-shadow:0 12px 34px rgba(3,15,26,.25),0 0 24px rgba(228,182,110,.1)!important}
+html:root body #bannerSection .banner-caption{background:var(--rain-window-top)!important;color:var(--text)!important}
+html:root body #cardDetailPage,html:root body .user-home-overlay{background:linear-gradient(var(--rain-veil-bottom),var(--rain-veil-bottom)),url('images/rainy-store-night-v2.webp') center/cover fixed!important}
+html:root body #cardDetailBody,html:root body .fullpage-body{background-color:transparent!important}
+html:root body .quiet-detail-meta,html:root body #cardDetailBody>.detail-glass,html:root body .comment-section,html:root body .user-modal-box,html:root body .filter-box,html:root body .modal-box{background:var(--rain-window-top)!important;backdrop-filter:blur(14px)!important;border-color:var(--border)!important;box-shadow:0 8px 32px rgba(6,18,29,.23),inset 0 1px 0 rgba(247,219,174,.12)!important}
+html:root body #cardDetailHeader,html:root body .fullpage-header{background:var(--rain-window-top)!important;backdrop-filter:blur(12px)!important;border-bottom-color:var(--rain-amber)!important}
+html:root body .user-modal-overlay{background:rgba(7,17,26,.6)!important;backdrop-filter:blur(5px)!important}
+html:root body #nav li{background:var(--rain-window)!important;box-shadow:inset 0 0 0 1px var(--category-border),0 2px 4px rgba(4,17,28,.05)!important}
+html:root body #nav li.active{background:var(--category-active)!important;box-shadow:inset 3px 0 0 var(--rain-lamp),inset 0 0 0 1px var(--rain-highlight),0 0 12px rgba(234,195,132,.06)!important}
+html:root body .search-row{background:var(--rain-window)!important;border-color:var(--primary-light)!important;box-shadow:inset 0 2px 7px rgba(5,17,26,.16),0 0 14px rgba(233,199,145,.05)!important}
+@media(max-width:700px){html:root body,html:root body #mainScroll,html:root body #cardDetailPage{background-attachment:scroll!important;background-position:60% top!important}html:root body .card,html:root body #box .card.active-render{backdrop-filter:none!important;background:var(--rain-window-top)!important}html:root body .sidebar-subtitle::after{display:none}}
