@@ -295,7 +295,7 @@ async function retryTurnstile(automatic=false){
   });
   // A synchronous error callback can request recovery while render returns its ID.
   if(!active()){try{window.turnstile.remove(s.widget)}catch(_){}s.widget=null;return}_tsWidgetId=s.widget;
-  tsTimer(s,()=>{if(!active()||container.dataset.state==='error')return;if(!container.querySelector('iframe'))fail('FRAME_MISSING','验证窗口尚未显示',true);else setTurnstileStatus('请完成验证；如果窗口空白或一直加载，可点击重新加载。',true)},10000);
+  tsTimer(s,()=>{if(!active()||['error','interactive'].includes(container.dataset.state))return;const mounted=Array.from(container.children).some(el=>el.tagName!=='INPUT');if(!mounted)fail('FRAME_MISSING','验证窗口尚未显示',true);else setTurnstileStatus('请完成验证；如果窗口空白或一直加载，可点击重新加载。',true)},10000);
  }catch(e){if(active())fail(e.code||'RENDER_ERROR',e.message||'验证组件加载失败',/^SCRIPT_/.test(e.code||''))}
 }
 function requestTurnstileToken(timeoutMs=90000){
