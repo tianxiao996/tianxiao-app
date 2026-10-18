@@ -69,13 +69,72 @@ function parseShareText(input){
 }
 // Explicitly leaves the manually entered unzip password alone.
 function applyDetected(existing,detected){return {...existing,url:detected.url,driveName:existing.driveName.trim()?existing.driveName:detected.driveName,extractionCode:detected.extractionCode,remark:existing.remark,unzipPassword:existing.unzipPassword}}
-function legacySuggestions(text,urls,records){
- if(!text||!Array.isArray(urls)||urls.length!==records.length||urls.some((url,i)=>url!==records[i].url))return null;
- const groups=text.split(';;;');if(groups.length!==records.length)return null;
- const fields=groups.map(group=>{const parts=group.split('|');while(parts.length>4&&parts.at(-1)==='')parts.pop();return parts});
- if(fields.some(p=>p.length!==4||p.some(v=>/https?:\/\//i.test(v))))return null;
- return records.map((record,i)=>{const p=fields[i];return {...record,driveName:record.driveName||p[0]||detectDrive(record.url),remark:record.remark||p[1],extractionCode:record.extractionCode||p[2],unzipPassword:record.unzipPassword||p[3]}});
+// Recover against the immutable original URL list, never the current position.
+// Existing nonempty fields always win. Conflicts prevent automatic activation.
+function recoverLegacy(text,urls,records,options={}){
+ const result={records:records.map(r=>({...r})),complete:false,reasons:[],sources:[]};
+ const fail=message=>{result.reasons.push(message)};
+ const provider=raw=>{let host;try{host=new URL(raw).hostname.toLowerCase()}catch{return ''}return detectDrive(raw)||(host==='github.com'?'GitHub':host==='files.catbox.moe'||host==='catbox.moe'?'catbox盘':'')};
+ const valid=raw=>{try{const u=new URL(raw);return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password}catch{return false}};
+ if(!records.length){fail('没有有效下载记录');return result}
+ if(!Array.isArray(urls)||new Set(urls).size!==urls.length||new Set(records.map(r=>r.url)).size!==records.length||!urls.every(valid)||!records.every(r=>valid(r.url)&&urls.includes(r.url))){fail('原始网址不唯一、无效或与当前网址不匹配');return result}
+ const originals=new Map(urls.map((url,i)=>[url,i]));
+ const knownPassword=value=>String(value).trim()==='tianxiao';
+ const merge=(index,field,value,source)=>{
+  value=String(value||'').trim();if(!value)return;
+  const record=result.records[index];
+  if(record[field]){if(['extractionCode','unzipPassword'].includes(field)&&record[field]!==value)fail('现有字段与旧资料有冲突：'+record.id+' '+field);return}
+  record[field]=value;result.sources.push({id:record.id,field,source});
+ };
+ result.records.forEach((r,i)=>{
+  merge(i,'driveName',provider(r.url),'网址域名');
+  if(!provider(r.url))return;
+  const u=new URL(r.url),codes=[...new Set(['pwd','password','passcode','access_code'].map(k=>u.searchParams.get(k)).filter(v=>v&&/^[A-Za-z0-9_-]{1,32}$/.test(v)))];
+  if(codes.length>1)fail('同一网址包含冲突的提取码');else if(codes[0])merge(i,'extractionCode',codes[0],'该网址自身的查询参数');
+ });
+ text=String(text||'').trim();
+ if(!text||text==='（链接已安全存储）'){result.complete=!result.reasons.length;return result}
+ const chunks=text.split(';;;').map(s=>s.trim());
+ const isUrlList=!text.includes(';;;')&&text.split('|').every(s=>urls.includes(s.trim()));
+ if(isUrlList){result.complete=!result.reasons.length;return result}
+ if(chunks.length===1&&!text.includes('|')&&!text.includes('\t')){
+  if(knownPassword(text)){result.records.forEach((r,i)=>merge(i,'unzipPassword',text,'用户确认的旧解压码'))}
+  else if(options.allowBareCode&&/^[A-Za-z0-9]{4}[,，]?$/.test(text)&&records.length===1){merge(0,'extractionCode',text.replace(/[,，]$/,''),'用户确认的单链接旧提取码')}
+  else if(/^[A-Za-z0-9]{4}[,，]?$/.test(text)&&!/^\s*[AFP]\d+[,，]?$/i.test(text)){fail('四位裸文本用途待确认')}
+  else result.records.forEach((r,i)=>merge(i,'remark',text,'资源共用旧备注（未解释为密码）'));
+  result.complete=!result.reasons.length;return result;
+ }
+ const slots=chunks.map(chunk=>{
+  let p=chunk.split('|');if(p.length===1&&chunk.includes('\t'))p=chunk.split('\t');
+  while(p.length>4&&p.at(-1)==='')p.pop();
+  if(p.length===4&&!p.some(v=>/https?:\/\//i.test(v)))return {driveName:p[0].trim(),remark:p[1].trim(),extractionCode:p[2].trim(),unzipPassword:p[3].trim()};
+  if(p.length===1&&['GitHub','catbox盘','Catbox'].includes(chunk))return {driveName:chunk,remark:'',extractionCode:'',unzipPassword:''};
+  return null;
+ });
+ // A single note with no password or drive is common to mirrored links.
+ if(slots.length===1&&slots[0]&&!slots[0].driveName&&!slots[0].extractionCode&&!slots[0].unzipPassword){
+  result.records.forEach((r,i)=>merge(i,'remark',slots[0].remark,'资源共用旧备注'));result.complete=!result.reasons.length;return result;
+ }
+ let sharedPassword='';
+ if(slots.length===urls.length+1&&knownPassword(chunks.at(-1))){sharedPassword=chunks.at(-1);slots.pop()}
+ if(slots.length>urls.length){fail('旧分组多于原始网址，不能确定对应关系');return result}
+ if(slots.some(s=>s===null)){fail('存在不能可靠解析的旧字段');return result}
+ if(slots.length<urls.length&&slots.some(s=>s.extractionCode||s.unzipPassword)){fail('密码分组与原始网址数量不同');return result}
+ result.records.forEach((record,i)=>{
+  const slot=slots[originals.get(record.url)];
+  if(slot){
+   const detected=provider(record.url);
+   const labels={'百度网盘':'百度网盘','夸克网盘':'夸克网盘','中国移动云盘':'中国移动云盘','蓝奏云':'蓝奏云','GitHub':'GitHub','catbox盘':'catbox盘','Catbox':'catbox盘'};
+   if(labels[slot.driveName]&&detected&&labels[slot.driveName]!==detected){fail('旧网盘名称与该原始网址不一致');return}
+   for(const field of ['remark','extractionCode','unzipPassword'])merge(i,field,slot[field],'原始完整网址对应的旧字段');
+   if(slot.driveName&&!records[i].driveName)record.driveName=slot.driveName;
+  }
+  if(sharedPassword)merge(i,'unzipPassword',sharedPassword,'用户确认的共用旧解压码');
+ });
+ result.complete=!result.reasons.length;return result;
 }
+function legacySuggestions(text,urls,records){const recovered=recoverLegacy(text,urls,records);return recovered.complete?recovered.records:null}
+
 function node(tag,className,text){const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=text;return el}
 function button(text,action){const el=node('button','rle-button',text);el.type='button';el.addEventListener('click',action);return el}
 async function open(cardId,wrap){
@@ -139,5 +198,5 @@ async function open(cardId,wrap){
   finally{saving=false;save.disabled=false;closeButton.disabled=false;page.classList.remove('rle-saving')}
  });footer.append(button('关闭',close),save);shell.append(footer);if(status.textContent==='正在读取 R2 中的链接...')status.textContent='已读取 '+records.length+' 组链接，版本 '+base.revision;
 }
-const api={parseShareText,detectDrive,applyDetected,legacySuggestions,open};if(typeof module!=='undefined'&&module.exports)module.exports=api;root.ResourceLinkEditor=api;
+const api={parseShareText,detectDrive,applyDetected,recoverLegacy,legacySuggestions,open};if(typeof module!=='undefined'&&module.exports)module.exports=api;root.ResourceLinkEditor=api;
 })(typeof window!=='undefined'?window:globalThis);
