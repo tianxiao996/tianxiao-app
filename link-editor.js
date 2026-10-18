@@ -107,7 +107,14 @@ function recoverLegacy(text,urls,records,options={}){
  const slots=chunks.map(chunk=>{
   let p=chunk.split('|');if(p.length===1&&chunk.includes('\t'))p=chunk.split('\t');
   while(p.length>4&&p.at(-1)==='')p.pop();
-  if(p.length===4&&!p.some(v=>/https?:\/\//i.test(v)))return {driveName:p[0].trim(),remark:p[1].trim(),extractionCode:p[2].trim(),unzipPassword:p[3].trim()};
+  if(p.length===4&&!p.some(v=>/https?:\/\//i.test(v))){
+   const fields=p.map(v=>v.trim());
+   // The old two-field form padded with || is not the four-field schema.
+   // Only recognize explicit volume/backup notes + four-character code;
+   // arbitrary custom drive names must retain their original meaning.
+   if(/^(?:分[卷捲]\s*\d+|度盘备份|夸盘备份)$/.test(fields[0])&&/^[A-Za-z0-9]{4}$/.test(fields[1])&&!fields[2]&&!fields[3])return {driveName:'',remark:fields[0],extractionCode:fields[1],unzipPassword:'',legacyTwoField:true};
+   return {driveName:fields[0],remark:fields[1],extractionCode:fields[2],unzipPassword:fields[3]};
+  }
   if(p.length===1&&['GitHub','catbox盘','Catbox'].includes(chunk))return {driveName:chunk,remark:'',extractionCode:'',unzipPassword:''};
   return null;
  });
@@ -123,6 +130,17 @@ function recoverLegacy(text,urls,records,options={}){
  result.records.forEach((record,i)=>{
   const slot=slots[originals.get(record.url)];
   if(slot){
+   if(slot.legacyTwoField){
+    const original=records[i];
+    if(original.driveName===slot.remark&&original.remark===slot.extractionCode&&!original.extractionCode){
+     // Exact evidence of the old parser's nonempty-field shift. Preserve the
+     // independent unzip password, URL and ID; correct just the shifted pair.
+     record.driveName=provider(record.url);record.remark='';
+     result.sources.push({id:record.id,field:'driveName/remark',source:'原始网址对应的旧双字段错位纠正'});
+    }else if(original.driveName===slot.remark||original.remark===slot.extractionCode){
+     fail('旧双字段与现有编辑结果不同，未强行覆盖');return;
+    }
+   }
    const detected=provider(record.url);
    const labels={'百度网盘':'百度网盘','夸克网盘':'夸克网盘','中国移动云盘':'中国移动云盘','蓝奏云':'蓝奏云','GitHub':'GitHub','catbox盘':'catbox盘','Catbox':'catbox盘'};
    if(labels[slot.driveName]&&detected&&labels[slot.driveName]!==detected){fail('旧网盘名称与该原始网址不一致');return}
