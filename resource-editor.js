@@ -33,28 +33,16 @@ function showResource(resource){
  clearTimeout(draftTimer);
  state.imageIndex=0;state.id=resource.id;state.base=copy(resource);state.images=resource.metadata.images.map(url=>({id:makeId('img_'),url}));state.records=resource.records.map(r=>({...r,resourceId:resource.id}));state.restoreRevision=null;state.lastSubmission=null;state.dirty=false;state.availableDraft=null;
  for(const name of names)$(name).value=resource.metadata[name]||'';$('size').value=resource.metadata.size?.label||'';$('isPinned').checked=!!resource.metadata.isPinned;
- $('editorTitle').textContent=resource.metadata.title||'新增资源';$('resourceId').textContent=resource.id;$('resourceState').textContent=resource.published?'编辑已发布资源':'新增资源';$('revision').textContent='版本 '+resource.revision;
+ $('editorTitle').textContent=resource.metadata.title||'新增资源';$('resourceId').textContent=resource.id;$('resourceState').textContent=resource.published?'编辑已发布资源':resource.revision?'已移出列表的资源':'新增资源';$('deleteResource').hidden=!resource.published||state.admin.role!=='owner';$('revision').textContent='版本 '+resource.revision;
  $('draftBanner').hidden=true;$('historyList').replaceChildren();$('historyDetails').open=false;delete $('historyDetails').dataset.loaded;
  $('editor').hidden=false;$('welcome').hidden=true;renderImages();renderLinks();renderList();$('saveState').textContent=resource.revision?'已读取云端版本':'新资源尚未保存';$('draftState').textContent='编辑内容会暂存到当前标签页';
  history.replaceState(null,'','?id='+encodeURIComponent(resource.id)+(resource.revision===0?'&new=1':''));
  if(resource.requiresRepair)status('此资源有无效旧网址，请逐组核对后保存。请以当前下载链接表单为准。',true);
  else status(resource.revision?'已读取当前云端资源。':'填写内容后点击保存云端，才会发布新资源。');
  try{const saved=sessionStorage.getItem(storageKey());if(saved){state.availableDraft=JSON.parse(saved);$('draftBanner').hidden=false;$('draftMessage').textContent='此标签页留有 '+new Date(state.availableDraft.savedAt).toLocaleString('zh-CN')+' 的草稿，是否恢复？'}}catch(error){status('草稿读取失败，云端内容已正常加载',true)}
- applyMainTransfer();
+
 }
-function applyMainTransfer(){
- const key='tx-resource-transfer:'+state.id;let transfer;
- try{transfer=JSON.parse(sessionStorage.getItem(key)||'null');sessionStorage.removeItem(key)}catch(error){return}
- if(!transfer||state.availableDraft||transfer.accountId!==state.admin.id)return;
- const m=transfer.metadata;if(!m)return;
- if(m.baseResourceRevision!==state.base.revision){status('主页面版本与云端不同，已加载最新云端内容；主页面的未保存内容仍留在原标签页。',true);return}
- let different=false;
- for(const name of names){const value=m[name]??'';if(name==='directDl'&&!m.directDlTouched&&!value)continue;if($(name).value!==value){$(name).value=value;different=true}}
- if(m.images&&JSON.stringify(m.images)!==JSON.stringify(state.base.metadata.images)){state.images=m.images.map(url=>({id:makeId('img_'),url}));different=true}
- const label=m.size?.label||'';if('size' in m&&label!==$('size').value){$('size').value=label;different=true}
- if(m.isPinned!==$('isPinned').checked){$('isPinned').checked=m.isPinned;different=true}
- if(different){renderImages();changed();status('已带入主页面尚未保存的资料，请核对后保存。')}
-}
+
 async function loadResource(id,skipGuard=false){
  if(!skipGuard&&!canLeave())return;status('正在读取资源…');
  try{const result=await request('/api/admin/resource?id='+encodeURIComponent(id));if(result.contractVersion!==1||result.resource.id!==id)throw Error('资源数据格式或 ID 不匹配');showResource(result.resource);if(matchMedia('(max-width:720px)').matches)$('resourceBrowser').open=false;window.scrollTo({top:0})}
@@ -153,7 +141,7 @@ async function save(event){
  const fingerprint=JSON.stringify(body);if(state.lastSubmission?.fingerprint!==fingerprint)state.lastSubmission={fingerprint,requestId:makeId('edit_')};body.requestId=state.lastSubmission.requestId;persistDraft();busy(true);status('正在保存当前资源的资料、图片和链接…');
  try{const result=await request('/api/admin/resource',{method:'POST',body:JSON.stringify(body)});if(result.contractVersion!==1||result.resource.id!==state.id)throw Error('保存响应与当前资源不匹配，请保留草稿并重新读取核对');
   clearTimeout(draftTimer);const key=storageKey();sessionStorage.removeItem(key);showResource(result.resource);$('saveState').textContent=result.unchanged?'内容未变，仍为当前云端版本':'已保存云端 · 版本 '+result.resource.revision;status('当前资源已保存云端，其他资源和站点设置未改动。');
-  try{const channel=new BroadcastChannel('tx-resource-editor');channel.postMessage({type:'saved',resourceId:state.id,revision:result.resource.revision});channel.close()}catch(error){}
+
   if(state.admin.role==='owner')loadList().catch(error=>status('资源已保存；列表刷新失败：'+error.message,true));
   else{$('editorFields').disabled=true;$('saveResource').disabled=true;$('saveResource').dataset.published='1';status('新资源已发布。此账号仅可新增，不能继续修改已发布资源。')}
  }catch(error){status(error.message,true);$('saveState').textContent='尚未确认保存，编辑内容已保留';persistDraft()}
@@ -205,5 +193,7 @@ $('reloadResource').onclick=()=>{if(!canLeave())return;if(state.base.revision===
 $('historyDetails').addEventListener('toggle',loadHistory);
 window.addEventListener('beforeunload',event=>{if(state.dirty||state.busy||state.uploading){if(state.dirty)persistDraft();event.preventDefault();event.returnValue=''}});
 window.addEventListener('pagehide',()=>{if(state.dirty)persistDraft()});
+$('deleteResource').onclick=async()=>{if(state.busy||state.uploading)return;if(!confirm('将此资源移出网站列表？历史资料和图片仍保留。若有未保存修改，请先保存或导出草稿。'))return;busy(true);try{await request('/api/admin/resource',{method:'DELETE',body:JSON.stringify({contractVersion:1,cardId:state.id,baseRevision:state.base.revision})});state.dirty=false;location.assign('./')}catch(error){status(error.message,true);busy(false)}};
+$('returnToSite').onclick=event=>{if(!canLeave()){event.preventDefault();return}state.dirty=false};
 boot();
 })();

@@ -11,20 +11,7 @@ function parseSize(text){
 function fromCard(card){if(!card||!card.hasAttribute('data-resource-size'))return undefined;try{return JSON.parse(card.dataset.resourceSize)}catch(e){return undefined}}
 function badge(size){const el=document.createElement('span');el.className='resource-size-display';el.textContent=size?.label?'大小 '+size.label:'大小待补充';if(size)el.title={title:'来自原标题标注',quark:'夸克文件大小合计',manual:'管理员填写'}[size.source]||'';return el}
 function renderCaption(card,size){const thumb=card.querySelector('.card-thumb');if(!thumb)return;let el=thumb.querySelector(':scope>.resource-size-caption');if(!size?.label){el?.remove();return}if(!el){el=badge(size);el.classList.add('resource-size-caption');thumb.append(el)}el.textContent=size.label}
-function render(){
- for(const card of document.querySelectorAll('#box>.card')){
-  const size=fromCard(card),tags=card.querySelector('.card-preview-tags');
-  if(tags)tags.querySelectorAll('.resource-size-display').forEach(el=>el.remove());
-  renderCaption(card,size);
-  const info=card.querySelector('.info-box');if(!info)continue;
-  info.querySelector(':scope>.resource-size-display')?.remove();const source=card.querySelector('.g-tags');if(source)source.insertAdjacentElement('afterend',badge(size));
-  const allowed=root.isEditMode!==false&&document.body.classList.contains('admin-mode')&&(root.adminProfile?.role==='owner'||card.dataset.adminDraft==='1');
-  let editor=info.querySelector('.resource-size-editor');if(!allowed){editor?.remove();continue}
-  if(!editor){editor=document.createElement('label');editor.className='resource-size-editor';const text=document.createElement('span');text.textContent='资源大小（填写后保存云端）';const input=document.createElement('input');input.className='resource-size-input';input.type='text';input.maxLength=40;input.placeholder='例如 3.4GB、500MB；留空为待补充';input.value=size?.label||'';input.autocomplete='off';const status=document.createElement('span');status.className='resource-size-error';status.setAttribute('role','status');editor.append(text,input,status);info.querySelector(':scope>.resource-size-display')?.insertAdjacentElement('afterend',editor)}
-  const input=editor.querySelector('input'),error=editor.querySelector('.resource-size-error');
-  input.oninput=()=>{try{card.dataset.resourceSize=JSON.stringify(parseSize(input.value));delete input.dataset.invalid;error.textContent='';card.querySelectorAll('.resource-size-display:not(.resource-size-caption)').forEach(el=>{const updated=fromCard(card);el.textContent=updated?.label?'大小 '+updated.label:'大小待补充'});renderCaption(card,fromCard(card))}catch(e){input.dataset.invalid='1';error.textContent=e.message}};
- }
-}
+function render(){for(const card of document.querySelectorAll('#box>.card')){const size=fromCard(card),tags=card.querySelector('.card-preview-tags');tags?.querySelectorAll('.resource-size-display').forEach(el=>el.remove());renderCaption(card,size);const info=card.querySelector('.info-box');if(!info)continue;info.querySelector(':scope>.resource-size-display')?.remove();const source=card.querySelector('.g-tags');if(source)source.insertAdjacentElement('afterend',badge(size))}}
 function detail(card){const body=document.getElementById('cardDetailBody');if(!body)return;body.querySelector('.detail-resource-size')?.remove();if(!fromCard(card)?.label)return;const anchor=body.querySelector('.detail-date')||body.querySelector('.detail-title-gradient');if(!anchor)return;const row=document.createElement('div');row.className='detail-resource-size';row.append(badge(fromCard(card)));anchor.insertAdjacentElement('afterend',row);requestAnimationFrame(()=>{const panel=body.querySelector('.quiet-detail-meta');if(panel&&row.isConnected)panel.append(row)})}
 function dismissTutorial(){document.querySelectorAll('.tutorial-fab-shell').forEach(el=>el.classList.add('tutorial-fab-dismissed'))}
 function installTutorialEntry(){

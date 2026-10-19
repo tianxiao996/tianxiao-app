@@ -6,12 +6,12 @@
 <meta name="robots" content="noindex,nofollow">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: http: data: blob:; connect-src 'self' https://api.tian-xiao.com; object-src 'none'; base-uri 'self'; form-action 'none'">
 <title>资源编辑 · 天笑の窝</title>
-<link rel="stylesheet" href="resource-editor.css?v=67d8a96b09b4">
-<script src="link-editor.js?v=0944daee0ad6" defer></script>
-<script src="resource-editor.js?v=233c78bace6b" defer></script>
+<link rel="stylesheet" href="resource-editor.css?v=fa0d44e04561">
+<script src="link-editor.js?v=aef906e759a3" defer></script>
+<script src="resource-editor.js?v=915f156a0cfb" defer></script>
 </head>
 <body>
-<header class="topbar"><a class="back-link" href="./">返回网站</a><div class="brand"><strong>资源编辑</strong><span id="account">正在验证登录</span></div><button id="themeButton" type="button" aria-label="切换日夜模式">日夜模式</button></header>
+<header class="topbar"><a id="returnToSite" class="back-link" href="./">返回列表</a><div class="brand"><strong>资源编辑</strong><span id="account">正在验证登录</span></div><button id="themeButton" type="button" aria-label="切换日夜模式">日夜模式</button></header>
 <p id="status" class="status" role="status" aria-live="polite">正在读取管理员信息…</p>
 <section id="locked" class="empty" hidden><h1>需要管理员登录</h1><p>请在网站原有登录页面登录管理员，再从管理员模式进入资源编辑。</p><a class="primary button-link" href="./">返回网站登录</a></section>
 <div id="workspace" class="workspace" hidden>
@@ -19,7 +19,7 @@
 <main>
 <section id="welcome" class="empty"><h1>集中编辑一份资源</h1><p>选择已有资源，或点击新增。标题、图片、作品信息和下载链接在同一个页面管理。</p></section>
 <form id="editor" hidden novalidate>
-<div class="resource-heading"><div><p class="eyebrow" id="resourceState">新资源</p><h1 id="editorTitle">新增资源</h1><code id="resourceId"></code></div><span class="revision" id="revision"></span></div>
+<div class="resource-heading"><div><p class="eyebrow" id="resourceState">新资源</p><h1 id="editorTitle">新增资源</h1><code id="resourceId"></code></div><div class="toolbar"><span class="revision" id="revision"></span><button id="deleteResource" class="danger owner-field" type="button" hidden>删除资源</button></div></div>
 <div id="draftBanner" class="notice" hidden><p id="draftMessage"></p><button id="restoreDraft" type="button">恢复草稿</button><button id="discardDraft" type="button">清除本页草稿</button></div>
 <nav class="section-nav" aria-label="编辑区域"><a href="#basic">基本信息</a><a href="#pictures">图片</a><a href="#downloads">下载链接</a><a href="#history">历史版本</a></nav>
 <fieldset id="editorFields">
