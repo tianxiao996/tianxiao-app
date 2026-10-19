@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: http: data: blob:; connect-src 'self' https://api.tian-xiao.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+<title>资源编辑 · 天笑の窝</title>
+<link rel="stylesheet" href="resource-editor.css?v=d2156259baca">
+<script src="link-editor.js?v=0944daee0ad6" defer></script>
+<script src="resource-editor.js?v=ced25566b84a" defer></script>
+</head>
+<body>
+<header class="topbar"><a class="back-link" href="./">返回网站</a><div class="brand"><strong>资源编辑</strong><span id="account">正在验证登录</span></div><button id="themeButton" type="button" aria-label="切换日夜模式">日夜模式</button></header>
+<p id="status" class="status" role="status" aria-live="polite">正在读取管理员信息…</p>
+<section id="locked" class="empty" hidden><h1>需要管理员登录</h1><p>请在网站原有登录页面登录管理员，再从管理员模式进入资源编辑。</p><a class="primary button-link" href="./">返回网站登录</a></section>
+<div id="workspace" class="workspace" hidden>
+<aside><button id="newResource" class="primary wide" type="button">新增资源</button><details id="resourceBrowser" open><summary>选择已有资源 <span id="resourceCount"></span></summary><label class="search-label"><span>搜索资源</span><input id="resourceSearch" type="search" placeholder="标题、编号或标签" autocomplete="off"></label><div id="resourceList" class="resource-list"></div></details><p class="aside-note">每次只保存当前资源。其他资源和站点设置不会随表单一起提交。</p></aside>
+<main>
+<section id="welcome" class="empty"><h1>集中编辑一份资源</h1><p>选择已有资源，或点击新增。标题、图片、作品信息和下载链接在同一个页面管理。</p></section>
+<form id="editor" hidden novalidate>
+<div class="resource-heading"><div><p class="eyebrow" id="resourceState">新资源</p><h1 id="editorTitle">新增资源</h1><code id="resourceId"></code></div><span class="revision" id="revision"></span></div>
+<div id="draftBanner" class="notice" hidden><p id="draftMessage"></p><button id="restoreDraft" type="button">恢复草稿</button><button id="discardDraft" type="button">清除本页草稿</button></div>
+<nav class="section-nav" aria-label="编辑区域"><a href="#basic">基本信息</a><a href="#pictures">图片</a><a href="#downloads">下载链接</a><a href="#history">历史与存档</a></nav>
+<fieldset id="editorFields">
+<section class="panel" id="basic"><div class="section-heading"><h2>基本信息</h2><span>未填写的作品信息不展示</span></div><div class="fields">
+<label class="full">标题 <span class="required">必填</span><input id="title" name="title" maxlength="2000" required autocomplete="off"></label>
+<label class="full">标签<input id="tags" name="tags" maxlength="4000" placeholder="例如：PC RPG 汉化" autocomplete="off"></label>
+<label>资源大小<input id="size" name="size" maxlength="40" placeholder="例如：3.4GB、500MB；可留空" autocomplete="off"></label>
+<label>RJ号<input id="rjCode" name="rjCode" maxlength="12" placeholder="例如：RJ01496317；可留空" autocomplete="off"></label>
+<label>会社<input id="company" name="company" maxlength="500" autocomplete="off"></label>
+<label>汉化<input id="translationTeam" name="translationTeam" maxlength="500" placeholder="汉化组名称；可留空" autocomplete="off"></label>
+<label class="full">简介<textarea id="desc" name="desc" rows="10" maxlength="100000" placeholder="填写资源简介，支持换行"></textarea></label>
+<label class="full owner-field">直接下载短链<input id="directDl" name="directDl" maxlength="4096" placeholder="可留空，仅管理员可编辑" autocomplete="off"></label>
+<label class="check owner-field"><input id="isPinned" name="isPinned" type="checkbox">置顶此资源</label>
+</div></section>
+<section class="panel" id="pictures"><div class="section-heading"><h2>图片 <span id="imageCount" class="count"></span></h2><span>可调整顺序，首张用于卡片封面</span></div>
+<div class="toolbar"><button id="addImage" type="button">添加图片链接</button><label class="file-button">上传图片<input id="imageUpload" type="file" accept="image/*" multiple></label><label class="folder-label">上传文件夹<select id="imageFolder"><option value="">默认</option></select></label></div>
+<p id="uploadStatus" class="hint" role="status"></p><div id="images" class="image-grid"></div>
+</section>
+<section class="panel" id="downloads"><div class="section-heading"><h2>下载链接 <span id="linkCount" class="count"></span></h2><span>每条链接独立保存密码和备注</span></div>
+<details class="subpanel"><summary>粘贴分享文案，识别网址和提取码</summary><label>网盘分享文案<textarea id="shareText" rows="5" maxlength="60000" placeholder="可粘贴百度、夸克等网盘的完整分享文案。解压码仍由你填写。"></textarea></label><button id="recognize" type="button">识别分享内容</button><p id="importStatus" class="hint" role="status"></p><div id="importPreview"></div></details>
+<details id="presetManager" class="subpanel owner-field"><summary>管理快捷解压码</summary><p class="hint">只在主动选择时填入，修改预设不会改动已有链接。</p><div id="presetRows"></div><div class="toolbar"><button id="addPreset" type="button">添加快捷码</button><button id="savePresets" type="button">保存快捷码</button></div><p id="presetStatus" class="hint" role="status"></p></details>
+<div id="links" class="link-list"></div><button id="addLink" type="button">手动添加一组链接</button>
+</section>
+<section class="panel" id="history"><div class="section-heading"><h2>历史与存档</h2><span>载入历史后仍需保存才会生效</span></div><details id="archive"><summary>迁移前原文存档，只读</summary><p class="hint">不会解析或自动回填到当前表单。</p><pre id="legacyText"></pre><pre id="legacyUrls"></pre></details><details id="historyDetails" class="owner-field"><summary>查看云端历史版本</summary><div id="historyList"></div></details></section>
+</fieldset>
+<footer class="savebar"><div class="save-state"><strong id="saveState">尚未保存</strong><span id="draftState">编辑内容会暂存到当前标签页</span></div><div class="save-actions"><button id="exportDraft" type="button">导出草稿</button><label class="file-button compact">导入草稿<input id="importDraft" type="file" accept="application/json,.json"></label><button id="reloadResource" type="button">重新读取</button><button id="saveResource" class="primary" type="submit">保存云端</button></div></footer>
+</form>
+</main>
+</div>
+</body></html>
