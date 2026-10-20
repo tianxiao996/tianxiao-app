@@ -8,7 +8,7 @@
 <title>资源编辑 · 天笑の窝</title>
 <link rel="stylesheet" href="resource-editor.css?v=07b97d8db1e2">
 <script src="link-editor.js?v=1b7552e0a142" defer></script>
-<script src="resource-editor.js?v=9b5b2664e8cc" defer></script>
+<script src="resource-editor.js?v=92a6482cfe05" defer></script>
 </head>
 <body>
 <header class="topbar"><div class="brand"><strong>资源编辑</strong><span id="account">正在验证登录</span></div><button id="themeButton" type="button" aria-label="切换日夜模式">日夜模式</button><button id="closeEditor" class="editor-close" type="button" aria-label="关闭资源编辑"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg></button></header>
@@ -27,7 +27,7 @@
 <label class="full">标题 <span class="required">必填</span><input id="title" name="title" maxlength="2000" required autocomplete="off"></label>
 <label class="full">标签<input id="tags" name="tags" maxlength="4000" placeholder="例如：PC RPG 汉化" autocomplete="off"></label>
 <label>资源大小<input id="size" name="size" maxlength="40" placeholder="例如：3.4GB、500MB；可留空" autocomplete="off"></label>
-<label>DL编号<input id="rjCode" name="rjCode" maxlength="12" placeholder="RJ 或 VJ 编号；可留空" autocomplete="off"></label>
+<label>DL编号<input id="rjCode" name="rjCode" placeholder="自由填写，可留空" autocomplete="off"></label>
 <label>会社<input id="company" name="company" maxlength="160" autocomplete="off"></label>
 <label>汉化<input id="translationTeam" name="translationTeam" maxlength="160" placeholder="汉化组名称；可留空" autocomplete="off"></label>
 <label class="full">正版链接<input id="officialUrl" name="officialUrl" type="url" maxlength="4096" placeholder="正版销售页或官网；可留空" autocomplete="off"></label>
@@ -40,7 +40,7 @@
 <input id="replaceUpload" type="file" accept="image/*" hidden><p id="uploadStatus" class="hint" role="status"></p><div id="images" class="image-gallery"></div>
 </section>
 <section class="panel" id="downloads"><div class="section-heading"><h2>下载链接 <span id="linkCount" class="count"></span></h2><span>每条链接独立保存密码和备注</span></div>
-<details class="subpanel"><summary>粘贴分享文案，识别网址和提取码</summary><label>网盘分享文案<textarea id="shareText" rows="5" maxlength="60000" placeholder="可粘贴百度、夸克等网盘的完整分享文案。解压码仍由你填写。"></textarea></label><button id="recognize" type="button">识别分享内容</button><p id="importStatus" class="hint" role="status"></p><div id="importPreview"></div></details>
+<details class="subpanel"><summary>粘贴分享文案，识别网址和提取码</summary><label>网盘分享文案<textarea id="shareText" rows="5" maxlength="60000" placeholder="可粘贴百度、夸克等网盘的完整分享文案。解压码仍由你填写。"></textarea></label><div class="actions"><button id="recognize" type="button">识别分享内容</button><button id="clearShareText" type="button">清空</button></div><p id="importStatus" class="hint" role="status"></p><div id="importPreview"></div></details>
 <details id="presetManager" class="subpanel owner-field"><summary>管理快捷解压码</summary><p class="hint">只在主动选择时填入，修改预设不会改动已有链接。</p><div id="presetRows"></div><div class="toolbar"><button id="addPreset" type="button">添加快捷码</button><button id="savePresets" type="button">保存快捷码</button></div><p id="presetStatus" class="hint" role="status"></p></details>
 <div id="links" class="link-list"></div><button id="addLink" type="button">手动添加一组链接</button>
 </section>
