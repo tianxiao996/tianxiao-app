@@ -29,13 +29,13 @@ root.addCard=function(){root.openResourceEditor('new')};
 const enter=root.enterAdmin;
 root.enterAdmin=async function(...args){
  const result=await enter.apply(this,args);
- if(root.adminProfile?.role==='owner'&&document.body.classList.contains('admin-mode')){const slot=document.getElementById('adminBarBtns')||document.getElementById('adminBar');if(slot&&!slot.querySelector('#openResourceManager')){const button=node('button','','资源管理');button.id='openResourceManager';button.type='button';button.onclick=()=>root.openResourceEditor();slot.append(button)}}
+ document.getElementById('openResourceManager')?.remove();const buttons=document.getElementById('adminBarBtns')||document.getElementById('adminBar');const add=buttons&&[...buttons.querySelectorAll('button')].find(button=>button.getAttribute('onclick')==='addCard()');if(add)buttons.prepend(add);
  root.renderResourceEditEntries();return result;
 };
 function displayCard(id,revision,m){
  const card=node('div','card'+(m.isPinned?' is-pinned':'')+(m.isFav?' is-fav':''));card.dataset.cardId=id;card.dataset.resourceRevision=String(revision);card.dataset.directDownload=m.directDl||'';
  if('size' in m)card.dataset.resourceSize=JSON.stringify(m.size);
- for(const [field,attr]of [['rjCode','resourceRj'],['company','resourceCompany'],['translationTeam','resourceTranslation']])if(field in m)card.dataset[attr]=m[field];
+ for(const [field,attr]of [['rjCode','resourceRj'],['company','resourceCompany'],['translationTeam','resourceTranslation'],['officialUrl','resourceOfficialUrl']])if(field in m)card.dataset[attr]=m[field];
  const slider=node('div','slider-box'),previous=node('button','slide-btn prev','‹'),next=node('button','slide-btn next','›');previous.onclick=()=>changeSlide(previous,-1);next.onclick=()=>changeSlide(next,1);previous.type=next.type='button';slider.append(previous);
  const images=m.images?.length?m.images:['images/image_404.jpg'];for(const [i,url]of images.entries()){const img=node('img',i===0?'active':'');img.src=url;img.loading='lazy';img.draggable=false;slider.append(img)}slider.append(next,node('div','img-index','1 / '+images.length));
  const favorite=node('div','fav-btn');favorite.innerHTML=heartSvg(favorites.has(id));favorite.onclick=()=>toggleFavorite(favorite);slider.append(favorite);

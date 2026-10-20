@@ -32,25 +32,26 @@ function parseShareText(input){
   links.push({url:value,start:match.index,end:match.index+value.length,driveName:detectDrive(value)});
   if(links.length>64)throw Error('每个资源最多64组链接，请分批处理');
  }
- const codePattern=/(提取码|提取碼|提取密码|提取密碼|访问码|訪問碼|访问密码|訪問密碼|取件码|分享密码|密码|密碼)\s*[：:=]?\s*([A-Za-z0-9_-]{1,32})(?![A-Za-z0-9_-])/g;
- function codes(chunk){const found=[];for(const m of chunk.matchAll(codePattern)){const prefix=chunk.slice(Math.max(0,m.index-8),m.index);if(/(?:解压|解壓|压缩|壓縮)\s*$/.test(prefix))continue;found.push(m[2])}return [...new Set(found)]}
+ const codePattern=/(提取码|提取碼|提取密码|提取密碼|访问码|訪問碼|访问密码|訪問密碼|取件码|分享密码|密码|密碼)\s*[：:=]?\s*([A-Za-z0-9]{1,32})(?![A-Za-z0-9])/g;
+ function validCode(value,drive){return /^[A-Za-z0-9]{1,32}$/.test(value)&&(!['百度网盘','夸克网盘','中国移动云盘','UC网盘'].includes(drive)||value.length===4)}
+ function codes(chunk,drive){const found=[];for(const m of chunk.matchAll(codePattern)){const prefix=chunk.slice(Math.max(0,m.index-8),m.index);if(/(?:解压|解壓|压缩|壓縮)\s*$/.test(prefix))continue;if(validCode(m[2],drive))found.push(m[2])}return [...new Set(found)]}
  const seen=new Set(),records=[];
  for(let i=0;i<links.length;i++){
   const link=links[i],url=new URL(link.url),notes=[];
   // Keep meaningful URL query parameters and fragments intact. A password in
   // the URL is evidence only for that URL, never for a neighbouring record.
-  const queryCode=link.driveName?['pwd','password','passcode','access_code'].map(k=>url.searchParams.get(k)).find(v=>v&&/^[A-Za-z0-9_-]{1,32}$/.test(v)):null;
+  const queryCode=link.driveName?['pwd','password','passcode','access_code'].map(k=>url.searchParams.get(k)).find(v=>v&&validCode(v,link.driveName)):null;
   const startBlank=text.lastIndexOf('\n\n',link.start),nextBlank=text.indexOf('\n\n',link.end);
   const blockStart=startBlank<0?0:startBlank+2,blockEnd=nextBlank<0?text.length:nextBlank;
   const inBlock=links.filter(x=>x.start>=blockStart&&x.start<blockEnd);
   let labelled=[];
-  if(inBlock.length===1)labelled=codes(text.slice(blockStart,blockEnd));
+  if(inBlock.length===1)labelled=codes(text.slice(blockStart,blockEnd),link.driveName);
   else{
    const after=text.slice(link.end,Math.min(i+1<links.length?links[i+1].start:text.length,blockEnd));
    // Only the same line or an immediately adjacent code line is unambiguous
    // in a multi-link block. A list of trailing codes is never zipped by index.
-   const lines=after.split('\n');labelled=codes(lines[0]);
-   if(!labelled.length&&lines[1]&&/^\s*(?:提取|访问|訪問|取件|分享密码|密码|密碼)/.test(lines[1]))labelled=codes(lines[1]);
+   const lines=after.split('\n');labelled=codes(lines[0],link.driveName);
+   if(!labelled.length&&lines[1]&&/^\s*(?:提取|访问|訪問|取件|分享密码|密码|密碼)/.test(lines[1]))labelled=codes(lines[1],link.driveName);
   }
   const candidates=[...new Set([...(queryCode?[queryCode]:[]),...labelled])];
   let extractionCode='';
