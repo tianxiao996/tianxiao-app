@@ -2,6 +2,13 @@
 'use strict';
 const API='https://api.tian-xiao.com',$=id=>document.getElementById(id),copy=value=>JSON.parse(JSON.stringify(value));
 const state={admin:null,base:null,id:null,images:[],imageIndex:0,records:[],dirty:false,busy:false,uploading:false,resources:[],presets:[],presetRevision:0,restoreRevision:null,lastSubmission:null,availableDraft:null};
+const hostQuery=new URLSearchParams(location.search),embedded=window.parent!==window&&hostQuery.get('embedded')==='1',hostChannel=hostQuery.get('editorChannel');
+let lastSiteRevision=Number(hostQuery.get('siteRevision'))||0;
+function notifyHost(type,data={}){if(embedded)window.parent.postMessage({type:'resource-editor:'+type,channel:hostChannel,...data},location.origin)}
+function leaveEditor(){if(!canLeave())return;state.dirty=false;if(embedded)notifyHost('closed');else location.assign('./')}
+if(embedded)document.documentElement.classList.add('embedded-editor');
+window.addEventListener('message',event=>{if(embedded&&event.origin===location.origin&&event.source===window.parent&&event.data?.channel===hostChannel&&event.data.type==='resource-editor:request-close')leaveEditor()});
+window.addEventListener('keydown',event=>{if(embedded&&event.key==='Escape'){event.preventDefault();leaveEditor()}});
 const names=['title','tags','rjCode','company','translationTeam','desc','directDl'];
 const makeId=prefix=>prefix+crypto.randomUUID().replaceAll('-','');
 function el(tag,cls,text){const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node}
@@ -31,12 +38,12 @@ async function loadList(){if(state.admin.role!=='owner')return;const result=awai
 function newMetadata(id){return {id,title:'',tags:'',desc:'',images:[],isPinned:false,isFav:false,directDl:''}}
 function showResource(resource){
  clearTimeout(draftTimer);
- state.imageIndex=0;state.id=resource.id;state.base=copy(resource);state.images=resource.metadata.images.map(url=>({id:makeId('img_'),url}));state.records=resource.records.map(r=>({...r,resourceId:resource.id}));state.restoreRevision=null;state.lastSubmission=null;state.dirty=false;state.availableDraft=null;
+ if(Number.isSafeInteger(resource.siteRevision))lastSiteRevision=resource.siteRevision;state.imageIndex=0;state.id=resource.id;state.base=copy(resource);state.images=resource.metadata.images.map(url=>({id:makeId('img_'),url}));state.records=resource.records.map(r=>({...r,resourceId:resource.id}));state.restoreRevision=null;state.lastSubmission=null;state.dirty=false;state.availableDraft=null;
  for(const name of names)$(name).value=resource.metadata[name]||'';$('size').value=resource.metadata.size?.label||'';$('isPinned').checked=!!resource.metadata.isPinned;
  $('editorTitle').textContent=resource.metadata.title||'新增资源';$('resourceId').textContent=resource.id;$('resourceState').textContent=resource.published?'编辑已发布资源':resource.revision?'已移出列表的资源':'新增资源';$('deleteResource').hidden=!resource.published||state.admin.role!=='owner';$('revision').textContent='版本 '+resource.revision;
  $('draftBanner').hidden=true;$('historyList').replaceChildren();$('historyDetails').open=false;delete $('historyDetails').dataset.loaded;
  $('editor').hidden=false;$('welcome').hidden=true;renderImages();renderLinks();renderList();$('saveState').textContent=resource.revision?'已读取云端版本':'新资源尚未保存';$('draftState').textContent='编辑内容会暂存到当前标签页';
- history.replaceState(null,'','?id='+encodeURIComponent(resource.id)+(resource.revision===0?'&new=1':''));
+ const address=new URL(location.href);address.searchParams.set('id',resource.id);if(resource.revision===0)address.searchParams.set('new','1');else address.searchParams.delete('new');history.replaceState(null,'',address.href);
  if(resource.requiresRepair)status('此资源有无效旧网址，请逐组核对后保存。请以当前下载链接表单为准。',true);
  else status(resource.revision?'已读取当前云端资源。':'填写内容后点击保存云端，才会发布新资源。');
  try{const saved=sessionStorage.getItem(storageKey());if(saved){state.availableDraft=JSON.parse(saved);$('draftBanner').hidden=false;$('draftMessage').textContent='此标签页留有 '+new Date(state.availableDraft.savedAt).toLocaleString('zh-CN')+' 的草稿，是否恢复？'}}catch(error){status('草稿读取失败，云端内容已正常加载',true)}
@@ -49,7 +56,7 @@ async function loadResource(id,skipGuard=false){
  catch(error){status(error.message,true)}
 }
 function createResource(id){
- if(!canLeave())return;id=id||'card_'+Date.now()+'_'+crypto.randomUUID().slice(0,9).replaceAll('-','');showResource({id,revision:0,published:false,metadata:newMetadata(id),records:[],legacyArchive:{text:'',urls:[]}});window.scrollTo({top:0});
+ if(!canLeave())return;id=id||'card_'+Date.now()+'_'+crypto.randomUUID().slice(0,9).replaceAll('-','');showResource({id,revision:0,siteRevision:lastSiteRevision,published:false,metadata:newMetadata(id),records:[],legacyArchive:{text:'',urls:[]}});window.scrollTo({top:0});
 }
 function parseSize(value){const text=value.trim();if(!text)return null;const match=/^(\d+(?:\.\d+)?)\s*(B|Ki?B?|Mi?B?|Gi?B?|Ti?B?)$/i.exec(text);if(!match)throw Error('大小请填写如 3.4GB、500MB，或留空');const unit=match[2].toUpperCase().replace('IB','B'),power={B:0,K:1,KB:1,M:2,MB:2,G:3,GB:3,T:4,TB:4}[unit],bytes=Math.round(Number(match[1])*1024**power);if(!Number.isSafeInteger(bytes)||bytes<=0)throw Error('资源大小必须大于0且在有效范围内');return {bytes,label:String(Number(match[1]))+' '+['B','KB','MB','GB','TB'][power],source:'manual'}}
 function payload(){
@@ -138,9 +145,9 @@ async function save(event){
  event.preventDefault();if(state.busy||state.uploading||!state.id)return;let body;
  try{body=payload()}catch(error){status(error.message,true);return}
  if(!body.records.length&&!confirm('此资源没有下载链接，仍要保存云端吗？'))return;
- const fingerprint=JSON.stringify(body);if(state.lastSubmission?.fingerprint!==fingerprint)state.lastSubmission={fingerprint,requestId:makeId('edit_')};body.requestId=state.lastSubmission.requestId;persistDraft();busy(true);status('正在保存当前资源的资料、图片和链接…');
+ const beforeSiteRevision=state.base.siteRevision;const fingerprint=JSON.stringify(body);if(state.lastSubmission?.fingerprint!==fingerprint)state.lastSubmission={fingerprint,requestId:makeId('edit_')};body.requestId=state.lastSubmission.requestId;persistDraft();busy(true);status('正在保存当前资源的资料、图片和链接…');
  try{const result=await request('/api/admin/resource',{method:'POST',body:JSON.stringify(body)});if(result.contractVersion!==1||result.resource.id!==state.id)throw Error('保存响应与当前资源不匹配，请保留草稿并重新读取核对');
-  clearTimeout(draftTimer);const key=storageKey();sessionStorage.removeItem(key);showResource(result.resource);$('saveState').textContent=result.unchanged?'内容未变，仍为当前云端版本':'已保存云端 · 版本 '+result.resource.revision;status('当前资源已保存云端，其他资源和站点设置未改动。');
+  clearTimeout(draftTimer);const key=storageKey();sessionStorage.removeItem(key);showResource(result.resource);$('saveState').textContent=result.unchanged?'内容未变，仍为当前云端版本':'已保存云端 · 版本 '+result.resource.revision;status('当前资源已保存云端，其他资源和站点设置未改动。');notifyHost('saved',{resourceId:result.resource.id,revision:result.resource.revision,metadata:result.resource.metadata,published:result.resource.published,siteRevision:result.resource.siteRevision,beforeSiteRevision,changed:!result.unchanged});
 
   if(state.admin.role==='owner')loadList().catch(error=>status('资源已保存；列表刷新失败：'+error.message,true));
   else{$('editorFields').disabled=true;$('saveResource').disabled=true;$('saveResource').dataset.published='1';status('新资源已发布。此账号仅可新增，不能继续修改已发布资源。')}
@@ -193,7 +200,9 @@ $('reloadResource').onclick=()=>{if(!canLeave())return;if(state.base.revision===
 $('historyDetails').addEventListener('toggle',loadHistory);
 window.addEventListener('beforeunload',event=>{if(state.dirty||state.busy||state.uploading){if(state.dirty)persistDraft();event.preventDefault();event.returnValue=''}});
 window.addEventListener('pagehide',()=>{if(state.dirty)persistDraft()});
-$('deleteResource').onclick=async()=>{if(state.busy||state.uploading)return;if(!confirm('将此资源移出网站列表？历史资料和图片仍保留。若有未保存修改，请先保存或导出草稿。'))return;busy(true);try{await request('/api/admin/resource',{method:'DELETE',body:JSON.stringify({contractVersion:1,cardId:state.id,baseRevision:state.base.revision})});state.dirty=false;location.assign('./')}catch(error){status(error.message,true);busy(false)}};
-$('returnToSite').onclick=event=>{if(!canLeave()){event.preventDefault();return}state.dirty=false};
+$('deleteResource').onclick=async()=>{if(state.busy||state.uploading)return;if(!confirm('将此资源移出网站列表？历史资料和图片仍保留。若有未保存修改，请先保存或导出草稿。'))return;busy(true);try{const result=await request('/api/admin/resource',{method:'DELETE',body:JSON.stringify({contractVersion:1,cardId:state.id,baseRevision:state.base.revision})});notifyHost('saved',{resourceId:state.id,revision:state.base.revision,published:false,siteRevision:result.siteRevision,beforeSiteRevision:state.base.siteRevision,changed:!result.alreadyRemoved});state.dirty=false;busy(false);leaveEditor()}catch(error){status(error.message,true);busy(false)}};
+$('returnToSite').onclick=event=>{event.preventDefault();leaveEditor()};
+if(embedded)$('locked').querySelector('a').onclick=event=>{event.preventDefault();leaveEditor()};
+notifyHost('ready');
 boot();
 })();
