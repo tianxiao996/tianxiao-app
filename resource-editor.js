@@ -102,7 +102,7 @@ function renderImages(){
  const before=button('前移',()=>reorder(-1)),after=button('后移',()=>reorder(1));before.disabled=index===0;after.disabled=index===state.images.length-1;
  controls.append(before,after,button('删图',()=>{if(state.uploading)return status('请等待图片上传完成',true);if(!confirm('删除当前图片？保存云端后才生效，历史版本仍会保留。'))return;state.images.splice(index,1);changed();renderImages()},'danger'));card.append(controls);
  const label=el('label','','当前图片链接'),input=el('input');input.type='url';input.value=image.url;input.maxLength=4096;input.setAttribute('aria-label','当前图片链接');
- input.addEventListener('input',()=>{image.url=input.value;changed()});input.addEventListener('change',updatePreview);label.append(input);card.append(label);
+ input.addEventListener('input',()=>{image.url=input.value;changed();updatePreview()});input.addEventListener('change',updatePreview);label.append(input);card.append(label);
  const actions=el('div','image-actions');actions.append(button('复制图链',()=>copyText(input.value.trim())),button('查看原图',()=>{if(!safeUrl(input.value.trim()))return status('请填写有效图片链接',true);window.open(input.value.trim(),'_blank','noopener,noreferrer')}));card.append(actions);gallery.append(card);
 }
 function linkField(record,index,key,name,max){const label=el('label',['url','remark','unzipPassword'].includes(key)?'full':'',name),input=el(key==='remark'?'textarea':'input');input.value=record[key]||'';input.maxLength=max;input.dataset.field=key;input.setAttribute('aria-label','第'+(index+1)+'组'+name);if(key==='remark')input.rows=2;else input.type='text';
