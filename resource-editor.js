@@ -17,11 +17,15 @@ function status(message,error=false){$('status').textContent=message;$('status')
 function storageKey(){return 'tx-resource-editor:'+state.admin.id+':'+state.id}
 function safeUrl(value){try{const url=new URL(value);return ['https:','http:'].includes(url.protocol)&&!url.username&&!url.password&&value===value.trim()}catch(error){return false}}
 async function request(path,options={}){
- const token=sessionStorage.getItem('ADMIN_TOKEN');if(!token)throw Error('管理员登录已失效，请返回网站登录');
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
- try{const response=await fetch(API+path,{...options,signal:controller.signal,cache:'no-store',headers:{Authorization:'Bearer '+token,...(!(options.body instanceof FormData)?{'Content-Type':'application/json'}:{}),...options.headers}});let data;try{data=await response.json()}catch(error){throw Error('服务器未返回有效数据，编辑内容已保留')}
-  if(!response.ok||data.success===false){const error=Error(data.error||'请求失败');error.status=response.status;throw error}return data;
- }catch(error){if(error.name==='AbortError')throw Error('请求超时，保存结果可能尚未确认。请保留草稿后重试或重新读取核对。');throw error}finally{clearTimeout(timer)}
+ const verify=path==='/api/admin/session'&&(!options.method||options.method==='GET');
+ for(let attempt=0;attempt<(verify?2:1);attempt++){
+  const token=sessionStorage.getItem('ADMIN_TOKEN');if(!token){const error=Error('管理员登录已失效，请返回网站登录');error.status=401;throw error}
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),verify?12000:45000);
+  try{const response=await fetch(API+path,{...options,signal:controller.signal,cache:'no-store',headers:{Authorization:'Bearer '+token,...(!(options.body instanceof FormData)?{'Content-Type':'application/json'}:{}),...options.headers}});let data;
+   try{data=await response.json()}catch(cause){const error=Error('服务器未返回有效数据，编辑内容已保留');if(response.status>=400)error.status=response.status;throw error}
+   if(!response.ok||data.success===false){const error=Error(data.error||'请求失败');error.status=response.status;throw error}return data;
+  }catch(error){if(verify&&attempt===0&&(!error.status||error.status>=500)){await new Promise(resolve=>setTimeout(resolve,400));continue}if(error.name==='AbortError')throw Error(verify?'验证连接超时，请重试':'请求超时，保存结果可能尚未确认。请保留草稿后重试或重新读取核对。');throw error}finally{clearTimeout(timer)}
+ }
 }
 function rawDraft(){return {version:1,resourceId:state.id,baseRevision:state.base.revision,metadata:Object.fromEntries(names.map(name=>[name,$(name).value])),sizeText:$('size').value,isPinned:$('isPinned').checked,images:copy(state.images),records:copy(state.records),restoreRevision:state.restoreRevision,lastSubmission:state.lastSubmission,savedAt:Date.now()}}
 let draftTimer;
@@ -178,14 +182,14 @@ async function loadHistory(){
  }catch(error){$('historyList').textContent=error.message}
 }
 function setTheme(theme){document.documentElement.dataset.theme=theme;try{localStorage.setItem('tx-resource-editor-theme',theme)}catch(error){}}
-async function boot(){
+let booting=false;async function boot(){if(booting)return;booting=true;$('locked').hidden=true;$('retryAccess').disabled=true;
  let theme;try{theme=localStorage.getItem('tx-resource-editor-theme')}catch(error){}setTheme(theme|| (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));
  $('themeButton').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
- try{const result=await request('/api/admin/session');state.admin=result.admin;if(!['owner','contributor'].includes(state.admin.role))throw Error('此账号没有资源编辑权限');$('account').textContent=state.admin.role==='owner'?'主管理员':'仅可新增';$('account').title=state.admin.username;document.body.classList.toggle('contributor',state.admin.role==='contributor');$('workspace').hidden=false;
+ try{const result=await request('/api/admin/session');state.admin=result.admin;if(!['owner','contributor'].includes(state.admin.role))throw Object.assign(Error('此账号没有资源编辑权限'),{status:403});$('account').textContent=state.admin.role==='owner'?'主管理员':'仅可新增';$('account').title=state.admin.username;document.body.classList.toggle('contributor',state.admin.role==='contributor');$('workspace').hidden=false;
   if(matchMedia('(max-width:720px)').matches)$('resourceBrowser').open=false;
   loadPresets();request('/api/admin/imgbed-folders').then(result=>{for(const folder of result.folders||[]){const option=el('option','',folder);option.value=folder;$('imageFolder').append(option)}}).catch(error=>$('uploadStatus').textContent='文件夹暂不可用，将使用默认文件夹。');
   const query=new URLSearchParams(location.search),id=query.get('id');if(id&&/^[a-zA-Z0-9_-]{1,160}$/.test(id)){if(query.get('new')==='1')createResource(id);else await loadResource(id,true)}else if(query.get('new')==='1'||state.admin.role==='contributor')createResource();else status('请选择已有资源，或新增一份资源。');
- }catch(error){$('locked').hidden=false;$('workspace').hidden=true;status(error.message,true)}
+ }catch(error){const unauthorized=[401,403].includes(error.status);$('locked').hidden=false;$('workspace').hidden=true;$('accessTitle').textContent=unauthorized?'需要管理员登录':'验证连接暂不可用';$('accessMessage').textContent=unauthorized?'管理员登录已失效或无编辑权限，请返回网站重新登录。':'暂时未能连接验证服务，登录状态已保留。请重试，无需因此重新登录。';$('accessReturn').textContent=unauthorized?'返回网站登录':'返回网站';$('retryAccess').hidden=unauthorized;status(error.message,true)}finally{booting=false;$('retryAccess').disabled=false}
 }
 $('newResource').onclick=()=>{delete $('saveResource').dataset.published;$('editorFields').disabled=false;$('saveResource').disabled=false;createResource()};$('resourceSearch').oninput=renderList;
 $('editor').addEventListener('submit',save);$('editor').addEventListener('input',event=>{if(event.target.closest('#basic'))changed()});
@@ -200,7 +204,7 @@ $('historyDetails').addEventListener('toggle',loadHistory);
 window.addEventListener('beforeunload',event=>{if(state.dirty||state.busy||state.uploading){if(state.dirty)persistDraft();event.preventDefault();event.returnValue=''}});
 window.addEventListener('pagehide',()=>{if(state.dirty)persistDraft()});
 $('deleteResource').onclick=async()=>{if(state.busy||state.uploading)return;if(!confirm('将此资源移出网站列表？历史资料和图片仍保留。若有未保存修改，请先保存或导出草稿。'))return;busy(true);try{const result=await request('/api/admin/resource',{method:'DELETE',body:JSON.stringify({contractVersion:1,cardId:state.id,baseRevision:state.base.revision})});notifyHost('saved',{resourceId:state.id,revision:state.base.revision,published:false,siteRevision:result.siteRevision,beforeSiteRevision:state.base.siteRevision,changed:!result.alreadyRemoved});state.dirty=false;busy(false);leaveEditor()}catch(error){status(error.message,true);busy(false)}};
-$('closeEditor').onclick=leaveEditor;
+$('closeEditor').onclick=leaveEditor;$('retryAccess').onclick=()=>boot();
 if(embedded)$('locked').querySelector('a').onclick=event=>{event.preventDefault();leaveEditor()};
 let activeEditorTab='basic';
 function setEditorTab(name){
