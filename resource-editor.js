@@ -38,17 +38,17 @@ function renderList(){
  for(const resource of matched.slice(0,100)){const item=button('',()=>loadResource(resource.id),resource.id===state.id?'selected':'');item.append(el('span','',resource.title||'未命名资源'),el('small','','版本 '+resource.revision));$('resourceList').append(item)}
  if(matched.length>100)$('resourceList').append(el('p','hint','仅显示前100项，请输入编号或标题查找。'));if(!matched.length)$('resourceList').append(el('p','hint','没有匹配资源'));
 }
-async function loadList(){if(state.admin.role!=='owner')return;const result=await request('/api/admin/resources');state.resources=result.resources;renderList()}
+async function loadList(){const result=await request('/api/admin/resources');state.resources=result.resources;renderList()}
 function newMetadata(id){return {id,title:'',tags:'',desc:'',images:[],isPinned:false,isFav:false,directDl:''}}
 function showResource(resource){
  clearTimeout(draftTimer);
  if(Number.isSafeInteger(resource.siteRevision))lastSiteRevision=resource.siteRevision;state.imageIndex=0;state.id=resource.id;state.base=copy(resource);state.images=resource.metadata.images.map(url=>({id:makeId('img_'),url}));state.records=resource.records.map(r=>({...r,resourceId:resource.id}));state.restoreRevision=null;state.lastSubmission=null;state.dirty=false;state.availableDraft=null;
  for(const name of names)$(name).value=resource.metadata[name]||'';$('size').value=resource.metadata.size?.label||'';$('isPinned').checked=!!resource.metadata.isPinned;
- $('editorTitle').textContent=resource.metadata.title||'新增资源';$('resourceId').textContent=resource.id;$('resourceState').textContent=resource.published?'编辑已发布资源':resource.revision?'已移出列表的资源':'新增资源';$('deleteResource').hidden=!resource.published||state.admin.role!=='owner';$('revision').textContent='版本 '+resource.revision;
+ $('editorTitle').textContent=resource.metadata.title||'新增资源';$('resourceId').textContent=resource.id;$('resourceState').textContent=resource.published?'编辑已发布资源':resource.revision?'已移出列表的资源':'新增资源';$('deleteResource').hidden=!resource.published||state.admin.role!=='owner';$('revision').textContent='版本 '+resource.revision;$('linkState').textContent='链接资料：'+(resource.requiresRepair?'待核对或修复':resource.linkState==='active'?'已整理':'待核对');
  $('draftBanner').hidden=true;$('historyList').replaceChildren();$('historyDetails').open=false;delete $('historyDetails').dataset.loaded;
- $('editor').hidden=false;$('welcome').hidden=true;$('newResource').hidden=resource.revision===0;document.querySelector('[data-editor-tab=history]').hidden=resource.revision===0||state.admin.role!=='owner';setEditorTab(activeEditorTab);renderImages();renderLinks();renderList();$('saveState').textContent=resource.revision?'已读取云端版本':'新资源尚未保存';$('draftState').textContent='编辑内容会暂存到当前标签页';
+ $('editor').hidden=false;$('welcome').hidden=true;$('newResource').hidden=resource.revision===0;document.querySelector('[data-editor-tab=history]').hidden=resource.revision===0;setEditorTab(activeEditorTab);renderImages();renderLinks();renderList();$('saveState').textContent=resource.revision?'已读取云端版本':'新资源尚未保存';$('draftState').textContent='编辑内容会暂存到当前标签页';
  const address=new URL(location.href);address.searchParams.set('id',resource.id);if(resource.revision===0)address.searchParams.set('new','1');else address.searchParams.delete('new');history.replaceState(null,'',address.href);
- if(resource.requiresRepair)status('此资源有无效旧网址，请逐组核对后保存。请以当前下载链接表单为准。',true);
+ if(resource.requiresRepair)status('此资源的链接资料需要核对。请检查每组网址、提取码、解压码和备注后保存。',true);
  else status(resource.revision?'已读取当前云端资源。':'填写内容后点击保存云端，才会发布新资源。');
  try{const saved=sessionStorage.getItem(storageKey());if(saved){state.availableDraft=JSON.parse(saved);$('draftBanner').hidden=false;$('draftMessage').textContent='此标签页留有 '+new Date(state.availableDraft.savedAt).toLocaleString('zh-CN')+' 的草稿，是否恢复？'}}catch(error){status('草稿读取失败，云端内容已正常加载',true)}
 
@@ -65,8 +65,8 @@ function createResource(id){
 function parseSize(value){const text=value.trim();if(!text)return null;const match=/^(\d+(?:\.\d+)?)\s*(B|Ki?B?|Mi?B?|Gi?B?|Ti?B?)$/i.exec(text);if(!match)throw Error('大小请填写如 3.4GB、500MB，或留空');const unit=match[2].toUpperCase().replace('IB','B'),power={B:0,K:1,KB:1,M:2,MB:2,G:3,GB:3,T:4,TB:4}[unit],bytes=Math.round(Number(match[1])*1024**power);if(!Number.isSafeInteger(bytes)||bytes<=0)throw Error('资源大小必须大于0且在有效范围内');return {bytes,label:String(Number(match[1]))+' '+['B','KB','MB','GB','TB'][power],source:'manual'}}
 function payload(){
  const metadata={...state.base.metadata,id:state.id};for(const name of names)metadata[name]=$(name).value;
- metadata.images=state.images.map(image=>image.url.trim());metadata.isPinned=state.admin.role==='owner'&&$('isPinned').checked;
- if(state.admin.role!=='owner'){metadata.directDl='';metadata.isFav=false}
+ metadata.images=state.images.map(image=>image.url.trim());metadata.isPinned=state.admin.role==='owner'?$('isPinned').checked:!!state.base.metadata.isPinned;
+ if(state.admin.role!=='owner'){metadata.directDl=state.base.metadata.directDl||'';metadata.isFav=!!state.base.metadata.isFav}
  if($('size').value!==(state.base.metadata.size?.label||''))metadata.size=parseSize($('size').value);
  if(!metadata.title.trim()){setEditorTab('basic');$('title').focus();throw Error('请填写资源标题')}
  metadata.officialUrl=metadata.officialUrl.trim();if(metadata.officialUrl&&!safeUrl(metadata.officialUrl)){setEditorTab('basic');$('officialUrl').focus();throw Error('正版链接请填写完整的 HTTP/HTTPS 网址，或留空')}
@@ -152,10 +152,9 @@ async function save(event){
  try{const result=await request('/api/admin/resource',{method:'POST',body:JSON.stringify(body)});if(result.contractVersion!==1||result.resource.id!==state.id)throw Error('保存响应与当前资源不匹配，请保留草稿并重新读取核对');
   clearTimeout(draftTimer);const key=storageKey();sessionStorage.removeItem(key);showResource(result.resource);$('saveState').textContent=result.unchanged?'内容未变，仍为当前云端版本':'已保存云端 · 版本 '+result.resource.revision;status('当前资源已保存云端，其他资源和站点设置未改动。');notifyHost('saved',{resourceId:result.resource.id,revision:result.resource.revision,metadata:result.resource.metadata,published:result.resource.published,siteRevision:result.resource.siteRevision,beforeSiteRevision,changed:!result.unchanged});
 
-  if(state.admin.role==='owner')loadList().catch(error=>status('资源已保存；列表刷新失败：'+error.message,true));
-  else{$('editorFields').disabled=true;$('saveResource').disabled=true;$('saveResource').dataset.published='1';status('新资源已发布。此账号仅可新增，不能继续修改已发布资源。')}
+  loadList().catch(error=>status('资源已保存；列表刷新失败：'+error.message,true));
  }catch(error){status(error.message,true);$('saveState').textContent='尚未确认保存，编辑内容已保留';persistDraft()}
- finally{busy(false);if($('saveResource').dataset.published){$('saveResource').disabled=true;$('editorFields').disabled=true}}
+ finally{busy(false)}
 }
 function applyDraft(draft){
  if(state.busy||state.uploading)throw Error('请等待当前操作完成后再载入草稿');
@@ -185,10 +184,10 @@ function setTheme(theme){document.documentElement.dataset.theme=theme;try{localS
 let booting=false;async function boot(){if(booting)return;booting=true;$('locked').hidden=true;$('retryAccess').disabled=true;
  let theme;try{theme=localStorage.getItem('tx-resource-editor-theme')}catch(error){}setTheme(theme|| (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));
  $('themeButton').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
- try{const result=await request('/api/admin/session');state.admin=result.admin;if(!['owner','contributor'].includes(state.admin.role))throw Object.assign(Error('此账号没有资源编辑权限'),{status:403});$('account').textContent=state.admin.role==='owner'?'主管理员':'仅可新增';$('account').title=state.admin.username;document.body.classList.toggle('contributor',state.admin.role==='contributor');$('workspace').hidden=false;
+ try{const result=await request('/api/admin/session');state.admin=result.admin;if(!['owner','contributor'].includes(state.admin.role))throw Object.assign(Error('此账号没有资源编辑权限'),{status:403});$('account').textContent=state.admin.role==='owner'?'主管理员':'资源管理员';$('account').title=state.admin.username;document.body.classList.toggle('contributor',state.admin.role==='contributor');$('workspace').hidden=false;
   if(matchMedia('(max-width:720px)').matches)$('resourceBrowser').open=false;
   loadPresets();request('/api/admin/imgbed-folders').then(result=>{for(const folder of result.folders||[]){const option=el('option','',folder);option.value=folder;$('imageFolder').append(option)}}).catch(error=>$('uploadStatus').textContent='文件夹暂不可用，将使用默认文件夹。');
-  const query=new URLSearchParams(location.search),id=query.get('id');if(id&&/^[a-zA-Z0-9_-]{1,160}$/.test(id)){if(query.get('new')==='1')createResource(id);else await loadResource(id,true)}else if(query.get('new')==='1'||state.admin.role==='contributor')createResource();else status('请选择已有资源，或新增一份资源。');
+  const query=new URLSearchParams(location.search),id=query.get('id');if(id&&/^[a-zA-Z0-9_-]{1,160}$/.test(id)){if(query.get('new')==='1')createResource(id);else await loadResource(id,true)}else if(query.get('new')==='1')createResource();else status('请选择已有资源，或新增一份资源。');
  }catch(error){const unauthorized=[401,403].includes(error.status);$('locked').hidden=false;$('workspace').hidden=true;$('accessTitle').textContent=unauthorized?'需要管理员登录':'验证连接暂不可用';$('accessMessage').textContent=unauthorized?'管理员登录已失效或无编辑权限，请返回网站重新登录。':'暂时未能连接验证服务，登录状态已保留。请重试，无需因此重新登录。';$('accessReturn').textContent=unauthorized?'返回网站登录':'返回网站';$('retryAccess').hidden=unauthorized;status(error.message,true)}finally{booting=false;$('retryAccess').disabled=false}
 }
 $('newResource').onclick=()=>{delete $('saveResource').dataset.published;$('editorFields').disabled=false;$('saveResource').disabled=false;createResource()};$('resourceSearch').oninput=renderList;
@@ -216,7 +215,7 @@ function setEditorTab(name){
 for(const button of document.querySelectorAll('[data-editor-tab]'))button.onclick=()=>setEditorTab(button.dataset.editorTab);
 document.querySelector('.section-nav').addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight'].includes(event.key))return;event.preventDefault();const tabs=[...document.querySelectorAll('[data-editor-tab]')].filter(tab=>!tab.hidden),current=tabs.findIndex(tab=>tab.dataset.editorTab===activeEditorTab),next=tabs[(current+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length];setEditorTab(next.dataset.editorTab);next.focus()});
 
-$('resourceBrowser').addEventListener('toggle',()=>{if($('resourceBrowser').open&&state.admin?.role==='owner')loadList().catch(error=>status(error.message,true))});
+$('resourceBrowser').addEventListener('toggle',()=>{if($('resourceBrowser').open&&state.admin)loadList().catch(error=>status(error.message,true))});
 notifyHost('ready');
 boot();
 })();

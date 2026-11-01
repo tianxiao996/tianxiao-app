@@ -5,7 +5,7 @@ const node=(tag,cls,text)=>{const el=document.createElement(tag);if(cls)el.class
 root.renderResourceEditEntries=function(){
  for(const card of document.querySelectorAll('#box>.card')){
   card.querySelectorAll('.resource-edit-entry').forEach(el=>el.remove());
-  if(!root.adminToken||root.adminProfile?.role!=='owner'||!document.body.classList.contains('admin-mode')||adminAuditMode)continue;
+  if(!root.adminToken||!['owner','contributor'].includes(root.adminProfile?.role)||!document.body.classList.contains('admin-mode')||adminAuditMode)continue;
   const slot=card.querySelector('.card-preview-bottom');if(!slot)continue;
   const edit=node('button','resource-edit-entry','编辑资源');edit.type='button';edit.onclick=event=>{event.stopPropagation();root.openResourceEditor(card.dataset.cardId)};slot.append(edit);
  }
