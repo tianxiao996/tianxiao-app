@@ -7,7 +7,8 @@ html:root body #memeCaptchaModal .meme-captcha-box{position:relative;width:min(4
 #memeCaptchaQuestion{font-size:17px;line-height:1.7;margin:4px 0 14px;font-weight:600;overflow-wrap:anywhere}
 #memeCaptchaGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 #memeCaptchaGrid button{display:block;position:relative;aspect-ratio:1;border:2px solid var(--border,#ccd2df);border-radius:12px;background:var(--soft,#eef1f8);color:inherit;overflow:hidden;padding:4px;cursor:pointer;touch-action:manipulation}
-#memeCaptchaGrid button:disabled{cursor:wait;opacity:.75}
+#memeCaptchaGrid button:disabled{cursor:default;opacity:.75}
+#memeCaptchaGrid[aria-busy="true"] button:disabled{cursor:wait}
 #memeCaptchaGrid button:not(:disabled):hover,#memeCaptchaGrid button:focus-visible{border-color:var(--primary,#657eae);outline:2px solid var(--primary-light,#a6b9d9);outline-offset:2px}
 #memeCaptchaGrid button.selected{border-color:var(--primary,#657eae);box-shadow:0 0 0 2px var(--primary-light,#a6b9d9)}
 #memeCaptchaGrid img{display:block;width:100%;height:100%;object-fit:contain;opacity:1;pointer-events:none}

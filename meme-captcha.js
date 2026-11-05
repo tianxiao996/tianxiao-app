@@ -24,12 +24,14 @@
  }
  function active(session, generation) { return current === session && session.generation === generation; }
  function message(text) { document.getElementById('memeCaptchaMessage').textContent = text; }
+ function gridBusy(value) { document.getElementById('memeCaptchaGrid').setAttribute('aria-busy', String(value)); }
+ function clearTimers(session) { for (const key of ['expiryTimer', 'imageTimer', 'resetTimer']) clearTimeout(session[key]); }
  function disableGrid() { document.querySelectorAll('#memeCaptchaGrid button').forEach(b => { b.disabled = true; }); }
  function close(error, token) {
   if (!current) return;
-  const session = current; current = null; session.controller?.abort(); clearTimeout(session.expiryTimer);
+  const session = current; current = null; session.controller?.abort(); clearTimers(session);
   document.getElementById('memeCaptchaModal').hidden = true;
-  document.getElementById('memeCaptchaGrid').replaceChildren();
+  gridBusy(false); document.getElementById('memeCaptchaGrid').replaceChildren();
   if (previousFocus?.isConnected) previousFocus.focus();
   error ? session.reject(error) : session.resolve(token);
  }
@@ -39,44 +41,49 @@
   try {
    const response = await fetch(base + path, { method: 'POST', credentials: 'omit', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal });
    const data = await response.json();
-   if (!response.ok || !data.success) throw Error(data.error || '验证暂不可用，请重试');
+   if (!response.ok || !data.success) throw Object.assign(Error(data.error || '验证暂不可用，请重试'), { status: response.status, reset: data.reset === true && (response.status === 403 || response.status === 409) });
    return data;
   } finally { clearTimeout(timer); }
  }
  async function load(session) {
-  const generation = ++session.generation; session.controller?.abort(); clearTimeout(session.expiryTimer); session.id = null; session.busy = false;
+  const generation = ++session.generation; session.controller?.abort(); clearTimers(session); session.id = null; session.busy = false;
   const grid = document.getElementById('memeCaptchaGrid'), refresh = document.getElementById('memeCaptchaRefresh'), retry = document.getElementById('memeCaptchaRetry');
-  grid.replaceChildren(); document.getElementById('memeCaptchaQuestion').textContent = '正在加载题目…'; message(''); retry.hidden = true; refresh.disabled = true;
+  gridBusy(true); grid.replaceChildren(); document.getElementById('memeCaptchaQuestion').textContent = '正在加载题目…'; message(''); retry.hidden = true; refresh.disabled = true;
   try {
    const data = await jsonRequest('/api/meme-captcha/new', { purpose: session.purpose, subject: session.subject }, session);
    if (!active(session, generation)) return;
    if (!data.id || !Array.isArray(data.images) || data.images.length !== 4 || !Number.isFinite(data.expiresAt)) throw Error('题目数据无效，请重试');
    session.id = data.id; document.getElementById('memeCaptchaQuestion').textContent = data.question;
    let loaded = 0, failed = false; message('正在加载图片…');
-   const loadedTimer = setTimeout(() => { if (active(session, generation) && loaded < 4) { failed = true; disableGrid(); message('图片加载较慢，请重试或换一题'); retry.hidden = false; } }, 60000);
+   const loadedTimer = session.imageTimer = setTimeout(() => { if (active(session, generation) && loaded < 4) { failed = true; gridBusy(false); disableGrid(); message('图片加载较慢，请重试或换一题'); retry.hidden = false; } }, 60000);
    for (let i = 0; i < 4; i++) {
     if (typeof data.images[i] !== 'string' || !data.images[i].startsWith('/api/meme-captcha/image?')) throw Error('图片地址无效');
     const button = document.createElement('button'); button.type = 'button'; button.disabled = true; button.setAttribute('aria-label', '选择第' + (i + 1) + '张图片');
     const img = document.createElement('img'); img.alt = '候选图片' + (i + 1); img.draggable = false;
-    img.onload = () => { if (!active(session, generation)) return; loaded++; if (loaded === 4 && !failed) { clearTimeout(loadedTimer); [...grid.children].forEach(b => { b.disabled = false; }); message('点击符合题目的图片'); } };
-    img.onerror = () => { if (active(session, generation)) { failed = true; clearTimeout(loadedTimer); disableGrid(); message('有图片加载失败，请重试或换一题'); retry.hidden = false; } };
+    img.onload = () => { if (!active(session, generation)) return; loaded++; if (loaded === 4 && !failed) { clearTimeout(loadedTimer); gridBusy(false); [...grid.children].forEach(b => { b.disabled = false; }); message('点击符合题目的图片'); } };
+    img.onerror = () => { if (active(session, generation)) { failed = true; clearTimeout(loadedTimer); gridBusy(false); disableGrid(); message('有图片加载失败，请重试或换一题'); retry.hidden = false; } };
     button.onclick = () => submit(session, generation, i, button);
     button.appendChild(img); grid.appendChild(button); img.src = base + data.images[i];
    }
-   session.expiryTimer = setTimeout(() => { if (active(session, generation)) { disableGrid(); message('题目已过期，请换一题'); retry.hidden = false; } }, Math.max(0, data.expiresAt - Date.now()));
+   session.expiryTimer = setTimeout(() => { if (active(session, generation)) { failed = true; clearTimeout(loadedTimer); gridBusy(false); disableGrid(); message('题目已过期，请换一题'); retry.hidden = false; } }, Math.max(0, data.expiresAt - Date.now()));
   } catch (e) {
-   if (active(session, generation)) { disableGrid(); document.getElementById('memeCaptchaQuestion').textContent = '题目加载失败'; message(e.name === 'AbortError' ? '连接超时，请重试' : e.message); retry.hidden = false; }
+   if (active(session, generation)) { clearTimeout(session.imageTimer); gridBusy(false); disableGrid(); document.getElementById('memeCaptchaQuestion').textContent = '题目加载失败'; message(e.name === 'AbortError' ? '连接超时，请重试' : e.message); retry.hidden = false; }
   } finally { if (active(session, generation)) refresh.disabled = false; }
  }
  async function submit(session, generation, selection, button) {
   if (!active(session, generation) || session.busy || !session.id) return;
-  session.busy = true; disableGrid(); button.classList.add('selected'); message('正在验证…'); document.getElementById('memeCaptchaRefresh').disabled = true;
+  session.busy = true; clearTimers(session); gridBusy(true); disableGrid(); button.classList.add('selected'); message('正在验证…'); document.getElementById('memeCaptchaRefresh').disabled = true;
   try {
    const data = await jsonRequest('/api/meme-captcha/verify', { id: session.id, selection }, session);
    if (active(session, generation)) { if (typeof data.token !== 'string' || !data.token.startsWith('meme.')) throw Error('验证结果无效，请换一题'); close(null, data.token); }
   } catch (e) {
-   if (active(session, generation)) { message(e.name === 'AbortError' ? '连接超时，请换一题重试' : e.message); document.getElementById('memeCaptchaRetry').hidden = false; }
-  } finally { if (active(session, generation)) { session.busy = false; document.getElementById('memeCaptchaRefresh').disabled = false; } }
+   if (active(session, generation)) {
+    gridBusy(false); session.id = null;
+    message(e.reset ? (e.status === 403 ? '选错了，正在换一题…' : '题目已失效，正在换一题…') : (e.name === 'AbortError' ? '连接超时，请换一题重试' : e.message));
+    document.getElementById('memeCaptchaRetry').hidden = !!e.reset;
+    if (e.reset) session.resetTimer = setTimeout(() => { if (active(session, generation)) load(session); }, 700);
+   }
+  } finally { if (active(session, generation)) { gridBusy(false); session.busy = false; document.getElementById('memeCaptchaRefresh').disabled = false; } }
  }
  window.cancelMemeCaptcha = () => close(cancelled());
  window.requestMemeCaptcha = function (purpose, subject) {
