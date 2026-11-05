@@ -25,8 +25,24 @@
  function active(session, generation) { return current === session && session.generation === generation; }
  function message(text) { document.getElementById('memeCaptchaMessage').textContent = text; }
  function gridBusy(value) { document.getElementById('memeCaptchaGrid').setAttribute('aria-busy', String(value)); }
- function clearTimers(session) { for (const key of ['expiryTimer', 'imageTimer', 'resetTimer']) clearTimeout(session[key]); }
+ function clearTimers(session) { for (const key of ['expiryTimer', 'imageTimer', 'resetTimer', 'cooldownTimer']) clearTimeout(session[key]); }
  function disableGrid() { document.querySelectorAll('#memeCaptchaGrid button').forEach(b => { b.disabled = true; }); }
+ function showCooldown(session, seconds) {
+  clearTimers(session); const generation = ++session.generation;
+  session.id = null; session.busy = false; gridBusy(false); disableGrid();
+  document.getElementById('memeCaptchaQuestion').textContent = '图片验证已暂停';
+  const until = Date.now() + seconds * 1000;
+  const refresh = document.getElementById('memeCaptchaRefresh'), retry = document.getElementById('memeCaptchaRetry');
+  refresh.disabled = true; retry.hidden = true;
+  function tick() {
+   if (!active(session, generation)) return;
+   const left = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+   if (!left) { message('等待已结束，可以换题重试'); refresh.disabled = false; retry.hidden = false; return; }
+   message('连续答错，暂停验证（剩余 ' + left + ' 秒）');
+   session.cooldownTimer = setTimeout(tick, 250);
+  }
+  tick();
+ }
  function close(error, token) {
   if (!current) return;
   const session = current; current = null; session.controller?.abort(); clearTimers(session);
@@ -41,7 +57,7 @@
   try {
    const response = await fetch(base + path, { method: 'POST', credentials: 'omit', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal });
    const data = await response.json();
-   if (!response.ok || !data.success) throw Object.assign(Error(data.error || '验证暂不可用，请重试'), { status: response.status, reset: data.reset === true && (response.status === 403 || response.status === 409) });
+   if (!response.ok || !data.success) throw Object.assign(Error(data.error || '验证暂不可用，请重试'), { status: response.status, attemptsLeft: data.attemptsLeft, cooldownSeconds: response.status === 429 && data.cooldown === true && Number.isFinite(data.retryAfter) && data.retryAfter > 0 ? data.retryAfter : null, reset: data.reset === true && (response.status === 403 || response.status === 409) });
    return data;
   } finally { clearTimeout(timer); }
  }
@@ -67,7 +83,7 @@
    }
    session.expiryTimer = setTimeout(() => { if (active(session, generation)) { failed = true; clearTimeout(loadedTimer); gridBusy(false); disableGrid(); message('题目已过期，请换一题'); retry.hidden = false; } }, Math.max(0, data.expiresAt - Date.now()));
   } catch (e) {
-   if (active(session, generation)) { clearTimeout(session.imageTimer); gridBusy(false); disableGrid(); document.getElementById('memeCaptchaQuestion').textContent = '题目加载失败'; message(e.name === 'AbortError' ? '连接超时，请重试' : e.message); retry.hidden = false; }
+   if (active(session, generation)) { if (e.cooldownSeconds) { showCooldown(session, e.cooldownSeconds); return; } clearTimeout(session.imageTimer); gridBusy(false); disableGrid(); document.getElementById('memeCaptchaQuestion').textContent = '题目加载失败'; message(e.name === 'AbortError' ? '连接超时，请重试' : e.message); retry.hidden = false; }
   } finally { if (active(session, generation)) refresh.disabled = false; }
  }
  async function submit(session, generation, selection, button) {
@@ -78,8 +94,9 @@
    if (active(session, generation)) { if (typeof data.token !== 'string' || !data.token.startsWith('meme.')) throw Error('验证结果无效，请换一题'); close(null, data.token); }
   } catch (e) {
    if (active(session, generation)) {
+    if (e.cooldownSeconds) { showCooldown(session, e.cooldownSeconds); return; }
     gridBusy(false); session.id = null;
-    message(e.reset ? (e.status === 403 ? '选错了，正在换一题…' : '题目已失效，正在换一题…') : (e.name === 'AbortError' ? '连接超时，请换一题重试' : e.message));
+    message(e.reset ? (e.status === 403 ? '选错了，' + (Number.isInteger(e.attemptsLeft) ? '再错 ' + e.attemptsLeft + ' 次将暂停验证；' : '') + '正在换一题…' : '题目已失效，正在换一题…') : (e.name === 'AbortError' ? '连接超时，请换一题重试' : e.message));
     document.getElementById('memeCaptchaRetry').hidden = !!e.reset;
     if (e.reset) session.resetTimer = setTimeout(() => { if (active(session, generation)) load(session); }, 700);
    }
