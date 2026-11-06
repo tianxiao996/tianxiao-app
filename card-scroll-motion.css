@@ -1,0 +1,17 @@
+/* Transform the existing card without wrappers or changes to its layout box. */
+html:root body:not(.admin-mode) #box > .card.active-render.card-scroll-motion:not(.card-expanded){
+ animation:none!important;
+ transform:perspective(1100px) translate3d(0,var(--card-scroll-y,0px),0) rotateX(var(--card-scroll-angle,0deg)) scale(var(--card-scroll-scale,1)) translateY(var(--card-scroll-hover,0px))!important;
+ transform-origin:center center;
+ backface-visibility:hidden;
+ opacity:var(--card-scroll-opacity,1)!important;
+ transition:transform 80ms linear,opacity 80ms linear,box-shadow .22s ease,border-color .22s ease!important;
+}
+@media(hover:hover) and (pointer:fine){
+ html:root body:not(.admin-mode) #box > .card.active-render.card-scroll-motion:not(.card-expanded):hover{--card-scroll-hover:-3px}
+}
+html:root body:not(.admin-mode) #box > .card.active-render.card-scroll-motion:not(.card-expanded):active{--card-scroll-hover:1px}
+html:root body:not(.admin-mode) #box > .card.active-render.card-scroll-motion:not(.card-expanded):focus-within{transform:translateY(var(--card-scroll-hover,0px))!important;opacity:1!important}
+@media(prefers-reduced-motion:reduce){
+ html:root body:not(.admin-mode) #box > .card.active-render.card-scroll-motion:not(.card-expanded){transform:none!important;opacity:1!important;transition:none!important}
+}

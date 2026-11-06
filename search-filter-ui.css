@@ -1,0 +1,13 @@
+/* Scope this update to search and blocked-tag settings. */
+html:root body > header #resourceSearchForm.search-row{width:100%!important;max-width:640px!important;min-height:48px!important;height:48px!important;display:flex!important;align-items:center!important;gap:6px!important;padding:5px!important;box-sizing:border-box!important;margin:0 auto!important}
+html:root body > header #resourceSearchForm #search{flex:1 1 0!important;min-width:0!important;width:0!important;height:36px!important;padding:0 10px!important;font:inherit!important}
+html:root body > header #resourceSearchForm #searchSubmit{flex:0 0 38px!important;width:38px!important;height:36px!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:0!important;border-radius:10px!important;background:var(--button)!important;color:var(--button-text)!important;box-shadow:none!important;cursor:pointer}
+html:root body > header #resourceSearchForm #searchSubmit svg{width:19px;height:19px;flex:none}
+html:root body > header #resourceSearchForm #filterBtn{flex:0 0 auto!important;height:36px!important;padding:0 13px!important;margin:0!important;font-size:14px!important}
+html:root body > header #resourceSearchForm button:focus-visible{outline:2px solid var(--primary)!important;outline-offset:2px!important}
+html:root body #filterPanel{padding:16px;box-sizing:border-box}
+html:root body #filterPanel .filter-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+html:root body #filterPanel .filter-title{margin:0}
+html:root body #filterPanel #closeFilterPanelButton{flex:0 0 36px;width:36px;height:36px;margin:0;padding:7px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)!important;border-radius:10px!important;background:var(--soft)!important;color:var(--text)!important;box-shadow:none!important;cursor:pointer}
+html:root body #filterPanel #closeFilterPanelButton:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+@media(min-width:1024px){html:root body > header #resourceSearchForm.search-row{width:640px!important;max-width:calc(100% - 170px)!important;margin-left:0!important;margin-right:auto!important}}

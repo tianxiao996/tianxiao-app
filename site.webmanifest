@@ -1,0 +1,24 @@
+{
+  "name": "天笸の纁密基圳",
+  "short_name": "天笘基地",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ff6699",
+  "description": "天笸の纁密基圳 - 游戏专属分享平台",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "assets/site-icons/cat-f881eec6c104-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/site-icons/cat-f881eec6c104-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
