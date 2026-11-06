@@ -59,7 +59,7 @@
   try {
    const response = await fetch(base + path, { method: 'POST', credentials: 'omit', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal });
    const data = await response.json();
-   if (!response.ok || !data.success) throw Object.assign(Error(data.error || '验证暂不可用，请重试'), { status: response.status, attemptsLeft: data.attemptsLeft, cooldownSeconds: response.status === 429 && data.cooldown === true && Number.isFinite(data.retryAfter) && data.retryAfter > 0 ? data.retryAfter : null, reset: data.reset === true && (response.status === 403 || response.status === 409) });
+   if (!response.ok || !data.success) throw Object.assign(Error(data.error || '验证暂不可用，请重试'), { code: data.code, status: response.status, attemptsLeft: data.attemptsLeft, cooldownSeconds: response.status === 429 && data.cooldown === true && Number.isFinite(data.retryAfter) && data.retryAfter > 0 ? data.retryAfter : null, reset: data.reset === true && (response.status === 403 || response.status === 409) });
    return data;
   } finally { clearTimeout(timer); }
  }
@@ -72,7 +72,7 @@
    if (!active(session, generation)) return;
    showChallenge(session,data);
   } catch (e) {
-   if (active(session, generation)) { if (e.cooldownSeconds) { showCooldown(session, e.cooldownSeconds); return; } clearTimeout(session.imageTimer); clearTimeout(session.questionTimer); expiry(''); gridBusy(false); disableGrid(); document.getElementById('memeCaptchaQuestion').textContent = '题目加载失败'; message(e.name === 'AbortError' ? '连接超时，请重试' : e.message); retry.hidden = false; }
+   if (active(session, generation)) { if(e.code==='DOWNLOAD_TURNSTILE_REQUIRED'){close(e);return;} if (e.cooldownSeconds) { showCooldown(session, e.cooldownSeconds); return; } clearTimeout(session.imageTimer); clearTimeout(session.questionTimer); expiry(''); gridBusy(false); disableGrid(); document.getElementById('memeCaptchaQuestion').textContent = '题目加载失败'; message(e.name === 'AbortError' ? '连接超时，请重试' : e.message); retry.hidden = false; }
   } finally { if (active(session, generation)) refresh.disabled = false; }
  }
  function showChallenge(session,data){
@@ -110,6 +110,7 @@
    if (active(session, generation)) { if(data.completed===false&&data.nextChallenge){showChallenge(session,data.nextChallenge);return} if (data.completed!==true||typeof data.token !== 'string' || !/^meme\.[a-f0-9]{64}$/.test(data.token)) throw Error('验证结果无效，请换一题'); close(null, data.token); }
   } catch (e) {
    if (active(session, generation)) {
+    if(e.code==='DOWNLOAD_TURNSTILE_REQUIRED'){close(e);return;}
     if (e.cooldownSeconds) { showCooldown(session, e.cooldownSeconds); return; }
     gridBusy(false); expiry(''); session.id = null;
     message(e.reset ? (e.status === 403 ? '选错了，连续正确次数已清零；' + (Number.isInteger(e.attemptsLeft) ? '再错 ' + e.attemptsLeft + ' 次将暂停验证；' : '') + '正在换一题…' : '题目已失效，正在换一题…') : (e.name === 'AbortError' ? '连接超时，请换一题重试' : e.message));

@@ -24,7 +24,7 @@ function drafts(){
 }
 function removeDraft(id){for(const store of [localStorage,sessionStorage])try{store.removeItem(storageKey(id))}catch(error){}renderList()}
 function draftFor(id){return drafts().get(id)}
-function syncControls(){const disabled=state.busy||!!loadingId;$('deleteResource').disabled=disabled||state.uploading;$('editorFields').disabled=disabled;$('saveResource').disabled=disabled||state.uploading;$('saveDraft').disabled=disabled||state.uploading;$('reloadResource').disabled=disabled||state.uploading;$('newResource').disabled=state.busy||state.uploading;$('saveResource').textContent=state.busy?'正在发布…':'发布资源'}
+function syncControls(){const disabled=state.busy||!!loadingId;$('copyResource').disabled=disabled||state.uploading;$('deleteResource').disabled=disabled||state.uploading;$('editorFields').disabled=disabled;$('saveResource').disabled=disabled||state.uploading;$('saveDraft').disabled=disabled||state.uploading;$('reloadResource').disabled=disabled||state.uploading;$('newResource').disabled=state.busy||state.uploading;$('saveResource').textContent=state.busy?'正在发布…':'发布资源'}
 function setLoading(id){loadingId=id;syncControls();$('resourceLoading').hidden=!id;if(id){status('正在读取所选资源…');$('resourceLoadingText').textContent='正在读取所选资源…';$('retryResource').hidden=true}else $('retryResource').hidden=true;renderList()}
 function loadedView(){if(matchMedia('(max-width:720px)').matches)$('resourceBrowser').open=false;window.scrollTo({top:0})}
 
@@ -74,7 +74,7 @@ function showResource(resource){
  clearTimeout(draftTimer);
  if(Number.isSafeInteger(resource.siteRevision))lastSiteRevision=resource.siteRevision;state.imageIndex=0;state.id=resource.id;state.base=copy(resource);state.images=resource.metadata.images.map(url=>({id:makeId('img_'),url}));state.records=resource.records.map(r=>({...r,resourceId:resource.id}));state.restoreRevision=null;state.lastSubmission=null;state.dirty=false;state.availableDraft=null;
  for(const name of names)$(name).value=resource.metadata[name]||'';$('size').value=resource.metadata.size?.label||'';$('isPinned').checked=!!resource.metadata.isPinned;
- $('editorTitle').textContent=resource.metadata.title||'新增资源';$('resourceId').textContent=resource.id;$('resourceState').textContent=resource.published?'编辑已发布资源':resource.revision?'已移出列表的资源':'新增资源';$('deleteResource').hidden=!resource.published||state.admin.role!=='owner';$('revision').textContent=resource.revision?'版本 '+resource.revision:'草稿';$('linkState').textContent='链接资料：'+(resource.requiresRepair?'待核对或修复':resource.linkState==='active'?'已整理':'待核对');
+ $('editorTitle').textContent=resource.metadata.title||'新增资源';$('resourceId').textContent=resource.id;$('resourceState').textContent=resource.published?'编辑已发布资源':resource.revision?'已移出列表的资源':'新增资源';$('copyResource').hidden=!resource.published;$('deleteResource').hidden=!resource.published||state.admin.role!=='owner';$('revision').textContent=resource.revision?'版本 '+resource.revision:'草稿';$('linkState').textContent='链接资料：'+(resource.requiresRepair?'待核对或修复':resource.linkState==='active'?'已整理':'待核对');
  $('draftBanner').hidden=true;$('historyList').replaceChildren();$('historyDetails').open=false;delete $('historyDetails').dataset.loaded;
  $('editor').hidden=false;$('welcome').hidden=true;$('newResource').hidden=false;document.querySelector('[data-editor-tab=history]').hidden=resource.revision===0;setEditorTab(activeEditorTab);renderImages();renderLinks();renderList();$('saveState').textContent=resource.published?'已发布 · 版本 '+resource.revision:resource.revision?'已移出列表':'新资源 · 尚未填写';$('draftState').textContent='编辑内容自动保存为本机草稿';
  const address=new URL(location.href);address.searchParams.set('id',resource.id);if(resource.revision===0)address.searchParams.set('new','1');else address.searchParams.delete('new');history.replaceState(null,'',address.href);
@@ -233,6 +233,26 @@ let booting=false;async function boot(){if(booting)return;booting=true;$('locked
   const query=new URLSearchParams(location.search),id=query.get('id');if(id&&/^[a-zA-Z0-9_-]{1,160}$/.test(id)){if(query.get('new')==='1')createResource(id);else await loadResource(id,true)}else if(query.get('new')==='1')createResource();else status('请选择已有资源，或新增一份资源。');
  }catch(error){const unauthorized=[401,403].includes(error.status);$('locked').hidden=false;$('workspace').hidden=true;$('accessTitle').textContent=unauthorized?'需要管理员登录':'验证连接暂不可用';$('accessMessage').textContent=unauthorized?'管理员登录已失效或无编辑权限，请返回网站重新登录。':'暂时未能连接验证服务，登录状态已保留。请重试，无需因此重新登录。';$('accessReturn').textContent=unauthorized?'返回网站登录':'返回网站';$('retryAccess').hidden=unauthorized;status(error.message,true)}finally{booting=false;$('retryAccess').disabled=false}
 }
+
+async function copyResource(){
+ if(state.busy||state.uploading||loadingId||!state.base?.published||!canLeave())return;
+ const source=state.base,storage='tx-resource-copy:'+state.admin.id+':'+source.id+':'+source.revision;
+ let requestId;try{requestId=sessionStorage.getItem(storage)}catch(_){}
+ if(!/^edit_[a-zA-Z0-9_-]{16,80}$/.test(requestId||''))requestId=makeId('edit_');
+ try{sessionStorage.setItem(storage,requestId)}catch(_){}
+ busy(true);status('正在复制云端资源，下载链接将留空…');
+ try{
+  const result=await request('/api/admin/resource/copy',{method:'POST',body:JSON.stringify({contractVersion:1,sourceId:source.id,baseRevision:source.revision,requestId})});
+  const r=result.resource;if(result.contractVersion!==1||!r?.published||r.id===source.id)throw Error('复制响应无效，请保留当前页面后重试');
+  try{sessionStorage.removeItem(storage)}catch(_){}
+  ++navigation;clearTimeout(draftTimer);resourceCache.set(r.id,copy(r));
+  const summary={id:r.id,title:r.metadata.title,tags:r.metadata.tags,revision:r.revision};listChanges.set(r.id,summary);state.resources=[summary,...state.resources.filter(x=>x.id!==r.id)];
+  showResource(r);loadedView();status('已复制为新资源并加入列表，图片和作品资料已保留，请填写新的下载链接。');
+  notifyHost('saved',{resourceId:r.id,revision:r.revision,metadata:r.metadata,published:true,siteRevision:r.siteRevision,beforeSiteRevision:source.siteRevision,changed:!result.replayed});
+ }catch(error){status('复制尚未确认：'+error.message+'。重试将核对同一份副本，不会重复新增。',true)}finally{busy(false)}
+}
+
+$('copyResource').onclick=copyResource;
 $('newResource').onclick=()=>createResource();$('resourceSearch').oninput=renderList;$('resourceFilter').onchange=renderList;$('refreshList').onclick=()=>loadList(true);$('saveDraft').onclick=()=>{clearTimeout(draftTimer);if(persistDraft())status('草稿已保存，可在资源列表的“草稿”中继续编辑；尚未发布。')};
 $('editor').addEventListener('submit',save);$('editor').addEventListener('input',event=>{if(event.target.closest('#basic'))changed()});
 $('isPinned').addEventListener('change',changed);$('addImage').onclick=()=>{if(state.images.length>=100)return status('每个资源最多100张图片',true);state.images.push({id:makeId('img_'),url:''});state.imageIndex=state.images.length-1;changed();renderImages()};$('imageUpload').onchange=()=>uploadImages();$('replaceUpload').onchange=()=>uploadImages(true);

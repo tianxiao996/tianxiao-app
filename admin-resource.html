@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="resource-editor.css?v=234d4adea80ac52f949261f03d5206606e7b0f9c412ab052bb2c2b5342080ad9">
 <script src="link-editor.js?v=1b7552e0a142" defer></script>
 <script src="resource-image-tools.js?v=9caf76ecff9a8f7a0aef314f0232ffd304c6d58545f6aff3442119c2c370e272" defer></script>
-<script src="resource-editor.js?v=489dbd9358dfa39688a34a98e01bb8e9e310bf3ca3201248e9633fd3563e0b0f" defer></script>
+<script src="resource-editor.js?v=fb05a2ff4813dba1" defer></script>
 </head>
 <body>
 <header class="topbar"><div class="brand"><strong>资源编辑</strong><span id="account">正在验证登录</span></div><button id="themeButton" type="button" aria-label="切换日夜模式">日夜模式</button><button id="closeEditor" class="editor-close" type="button" aria-label="关闭资源编辑"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg></button></header>
@@ -20,7 +20,7 @@
 <main><div id="resourceLoading" class="notice" role="status" hidden><span id="resourceLoadingText"></span><button id="retryResource" type="button" hidden>重试读取</button></div>
 <section id="welcome" class="empty"><h1>集中编辑一份资源</h1><p>切换资源，或点击新增。标题、图片、作品信息和下载链接在同一个页面管理。</p></section>
 <form id="editor" hidden novalidate>
-<div class="resource-heading"><div><p class="eyebrow" id="resourceState">新资源</p><h1 id="editorTitle">新增资源</h1><code id="resourceId"></code></div><div class="toolbar"><span class="revision" id="revision"></span><button id="deleteResource" class="danger owner-field" type="button" hidden>删除资源</button></div></div>
+<div class="resource-heading"><div><p class="eyebrow" id="resourceState">新资源</p><h1 id="editorTitle">新增资源</h1><code id="resourceId"></code></div><div class="toolbar"><span class="revision" id="revision"></span><button id="copyResource" type="button" title="复制云端已保存的资料与图片，下载链接留空" hidden>复制为新资源</button><button id="deleteResource" class="danger owner-field" type="button" hidden>删除资源</button></div></div>
 <div id="draftBanner" class="notice" hidden><p id="draftMessage"></p><button id="restoreDraft" type="button">恢复草稿</button><button id="discardDraft" type="button">清除本页草稿</button></div>
 <nav class="section-nav" role="tablist" aria-label="编辑区域"><button type="button" role="tab" data-editor-tab="basic" aria-controls="basic" aria-selected="true">基本信息</button><button type="button" role="tab" data-editor-tab="pictures" aria-controls="pictures" aria-selected="false">图片</button><button type="button" role="tab" data-editor-tab="downloads" aria-controls="downloads" aria-selected="false">下载链接</button><button type="button" role="tab" data-editor-tab="history" aria-controls="history" aria-selected="false">历史版本</button></nav>
 <fieldset id="editorFields">
