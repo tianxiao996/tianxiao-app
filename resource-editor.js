@@ -138,7 +138,7 @@ function renderImages(){
  const img=el('img');img.alt='图片 '+(index+1)+' 预览';img.referrerPolicy='strict-origin-when-cross-origin';
  const error=el('span','image-error','预览不可用，请核对图片链接');error.hidden=true;
  img.onerror=()=>{img.hidden=true;error.hidden=false};img.onload=()=>{img.hidden=false;error.hidden=true};
- function updatePreview(){img.hidden=false;error.hidden=true;img.src=safeUrl(image.url.trim())?image.url.trim():'images/image_404.jpg'}
+ function updatePreview(){img.hidden=false;error.hidden=true;img.src=safeUrl(image.url.trim())?(image.displayUrl||image.url.trim()):'images/image_404.jpg'}
  updatePreview();preview.append(img,error);
  if(state.images.length>1)preview.append(galleryArrow('previous',()=>switchImage(-1)),galleryArrow('next',()=>switchImage(1)));
  preview.addEventListener('keydown',event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();switchImage(event.key==='ArrowLeft'?-1:1);gallery.querySelector('.image-preview').focus({preventScroll:true})}});
@@ -149,7 +149,7 @@ function renderImages(){
  const before=button('前移',()=>reorder(-1)),after=button('后移',()=>reorder(1));before.disabled=index===0;after.disabled=index===state.images.length-1;
  controls.append(before,after,button('删图',()=>{if(state.uploading)return status('请等待图片上传完成',true);if(!confirm('删除当前图片？保存云端后才生效，历史版本仍会保留。'))return;state.images.splice(index,1);changed();renderImages()},'danger'));card.append(controls);
  const label=el('label','','当前图片链接'),input=el('input');input.type='url';input.value=image.url;input.maxLength=4096;input.setAttribute('aria-label','当前图片链接');
- input.addEventListener('input',()=>{image.url=input.value;changed();updatePreview()});input.addEventListener('change',updatePreview);label.append(input);card.append(label);
+ input.addEventListener('input',()=>{image.url=input.value;image.displayUrl='';changed();updatePreview()});input.addEventListener('change',updatePreview);label.append(input);card.append(label);
  const actions=el('div','image-actions');actions.append(button('复制图链',()=>copyText(input.value.trim())),button('查看原图',()=>{if(!safeUrl(input.value.trim()))return status('请填写有效图片链接',true);window.open(input.value.trim(),'_blank','noopener,noreferrer')}));card.append(actions);gallery.append(card);
 }
 function linkField(record,index,key,name,max){const label=el('label',['url','remark','unzipPassword'].includes(key)?'full':'',name),input=el(key==='remark'?'textarea':'input');input.value=record[key]||'';input.maxLength=max;input.dataset.field=key;input.setAttribute('aria-label','第'+(index+1)+'组'+name);if(key==='remark')input.rows=2;else input.type='text';
@@ -182,8 +182,8 @@ async function uploadImages(replacing=false){
  if(state.uploading||state.busy)return status('请等待当前操作完成',true);
  const picker=$(replacing?'replaceUpload':'imageUpload'),targetId=replacing?state.images[state.imageIndex]?.id:null,files=[...picker.files];picker.value='';if(!files.length)return;if(replacing&&!targetId)return;if(!replacing&&state.images.length+files.length>100)return status('每个资源最多100张图片',true);
  state.uploading=true;$('imageUpload').disabled=true;$('saveResource').disabled=true;let success=0;
- try{for(let i=0;i<files.length;i++){const file=files[i];if(!file.type.startsWith('image/'))continue;$('uploadStatus').textContent='正在上传 '+(i+1)+' / '+files.length+'：'+file.name;const body=new FormData();body.append('file',file);body.append('folder',$('imageFolder').value);
-   try{const result=await request('/api/admin/upload-image',{method:'POST',body});if(!safeUrl(result.url||''))throw Error('上传未返回有效图片地址');if(replacing){const target=state.images.find(image=>image.id===targetId);if(!target)throw Error('待更换图片已移除');target.url=result.url}else{state.images.push({id:makeId('img_'),url:result.url});state.imageIndex=state.images.length-1}success++;changed();renderImages()}catch(error){status('图片 '+file.name+' 上传失败：'+error.message,true)}
+ try{for(let i=0;i<files.length;i++){const file=files[i];if(!file.type.startsWith('image/'))continue;$('uploadStatus').textContent='正在上传 '+(i+1)+' / '+files.length+'：'+file.name;const body=new FormData();body.append('file',file);body.append('folder',$('imageFolder').value);const compression=await ResourceImageTools.appendVariants(body,file);if(compression.warning)status(compression.warning,true);
+   try{const result=await request('/api/admin/upload-image',{method:'POST',body});if(!safeUrl(result.url||''))throw Error('上传未返回有效图片地址');if(result.warning)status(result.warning,true);if(replacing){const target=state.images.find(image=>image.id===targetId);if(!target)throw Error('待更换图片已移除');target.url=result.url;target.displayUrl=result.optimized?.detail||''}else{state.images.push({id:makeId('img_'),url:result.url,displayUrl:result.optimized?.detail||''});state.imageIndex=state.images.length-1}success++;changed();renderImages()}catch(error){status('图片 '+file.name+' 上传失败：'+error.message,true)}
   }$('uploadStatus').textContent='已上传 '+success+' / '+files.length+' 张，保存资源后才会使用这些图片。';
  }finally{state.uploading=false;$('imageUpload').disabled=false;$('saveResource').disabled=state.busy;renderImages()}
 }
