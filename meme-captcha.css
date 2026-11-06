@@ -17,3 +17,6 @@ html:root body #memeCaptchaModal .meme-captcha-box{position:relative;width:min(4
 #memeCaptchaModal .meme-captcha-actions button{padding:8px 13px;border:1px solid var(--border,#ccd2df);border-radius:9px;background:var(--soft,#eef1f8);color:inherit;font:inherit;font-size:13px;cursor:pointer}
 #memeCaptchaModal button:focus-visible{outline:2px solid var(--primary,#657eae);outline-offset:3px}
 @media(max-width:380px){html:root body #memeCaptchaModal .meme-captcha-box{padding:18px}#memeCaptchaGrid{gap:8px}}
+
+#memeCaptchaExpiry{display:inline-block;margin-left:10px;font-size:12px;font-weight:400;white-space:nowrap;color:var(--muted,#69768e)}
+#memeCaptchaExpiry[hidden]{display:none!important}
