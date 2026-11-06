@@ -79,6 +79,7 @@
   if(!data||data.required!==2||![1,2].includes(data.stage)||!data.id||!Array.isArray(data.images)||data.images.length!==4||!Number.isFinite(data.expiresAt)||data.images.some(u=>typeof u!=='string'||!u.startsWith('/api/meme-captcha/image?')))throw Error('题目数据无效，请重试');
   const generation=++session.generation;clearTimers(session);session.busy=false;const grid=document.getElementById('memeCaptchaGrid'),retry=document.getElementById('memeCaptchaRetry');grid.replaceChildren();gridBusy(true);retry.hidden=true;document.getElementById('memeCaptchaRefresh').disabled=false;
    if (data.required!==2 || ![1,2].includes(data.stage) || !data.id || !Array.isArray(data.images) || data.images.length !== 4 || !Number.isFinite(data.expiresAt)) throw Error('题目数据无效，请重试');
+   const remaining=Math.max(0,Math.min(60000,data.expiresAt-(Number.isFinite(data.serverNow)?data.serverNow:Date.now())));const candidate=performance.now()+remaining;session.displayDeadline=data.stage===1?candidate:Math.min(session.displayDeadline??candidate,candidate);const deadline=session.displayDeadline;
    session.id = data.id; document.getElementById('memeCaptchaQuestion').textContent = data.question+'（第 '+data.stage+'/2 题）';
    let loaded = 0, failed = false; message('正在加载图片…');
    const loadedTimer = session.imageTimer = setTimeout(() => { if (active(session, generation) && loaded < 4) { failed = true; gridBusy(false); disableGrid(); message('图片加载较慢，请重试或换一题'); retry.hidden = false; } }, 60000);
@@ -91,13 +92,13 @@
     button.onclick = () => submit(session, generation, i, button);
     button.appendChild(img); grid.appendChild(button); img.src = base + data.images[i];
    }
-   session.expiryTimer = setTimeout(() => { if (active(session, generation)) { failed = true; clearTimeout(loadedTimer); clearTimeout(session.questionTimer); session.refreshExpiry = null; expiry('已过期'); gridBusy(false); disableGrid(); message('题目已过期，请换一题'); retry.hidden = false; } }, Math.max(0, data.expiresAt - Date.now()));
+   session.expiryTimer = setTimeout(() => { if (active(session, generation)) { failed = true; clearTimeout(loadedTimer); clearTimeout(session.questionTimer); session.refreshExpiry = null; expiry('已过期'); gridBusy(false); disableGrid(); message('题目已过期，请换一题'); retry.hidden = false; } }, Math.max(0, deadline - performance.now()));
    session.refreshExpiry = () => {
     if (!active(session, generation) || session.busy) return;
     clearTimeout(session.questionTimer);
-    const left = Math.max(0, Math.ceil((data.expiresAt - Date.now()) / 1000));
+    const left = Math.max(0, Math.ceil((deadline - performance.now()) / 1000));
     expiry(left ? '剩余 ' + left + ' 秒' : '已过期');
-    if (left) session.questionTimer = setTimeout(session.refreshExpiry, Math.min(1000, data.expiresAt - Date.now()));
+    if (left) session.questionTimer = setTimeout(session.refreshExpiry, Math.min(1000, deadline - performance.now()));
    };
    session.refreshExpiry();
  }
