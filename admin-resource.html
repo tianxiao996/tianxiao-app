@@ -6,17 +6,17 @@
 <meta name="robots" content="noindex,nofollow">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: http: data: blob:; connect-src 'self' https://api.tian-xiao.com; object-src 'none'; base-uri 'self'; form-action 'none'">
 <title>资源编辑 · 天笑の窝</title>
-<link rel="stylesheet" href="resource-editor.css?v=267c39cfc3d0">
+<link rel="stylesheet" href="resource-editor.css?v=234d4adea80ac52f949261f03d5206606e7b0f9c412ab052bb2c2b5342080ad9">
 <script src="link-editor.js?v=1b7552e0a142" defer></script>
-<script src="resource-editor.js?v=f7d2f438057a" defer></script>
+<script src="resource-editor.js?v=5c4a9d7fadb61d81e17ed58a1cbfedceeb4b9c7551f7ffb30f1cca99c6325abe" defer></script>
 </head>
 <body>
 <header class="topbar"><div class="brand"><strong>资源编辑</strong><span id="account">正在验证登录</span></div><button id="themeButton" type="button" aria-label="切换日夜模式">日夜模式</button><button id="closeEditor" class="editor-close" type="button" aria-label="关闭资源编辑"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg></button></header>
 <p id="status" class="status" role="status" aria-live="polite">正在读取管理员信息…</p>
 <section id="locked" class="empty" hidden><h1 id="accessTitle">正在验证管理员</h1><p id="accessMessage" role="status"></p><div class="toolbar"><button id="retryAccess" type="button" hidden>重新验证</button><a id="accessReturn" class="primary button-link" href="./">返回网站</a></div></section>
 <div id="workspace" class="workspace" hidden>
-<aside><button id="newResource" class="primary wide" type="button">新增资源</button><details id="resourceBrowser"><summary>切换资源 <span id="resourceCount"></span></summary><label class="search-label"><span>搜索资源</span><input id="resourceSearch" type="search" placeholder="标题、编号或标签" autocomplete="off"></label><div id="resourceList" class="resource-list"></div></details><p class="aside-note">每次只保存当前资源。其他资源和站点设置不会随表单一起提交。</p></aside>
-<main>
+<aside><button id="newResource" class="primary wide" type="button">新增资源</button><details id="resourceBrowser"><summary>切换资源 <span id="resourceCount"></span></summary><label class="search-label"><span>搜索资源</span><input id="resourceSearch" type="search" placeholder="标题、编号或标签" autocomplete="off"></label><div class="resource-list-tools"><select id="resourceFilter" aria-label="资源状态"><option value="all">全部资源</option><option value="drafts">草稿</option><option value="published">已发布</option></select><button id="refreshList" type="button">刷新列表</button></div><p id="draftCount" class="hint"></p><p id="listStatus" class="hint" role="status"></p><div id="resourceList" class="resource-list"></div></details><p class="aside-note">每次只保存当前资源。其他资源和站点设置不会随表单一起提交。</p></aside>
+<main><div id="resourceLoading" class="notice" role="status" hidden><span id="resourceLoadingText"></span><button id="retryResource" type="button" hidden>重试读取</button></div>
 <section id="welcome" class="empty"><h1>集中编辑一份资源</h1><p>切换资源，或点击新增。标题、图片、作品信息和下载链接在同一个页面管理。</p></section>
 <form id="editor" hidden novalidate>
 <div class="resource-heading"><div><p class="eyebrow" id="resourceState">新资源</p><h1 id="editorTitle">新增资源</h1><code id="resourceId"></code></div><div class="toolbar"><span class="revision" id="revision"></span><button id="deleteResource" class="danger owner-field" type="button" hidden>删除资源</button></div></div>
@@ -46,7 +46,7 @@
 </section>
 <section class="panel" id="history"><div class="section-heading"><h2>历史版本</h2><span>载入历史后仍需保存才会生效</span></div><details id="historyDetails"><summary>查看云端历史版本</summary><div id="historyList"></div></details></section>
 </fieldset>
-<footer class="savebar"><div class="save-state"><strong id="saveState">尚未保存</strong><span id="draftState">编辑内容会暂存到当前标签页</span></div><div class="save-actions"><details class="draft-tools"><summary>更多</summary><div class="draft-tools-menu"><button id="exportDraft" type="button">导出草稿</button><label class="file-button compact">导入草稿<input id="importDraft" type="file" accept="application/json,.json"></label><button id="reloadResource" type="button">重新读取</button></div></details><button id="saveResource" class="primary" type="submit">保存云端</button></div></footer>
+<footer class="savebar"><div class="save-state"><strong id="saveState">尚未保存</strong><span id="draftState">编辑内容自动保存为本机草稿</span></div><div class="save-actions"><details class="draft-tools"><summary>更多</summary><div class="draft-tools-menu"><button id="deleteDraft" type="button">删除本机草稿</button><button id="exportDraft" type="button">导出草稿</button><label class="file-button compact">导入草稿<input id="importDraft" type="file" accept="application/json,.json"></label><button id="reloadResource" type="button">重新读取</button></div></details><button id="saveDraft" type="button">保存草稿</button><button id="saveResource" class="primary" type="submit">发布资源</button></div></footer>
 </form>
 </main>
 </div>
