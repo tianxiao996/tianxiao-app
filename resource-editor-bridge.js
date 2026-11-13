@@ -17,9 +17,9 @@ function closeHost(){
  if(history.state?.resourceEditorHost===old.channel)history.back();
 }
 function requestClose(){if(!host)return;if(!host.ready){closeHost();return}host.frame.contentWindow.postMessage({type:'resource-editor:request-close',channel:host.channel},location.origin)}
-root.openResourceEditor=function(id){
+root.openResourceEditor=function(id,options={}){
  if(!root.adminToken){root.showToast?.('请先登录管理员');return}if(host){host.frame.focus();return}
- const channel=crypto.randomUUID(),url=new URL('admin-resource.html',location.href);url.searchParams.set('embedded','1');url.searchParams.set('editorChannel',channel);url.searchParams.set('siteRevision',String(root.resourceSiteRevision||0));if(id==='new')url.searchParams.set('new','1');else if(id)url.searchParams.set('id',id);
+ const channel=crypto.randomUUID(),url=new URL('admin-resource.html',location.href);url.searchParams.set('embedded','1');if(options.settings==='remarks')url.searchParams.set('settings','remarks');url.searchParams.set('editorChannel',channel);url.searchParams.set('siteRevision',String(root.resourceSiteRevision||0));if(id==='new')url.searchParams.set('new','1');else if(id)url.searchParams.set('id',id);
  const layer=node('section','resource-editor-host'),frame=node('iframe'),close=node('button','resource-editor-host-close','×');layer.id='resourceEditorHost';layer.setAttribute('role','dialog');layer.setAttribute('aria-modal','true');layer.setAttribute('aria-label','资源编辑');frame.title='资源编辑';frame.src=url.href;close.type='button';close.setAttribute('aria-label','关闭资源编辑');close.onclick=requestClose;layer.append(frame,close);
  const focus=document.activeElement,inert=new Map();for(const el of document.body.children)if(el instanceof HTMLElement&&!['SCRIPT','STYLE','LINK'].includes(el.tagName)){inert.set(el,el.inert);el.inert=true}
  const scroll=document.getElementById('mainScroll');host={channel,layer,frame,inert,focus,overflow:document.body.style.overflow,mainTop:scroll?.scrollTop||0,windowTop:root.scrollY,ready:false};
@@ -30,7 +30,7 @@ const enter=root.enterAdmin;
 root.enterAdmin=async function(...args){
  const result=await enter.apply(this,args);
  document.getElementById('openResourceManager')?.remove();const buttons=document.getElementById('adminBarBtns')||document.getElementById('adminBar');const add=buttons&&[...buttons.querySelectorAll('button')].find(button=>button.getAttribute('onclick')==='addCard()');if(add)buttons.prepend(add);
- root.renderResourceEditEntries();return result;
+ document.getElementById('openRemarkSettings')?.remove();if(buttons&&root.adminProfile?.role==='owner'){const settings=node('button','','快捷备注');settings.id='openRemarkSettings';settings.type='button';settings.onclick=()=>root.openResourceEditor(null,{settings:'remarks'});buttons.append(settings)}root.renderResourceEditEntries();return result;
 };
 function displayCard(id,revision,m){
  const card=node('div','card'+(m.isPinned?' is-pinned':'')+(m.isFav?' is-fav':''));card.dataset.cardId=id;card.dataset.resourceRevision=String(revision);card.dataset.directDownload=m.directDl||'';

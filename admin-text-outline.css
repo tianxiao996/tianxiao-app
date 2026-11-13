@@ -1,0 +1,12 @@
+/* Glyph outline, not a rectangular border. Scope only administrator controls. */
+:root{--admin-glyph-edge:#000}
+:root[data-theme="dark"]{--admin-glyph-edge:#fff}
+html:root body :is(#adminBar,#adminBarBtns,#catPanel,#userQueryPanel,#wordlistPanel,#mailManagePanel,#linkProxyPanel,#proxyManagePanel,#adminAuditPanel,#bannerEditPanel,#shortlinkPanel,#adminDashboard,#memeImageManager),
+html:root body :is(#adminBar,#adminBarBtns,#catPanel,#userQueryPanel,#wordlistPanel,#mailManagePanel,#linkProxyPanel,#proxyManagePanel,#adminAuditPanel,#bannerEditPanel,#shortlinkPanel,#adminDashboard,#memeImageManager) :is(button,label,summary,h1,h2,h3,p,span,strong,small),
+html:root body #workspace :is(button,summary,label,h1,h2,h3,.hint,.section-heading,.save-state,.notice,.eyebrow,.revision,.resource-list-item),
+html:root body #resourceLinkEditor :is(button,summary,label,h1,h2,h3,.rle-hint,.rle-status){
+ -webkit-text-stroke:.35px var(--admin-glyph-edge);
+ paint-order:stroke fill;
+}
+/* Keep entered resource content, password fields and vector icons crisp. */
+html:root body :is(input,textarea,select,option,svg,svg *){-webkit-text-stroke:0}
