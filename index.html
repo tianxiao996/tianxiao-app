@@ -1282,7 +1282,7 @@ html:root body .reply-input-box button:disabled{opacity:.45;cursor:default}
 
 <link rel="stylesheet" href="meme-captcha.css?v=d3029cf85a8e7bfbf6068bc90a5ab9e0975f0e938594204bf55f2e857f2ccf4b">
 
-<script src="meme-captcha.js?v=29bf1f73f45246a6" defer></script>
+<script src="meme-captcha.js?v=baa84a8d2d6fea36" defer></script>
 
 <script id="filter-dialog-keyboard">document.addEventListener('keydown',function(event){const panel=document.getElementById('filterPanel');if(panel.style.display==='none')return;if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeFilterPanel();return}if(event.key!=='Tab')return;const items=[...panel.querySelectorAll('button:not(:disabled),input:not(:disabled)')].filter(el=>el.getClientRects().length);if(!items.length)return;const first=items[0],last=items.at(-1);if(!panel.contains(document.activeElement)){event.preventDefault();first.focus();return}if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}});</script>
 

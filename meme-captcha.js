@@ -9,7 +9,8 @@
   modal.innerHTML = '<section class="meme-captcha-box" role="dialog" aria-modal="true" aria-labelledby="memeCaptchaTitle" aria-describedby="memeCaptchaQuestion"><button type="button" class="meme-captcha-close" aria-label="关闭图片验证"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m4 4 12 12M16 4 4 16"/></svg></button><h2 id="memeCaptchaTitle">图片验证<span id="memeCaptchaExpiry" role="timer" aria-live="off" hidden></span></h2><div id="memeCaptchaQuestion"></div><div id="memeCaptchaGrid"></div><p id="memeCaptchaMessage" role="status" aria-live="polite"></p><div class="meme-captcha-actions"><button type="button" id="memeCaptchaRetry" hidden>重试加载</button><button type="button" id="memeCaptchaRefresh">换一题</button></div></section>';
   document.body.appendChild(modal);
   modal.querySelector('.meme-captcha-close').onclick = () => close(cancelled());
-  modal.addEventListener('click', e => { if (e.target === modal) close(cancelled()); });
+  // Keep backdrop clicks inside the verification dialog; only explicit cancellation closes it.
+  modal.addEventListener('click', e => e.stopPropagation());
   document.getElementById('memeCaptchaRefresh').onclick = () => current && load(current);
   document.getElementById('memeCaptchaRetry').onclick = () => current && load(current);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') current?.refreshExpiry?.(); });
