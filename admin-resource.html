@@ -9,13 +9,13 @@
 <link rel="stylesheet" href="resource-editor.css?v=93b189e02583daa2">
 <script src="link-editor.js?v=1b7552e0a142" defer></script>
 <script src="resource-image-tools.js?v=9caf76ecff9a8f7a0aef314f0232ffd304c6d58545f6aff3442119c2c370e272" defer></script>
-<script src="resource-editor.js?v=6deb166eb8678053" defer></script>
+<script src="resource-editor.js?v=8a16dc521d5a3b34" defer></script>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/site-icons/cat-f881eec6c104-32.png">
 <link rel="icon" type="image/svg+xml" sizes="any" href="assets/site-icons/cat-face-e758088f6eb0.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/site-icons/cat-f881eec6c104-180.png">
-<link rel="stylesheet" href="admin-text-outline.css?v=37b246d5add80f95">
+<link rel="stylesheet" href="admin-text-outline.css?v=8026c51e270d2c23">
 </head>
-<body>
+<body class="resource-editor-page">
 <header class="topbar"><div class="brand"><strong>资源编辑</strong><span id="account">正在验证登录</span></div><button id="remarkSettingsButton" class="owner-field" type="button">快捷备注设置</button><button id="themeButton" type="button" aria-label="切换日夜模式">日夜模式</button><button id="closeEditor" class="editor-close" type="button" aria-label="关闭资源编辑"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg></button></header>
 <p id="status" class="status" role="status" aria-live="polite">正在读取管理员信息…</p>
 <section id="locked" class="empty" hidden><h1 id="accessTitle">正在验证管理员</h1><p id="accessMessage" role="status"></p><div class="toolbar"><button id="retryAccess" type="button" hidden>重新验证</button><a id="accessReturn" class="primary button-link" href="./">返回网站</a></div></section>
@@ -46,7 +46,7 @@
 <input id="replaceUpload" type="file" accept="image/*" hidden><p id="uploadStatus" class="hint" role="status"></p><div id="images" class="image-gallery"></div>
 </section>
 <section class="panel" id="downloads"><div class="section-heading"><h2>下载链接 <span id="linkCount" class="count"></span></h2><span>每条链接独立保存密码和备注</span></div>
-<p id="linkState" class="hint" role="status"></p><details class="subpanel"><summary>粘贴分享文案，识别网址和提取码</summary><label>网盘分享文案<textarea id="shareText" rows="5" maxlength="60000" placeholder="可粘贴百度、夸克等网盘的完整分享文案。解压码仍由你填写。"></textarea></label><div class="actions"><button id="recognize" type="button">识别分享内容</button><button id="clearShareText" type="button">清空</button></div><p id="importStatus" class="hint" role="status"></p><div id="importPreview"></div></details>
+<p id="linkState" class="hint" role="status"></p><p class="hint">每组链接的备注框下方可直接选择快捷备注。<button id="linkRemarkSettings" class="owner-field" type="button">快捷备注设置</button></p><details class="subpanel"><summary>粘贴分享文案，识别网址和提取码</summary><label>网盘分享文案<textarea id="shareText" rows="5" maxlength="60000" placeholder="可粘贴百度、夸克等网盘的完整分享文案。解压码仍由你填写。"></textarea></label><div class="actions"><button id="recognize" type="button">识别分享内容</button><button id="clearShareText" type="button">清空</button></div><p id="importStatus" class="hint" role="status"></p><div id="importPreview"></div></details>
 <details id="presetManager" class="subpanel owner-field"><summary>管理快捷解压码</summary><p class="hint">只在主动选择时填入，修改预设不会改动已有链接。</p><div id="presetRows"></div><div class="toolbar"><button id="addPreset" type="button">添加快捷码</button><button id="savePresets" type="button">保存快捷码</button></div><p id="presetStatus" class="hint" role="status"></p></details>
 <div id="links" class="link-list"></div><button id="addLink" type="button">手动添加一组链接</button>
 </section>

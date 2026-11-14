@@ -1,12 +1,16 @@
-/* Glyph outline, not a rectangular border. Scope only administrator controls. */
-:root{--admin-glyph-edge:#000}
-:root[data-theme="dark"]{--admin-glyph-edge:#fff}
-html:root body :is(#adminBar,#adminBarBtns,#catPanel,#userQueryPanel,#wordlistPanel,#mailManagePanel,#linkProxyPanel,#proxyManagePanel,#adminAuditPanel,#bannerEditPanel,#shortlinkPanel,#adminDashboard,#memeImageManager),
-html:root body :is(#adminBar,#adminBarBtns,#catPanel,#userQueryPanel,#wordlistPanel,#mailManagePanel,#linkProxyPanel,#proxyManagePanel,#adminAuditPanel,#bannerEditPanel,#shortlinkPanel,#adminDashboard,#memeImageManager) :is(button,label,summary,h1,h2,h3,p,span,strong,small),
-html:root body #workspace :is(button,summary,label,h1,h2,h3,.hint,.section-heading,.save-state,.notice,.eyebrow,.revision,.resource-list-item),
-html:root body #resourceLinkEditor :is(button,summary,label,h1,h2,h3,.rle-hint,.rle-status){
- -webkit-text-stroke:.35px var(--admin-glyph-edge);
- paint-order:stroke fill;
+/* Administrator text colors. Public resource cards and page layout are unaffected. */
+:root{--admin-text-color:#000}
+:root[data-theme="dark"]{--admin-text-color:#fff}
+html:root body.resource-editor-page,
+html:root body.resource-editor-page *,
+html:root body :is(#adminBar,#adminBarBtns,#catPanel,#userQueryPanel,#wordlistPanel,#mailManagePanel,#linkProxyPanel,#proxyManagePanel,#adminAuditPanel,#bannerEditPanel,#shortlinkPanel,#adminDashboard,#memeImageManager,#resourceLinkEditor):is(#adminBar,#adminBarBtns,#catPanel,#userQueryPanel,#wordlistPanel,#mailManagePanel,#linkProxyPanel,#proxyManagePanel,#adminAuditPanel,#bannerEditPanel,#shortlinkPanel,#adminDashboard,#memeImageManager,#resourceLinkEditor),
+html:root body :is(#adminBar,#adminBarBtns,#catPanel,#userQueryPanel,#wordlistPanel,#mailManagePanel,#linkProxyPanel,#proxyManagePanel,#adminAuditPanel,#bannerEditPanel,#shortlinkPanel,#adminDashboard,#memeImageManager,#resourceLinkEditor):is(#adminBar,#adminBarBtns,#catPanel,#userQueryPanel,#wordlistPanel,#mailManagePanel,#linkProxyPanel,#proxyManagePanel,#adminAuditPanel,#bannerEditPanel,#shortlinkPanel,#adminDashboard,#memeImageManager,#resourceLinkEditor) *{
+ color:var(--admin-text-color)!important;
+ -webkit-text-fill-color:currentColor!important;
+ -webkit-text-stroke:0!important;
+ text-shadow:none!important;
 }
-/* Keep entered resource content, password fields and vector icons crisp. */
-html:root body :is(input,textarea,select,option,svg,svg *){-webkit-text-stroke:0}
+html:root body.resource-editor-page input::placeholder,
+html:root body.resource-editor-page textarea::placeholder,
+html:root body :is(#adminBar,#adminBarBtns,#catPanel,#userQueryPanel,#wordlistPanel,#mailManagePanel,#linkProxyPanel,#proxyManagePanel,#adminAuditPanel,#bannerEditPanel,#shortlinkPanel,#adminDashboard,#memeImageManager,#resourceLinkEditor) input::placeholder,
+html:root body :is(#adminBar,#adminBarBtns,#catPanel,#userQueryPanel,#wordlistPanel,#mailManagePanel,#linkProxyPanel,#proxyManagePanel,#adminAuditPanel,#bannerEditPanel,#shortlinkPanel,#adminDashboard,#memeImageManager,#resourceLinkEditor) textarea::placeholder{color:var(--admin-text-color)!important;opacity:.65}
