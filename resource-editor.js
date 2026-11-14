@@ -3,7 +3,7 @@
 const API='https://api.tian-xiao.com',$=id=>document.getElementById(id),copy=value=>JSON.parse(JSON.stringify(value));
 const state={admin:null,base:null,id:null,copySourceId:null,images:[],imageIndex:0,records:[],dirty:false,draftPending:false,busy:false,uploading:false,resources:[],presets:[],presetRevision:0,remarks:[],remarkRevision:0,restoreRevision:null,lastSubmission:null,availableDraft:null};
 const hostQuery=new URLSearchParams(location.search),embedded=window.parent!==window&&hostQuery.get('embedded')==='1',hostChannel=hostQuery.get('editorChannel');
-const resourceCache=new Map(),pendingResources=new Map(),listChanges=new Map();let navigation=0,listPending=null,listLoaded=false,loadingId=null;
+const removedDraftIds=new Set(),resourceCache=new Map(),pendingResources=new Map(),listChanges=new Map();let navigation=0,listPending=null,listLoaded=false,loadingId=null;
 let lastSiteRevision=Number(hostQuery.get('siteRevision'))||0;
 function notifyHost(type,data={}){if(embedded)window.parent.postMessage({type:'resource-editor:'+type,channel:hostChannel,...data},location.origin)}
 function leaveEditor(){if(!canLeave())return;state.dirty=false;if(embedded)notifyHost('closed');else location.assign('./')}
@@ -22,9 +22,9 @@ function drafts(){
  for(const store of [localStorage,sessionStorage])try{for(let i=0;i<store.length;i++){const key=store.key(i);if(!key?.startsWith(prefix))continue;try{const d=JSON.parse(store.getItem(key));if(d?.version!==1||key!==prefix+d.resourceId||!/^[a-zA-Z0-9_-]{1,160}$/.test(d.resourceId)||!Number.isSafeInteger(d.baseRevision)||d.baseRevision<0||!d.metadata||!Array.isArray(d.images)||!Array.isArray(d.records))continue;if(!found.has(d.resourceId)||(found.get(d.resourceId).savedAt||0)<(d.savedAt||0))found.set(d.resourceId,d)}catch(error){}}}catch(error){}
  return found;
 }
-function removeDraft(id){for(const store of [localStorage,sessionStorage])try{store.removeItem(storageKey(id))}catch(error){}renderList()}
+function removeDraft(id){let removed=true;for(const store of [localStorage,sessionStorage])try{store.removeItem(storageKey(id));if(store.getItem(storageKey(id))!==null)removed=false}catch(error){removed=false}renderList();return removed}
 function draftFor(id){return drafts().get(id)}
-function syncControls(){const disabled=state.busy||!!loadingId;$('copyResource').disabled=disabled||state.uploading;$('deleteResource').disabled=disabled||state.uploading;$('editorFields').disabled=disabled;$('saveResource').disabled=disabled||state.uploading;$('saveDraft').disabled=disabled||state.uploading;$('reloadResource').disabled=disabled||state.uploading;$('newResource').disabled=state.busy||state.uploading;$('saveResource').textContent=state.busy?'正在发布…':'发布资源'}
+function syncControls(){const disabled=state.busy||!!loadingId;$('copyResource').disabled=disabled||state.uploading;$('deleteResource').disabled=disabled||state.uploading;$('editorFields').disabled=disabled;$('saveResource').disabled=disabled||state.uploading;$('saveDraft').disabled=disabled||state.uploading;$('reloadResource').disabled=disabled||state.uploading;$('newResource').disabled=state.busy||state.uploading;$('saveResource').textContent=state.busy?'正在发布…':'发布资源';$('deleteDraft').textContent=state.base?.cloudDraft?'删除云端草稿':state.base?.revision===0?'删除草稿':'删除本机草稿';$('deleteDraft').disabled=disabled||state.uploading||!state.id||(!state.base?.cloudDraft&&!draftFor(state.id)&&!state.dirty);$('discardDraft').disabled=disabled||state.uploading}
 function setLoading(id){loadingId=id;syncControls();$('resourceLoading').hidden=!id;if(id){status('正在读取所选资源…');$('resourceLoadingText').textContent='正在读取所选资源…';$('retryResource').hidden=true}else $('retryResource').hidden=true;renderList()}
 function loadedView(){if(matchMedia('(max-width:720px)').matches)$('resourceBrowser').open=false;window.scrollTo({top:0})}
 
@@ -49,13 +49,13 @@ function persistDraft(force=false){
  try{localStorage.setItem(storageKey(),JSON.stringify(rawDraft()));sessionStorage.removeItem(storageKey());state.draftPending=false;$('draftState').textContent='草稿已保存到本机，尚未发布';$('saveState').textContent=state.base.published?'修改草稿已保存 · 尚未发布':'新资源草稿已保存 · 尚未发布';renderList();return true}
  catch(error){$('draftState').textContent='本机保存失败，请导出草稿';status('无法保存本机草稿，请点击“导出草稿”保存一份',true);return false}
 }
-function changed(){state.dirty=true;state.draftPending=true;$('saveState').textContent='修改尚未暂存';clearTimeout(draftTimer);draftTimer=setTimeout(persistDraft,250);$('editorTitle').textContent=$('title').value||'未命名草稿'}
+function changed(){state.dirty=true;state.draftPending=true;syncControls();$('saveState').textContent='修改尚未暂存';clearTimeout(draftTimer);draftTimer=setTimeout(persistDraft,250);$('editorTitle').textContent=$('title').value||'未命名草稿'}
 function busy(value){state.busy=value;syncControls()}
 function canLeave(){if(state.busy||state.uploading)return false;if(!state.dirty)return true;clearTimeout(draftTimer);return persistDraft()}
 function renderList(){
  if(!state.admin)return;
- const saved=drafts(),entries=new Map(state.resources.map(r=>[r.id,{...r,published:r.published!==false}]));
- for(const [id,d]of saved){const cloud=entries.get(id);entries.set(id,{...(cloud||{id,revision:d.baseRevision,published:false}),copySourceId:d.copySourceId||d.baseSnapshot?.copySourceId||cloud?.copySourceId||null,title:d.metadata.title||cloud?.title||'未命名草稿',tags:d.metadata.tags||'',draft:d})}
+ syncControls();const saved=drafts(),entries=new Map(state.resources.filter(r=>!removedDraftIds.has(r.id)).map(r=>[r.id,{...r,published:r.published!==false}]));
+ for(const [id,d]of saved){if(removedDraftIds.has(id))continue;const cloud=entries.get(id);entries.set(id,{...(cloud||{id,revision:d.baseRevision,published:false}),copySourceId:d.copySourceId||d.baseSnapshot?.copySourceId||cloud?.copySourceId||null,title:d.metadata.title||cloud?.title||'未命名草稿',tags:d.metadata.tags||'',draft:d})}
  const query=$('resourceSearch').value.trim().toLowerCase(),filter=$('resourceFilter').value;
  const matched=[...entries.values()].filter(r=>(filter!=='drafts'||r.draft||r.cloudDraft)&&(filter!=='published'||r.published)&&(r.title+' '+r.tags+' '+r.id).toLowerCase().includes(query));
  matched.sort((a,b)=>Number(!!(b.draft||b.cloudDraft))-Number(!!(a.draft||a.cloudDraft))||(b.draft?.savedAt||0)-(a.draft?.savedAt||0));
@@ -66,7 +66,7 @@ function renderList(){
 async function loadList(force=false){
  if(listPending)return listPending;if(listLoaded&&!force){renderList();return}
  $('listStatus').textContent='正在读取资源列表…';$('refreshList').disabled=true;
- listPending=(async()=>{try{const result=await request('/api/admin/resources');if(!Array.isArray(result.resources))throw Error('资源列表格式无效');const merged=new Map(result.resources.map(r=>[r.id,r]));for(const [id,r]of listChanges)if(!merged.has(id)||merged.get(id).revision<r.revision)merged.set(id,r);state.resources=[...merged.values()];listLoaded=true;
+ listPending=(async()=>{try{const result=await request('/api/admin/resources');if(!Array.isArray(result.resources))throw Error('资源列表格式无效');for(const id of Array.isArray(result.deletedDraftIds)?result.deletedDraftIds:[]){if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{1,160}$/.test(id))continue;removedDraftIds.add(id);removeDraft(id);if(state.id===id){clearDraftView(id);status('这份云端草稿已删除，旧的本机编辑副本已移出列表。')}}const merged=new Map(result.resources.filter(r=>!removedDraftIds.has(r.id)).map(r=>[r.id,r]));for(const [id,r]of listChanges)if(!removedDraftIds.has(id)&&(!merged.has(id)||merged.get(id).revision<r.revision))merged.set(id,r);state.resources=[...merged.values()];listLoaded=true;
   for(const [id,r]of resourceCache){const current=state.resources.find(item=>item.id===id);if(!current||current.revision!==r.revision)resourceCache.delete(id)}
   $('listStatus').textContent='';$('refreshList').textContent='刷新列表';renderList()
  }catch(error){$('listStatus').textContent='资源列表读取失败：'+error.message;$('refreshList').textContent='重试列表';renderList()}finally{listPending=null;$('refreshList').disabled=false}})();return listPending;
@@ -87,6 +87,7 @@ function showResource(resource){
 }
 
 async function loadResource(id,skipGuard=false,force=false){
+ if(removedDraftIds.has(id)){status('这份草稿已删除，请选择其他资源。');return}
  if(!force&&(id===loadingId||(id===state.id&&!loadingId)))return;
  if(!skipGuard&&!canLeave())return;const turn=++navigation;
  const draft=!force&&draftFor(id);setLoading(null);$('resourceLoading').hidden=true;
@@ -271,9 +272,37 @@ $('isPinned').addEventListener('change',changed);$('addImage').onclick=()=>{if(s
 $('addLink').onclick=()=>{if(state.records.length>=64)return status('每个资源最多64组链接',true);state.records.push(emptyRecord());changed();renderLinks()};$('recognize').onclick=recognize;$('clearShareText').onclick=()=>{$('shareText').value='';$('importPreview').replaceChildren();$('importStatus').textContent='';$('shareText').focus()};
 $('addPreset').onclick=()=>{if(presetDraft.length>=20)return;$('presetStatus').textContent='';presetDraft.push({id:makeId('preset_'),label:'',value:''});renderPresets()};
 $('savePresets').onclick=async()=>{const b=$('savePresets');b.disabled=true;try{const result=await request('/api/admin/link-presets',{method:'PUT',body:JSON.stringify({baseRevision:state.presetRevision,presets:presetDraft})});state.presets=result.presets;state.presetRevision=result.revision;presetDraft=copy(result.presets);renderPresets();if(state.id)renderLinks();$('presetStatus').textContent='快捷码已保存，不会自动更改已有链接。'}catch(error){$('presetStatus').textContent=error.message}finally{b.disabled=false}};
-$('deleteDraft').onclick=()=>{if(state.busy||state.uploading||loadingId||!draftFor(state.id))return;if(!confirm('删除这份本机草稿？云端资源不变，当前表单会暂时保留。'))return;clearTimeout(draftTimer);removeDraft(state.id);state.dirty=false;state.availableDraft=null;$('draftBanner').hidden=true;$('saveState').textContent='本机草稿已删除';status('本机草稿已删除；继续修改表单会重新保存草稿。')};
+function clearDraftView(id,hide=true){
+ ++navigation;clearTimeout(draftTimer);if(hide)removedDraftIds.add(id);resourceCache.delete(id);listChanges.delete(id);state.resources=state.resources.filter(r=>r.id!==id);
+ state.id=null;state.base=null;state.copySourceId=null;state.records=[];state.images=[];state.dirty=false;state.draftPending=false;state.availableDraft=null;state.lastSubmission=null;state.restoreRevision=null;
+ setLoading(null);$('editor').hidden=true;$('welcome').hidden=false;$('draftBanner').hidden=true;$('resourceLoading').hidden=true;
+ const address=new URL(location.href);address.searchParams.delete('id');address.searchParams.delete('new');history.replaceState(null,'',address.href);renderList();
+}
+async function deleteCurrentDraft(localOnly=false){
+ if(state.busy||state.uploading||loadingId||!state.id)return;
+ const id=state.id,base=copy(state.base),cloud=!!base.cloudDraft&&!localOnly;
+ if(!cloud&&!draftFor(id)&&!state.dirty){status('当前资源没有可删除的本机草稿。');return}
+ const message=cloud?'删除这份云端草稿及当前浏览器的对应草稿？它将从草稿列表移除，历史资料和图片仍保留，原资源不变。':base.revision===0?'删除这份未发布草稿并退出编辑？原资源和已发布内容不变。':'删除本机编辑草稿并重新显示云端资料？已发布内容不变。';
+ if(!confirm(message))return;
+ clearTimeout(draftTimer);
+ if(cloud){
+  busy(true);
+  try{
+   const result=await request('/api/admin/resource',{method:'DELETE',body:JSON.stringify({contractVersion:1,cardId:id,baseRevision:base.revision,draftOnly:true})});
+   if(result.contractVersion!==1||result.cardId!==id||!result.draftDeleted)throw Error('删除结果与当前草稿不匹配，请刷新列表核对');
+   const localRemoved=removeDraft(id);clearDraftView(id);
+   status(localRemoved?'云端草稿已删除，历史资料保留；刷新后不会重新显示。':'云端草稿已删除，但本机存储清理失败，请保留导出并检查浏览器存储。',!localRemoved);
+  }catch(error){status('草稿未删除：'+error.message,true);if(state.draftPending)draftTimer=setTimeout(persistDraft,250)}finally{busy(false)}
+  return;
+ }
+ if(!removeDraft(id)){status('本机草稿删除失败，浏览器未能清理存储；内容仍保留。',true);return}
+ state.dirty=false;state.draftPending=false;state.availableDraft=null;$('draftBanner').hidden=true;
+ if(base.revision===0){clearDraftView(id);status('未发布草稿已删除；刷新后不会恢复。')}
+ else{resourceCache.delete(id);await loadResource(id,true,true);if(state.id===id&&!loadingId&&$('resourceLoading').hidden)status('本机草稿已删除，已重新显示云端资料。')}
+}
+$('deleteDraft').onclick=()=>deleteCurrentDraft();
 $('exportDraft').onclick=exportDraft;$('importDraft').onchange=async()=>{const file=$('importDraft').files[0];$('importDraft').value='';if(!file)return;try{if(file.size>3000000)throw Error('草稿文件过大');const draft=JSON.parse(await file.text());if(!confirm('将草稿载入当前表单？云端不会立即改变。'))return;applyDraft(draft)}catch(error){status(error.message,true)}};
-$('restoreDraft').onclick=()=>{try{applyDraft(state.availableDraft)}catch(error){status(error.message,true)}};$('discardDraft').onclick=()=>{if(!confirm('清除此资源的本机草稿？云端和当前表单都不会改变。'))return;removeDraft(state.id);state.availableDraft=null;$('draftBanner').hidden=true};
+$('restoreDraft').onclick=()=>{try{applyDraft(state.availableDraft)}catch(error){status(error.message,true)}};$('discardDraft').onclick=()=>deleteCurrentDraft(true);
 $('reloadResource').onclick=()=>{if(!canLeave())return;if(state.base.revision===0){status('这是尚未发布的本机草稿，没有云端版本；可继续编辑或发布。');return}loadResource(state.id,true,true)};
 $('historyDetails').addEventListener('toggle',loadHistory);
 window.addEventListener('beforeunload',event=>{if(state.busy||state.uploading||(state.dirty&&!persistDraft())){event.preventDefault();event.returnValue=''}});
@@ -321,7 +350,14 @@ for(const button of document.querySelectorAll('[data-editor-tab]'))button.onclic
 document.querySelector('.section-nav').addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight'].includes(event.key))return;event.preventDefault();const tabs=[...document.querySelectorAll('[data-editor-tab]')].filter(tab=>!tab.hidden),current=tabs.findIndex(tab=>tab.dataset.editorTab===activeEditorTab),next=tabs[(current+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length];setEditorTab(next.dataset.editorTab);next.focus()});
 
 $('resourceBrowser').addEventListener('toggle',()=>{if($('resourceBrowser').open&&state.admin)loadList().catch(error=>status(error.message,true))});
-window.addEventListener('storage',event=>{if(state.admin&&event.key?.startsWith(draftPrefix()))renderList()});
+window.addEventListener('storage',event=>{
+ if(!state.admin||!event.key?.startsWith(draftPrefix()))return;
+ if(event.newValue===null&&event.oldValue&&state.id&&event.key===storageKey()&&!draftFor(state.id)){
+  const id=state.id;clearTimeout(draftTimer);state.dirty=false;state.draftPending=false;state.availableDraft=null;
+  if(state.base?.revision===0){clearDraftView(id,false);loadList(true)}else loadResource(id,true,true);
+ }
+ renderList();
+});
 notifyHost('ready');
 boot();
 })();
