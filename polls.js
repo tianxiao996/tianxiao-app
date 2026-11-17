@@ -127,7 +127,21 @@ window.addEventListener('pagehide',()=>clearTimeout(carouselTimer));
 attachRules($('createForm'));$('reloadList').onclick=()=>{if(!busy)loadList()};$('newPoll').onclick=()=>{$('createForm').hidden=false;$('pollTitle').focus()};$('cancelCreate').onclick=()=>{$('createForm').hidden=true};
 $('createForm').onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;++selection;$('createSubmit').disabled=true;try{const j=await api('/api/polls',{method:'POST',body:JSON.stringify({title:$('pollTitle').value,description:$('pollDescription').value,participantLimit:Number($('pollLimit').value),rules:readRules($('createForm'))})});active=j.poll;await loadList();busy=false;render();$('createForm').hidden=true;$('createForm').reset();attachRules($('createForm'));const u=new URL(location.href);u.searchParams.set('id',active.id);history.replaceState(null,'',u);message('投票已发起，现已开放投稿。')}catch(e){message(e.message,true)}finally{busy=false;$('createSubmit').disabled=false}};
 $('closeImage').onclick=closeLarge;$('imageDialog').addEventListener('cancel',e=>{e.preventDefault();closeLarge()});$('previousImage').onclick=()=>{if(viewing&&viewing.index>0){viewing.index--;paintLarge()}};$('nextImage').onclick=()=>{if(viewing&&viewing.index<viewing.entry.imageUrls.length-1){viewing.index++;paintLarge()}};$('imageDialog').onkeydown=e=>{if(e.key==='ArrowLeft')$('previousImage').click();if(e.key==='ArrowRight')$('nextImage').click()};
-let theme=localStorage.getItem('tx-resource-editor-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.dataset.theme=theme;$('theme').onclick=()=>{theme=theme==='dark'?'light':'dark';document.documentElement.dataset.theme=theme;localStorage.setItem('tx-resource-editor-theme',theme)};
+// Match the main site's icons and TX_DARK_MODE preference.
+const mainThemeKey='TX_DARK_MODE',themeMedia=matchMedia('(prefers-color-scheme: dark)');
+const mainThemeIcons={light:"<svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z\"/></svg>",dark:"<svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"4\"/><line x1=\"12\" y1=\"2\" x2=\"12\" y2=\"5\"/><line x1=\"12\" y1=\"19\" x2=\"12\" y2=\"22\"/><line x1=\"2\" y1=\"12\" x2=\"5\" y2=\"12\"/><line x1=\"19\" y1=\"12\" x2=\"22\" y2=\"12\"/><line x1=\"4.22\" y1=\"4.22\" x2=\"6.34\" y2=\"6.34\"/><line x1=\"17.66\" y1=\"17.66\" x2=\"19.78\" y2=\"19.78\"/><line x1=\"4.22\" y1=\"19.78\" x2=\"6.34\" y2=\"17.66\"/><line x1=\"17.66\" y1=\"6.34\" x2=\"19.78\" y2=\"4.22\"/></svg>"};
+function savedMainTheme(){try{return localStorage.getItem(mainThemeKey)}catch(_){return null}}
+function applyVoteTheme(dark){
+ document.documentElement.dataset.theme=dark?'dark':'light';
+ const button=$('theme');button.innerHTML=mainThemeIcons[dark?'dark':'light'];
+ button.title=dark?'日间模式':'夜间模式';button.setAttribute('aria-label',dark?'切换至日间模式':'切换至夜间模式');button.setAttribute('aria-pressed',String(dark));
+}
+function syncVoteTheme(){const saved=savedMainTheme();applyVoteTheme(saved!==null?saved==='1':themeMedia.matches)}
+$('theme').onclick=()=>{const dark=document.documentElement.dataset.theme!=='dark';try{localStorage.setItem(mainThemeKey,dark?'1':'0')}catch(_){}applyVoteTheme(dark)};
+window.addEventListener('storage',event=>{if(event.key===mainThemeKey||event.key===null)syncVoteTheme()});
+window.addEventListener('pageshow',syncVoteTheme);
+themeMedia.addEventListener('change',()=>{if(savedMainTheme()===null)syncVoteTheme()});
+syncVoteTheme();
 (async()=>{if(token()){try{account=(await api('/api/account/session')).account}catch(e){message(e.message,true);if(e.status===401){sessionStorage.removeItem('ADMIN_TOKEN');localStorage.removeItem('tx_user')}}}$('accountName').textContent=account?account.username+(account.kind==='admin'?' · 管理员':''):'未登录';$('loginHint').hidden=!!account;$('newPoll').hidden=account?.kind!=='admin';const [list]=await Promise.all([loadList(),loadCarousel()]),id=new URL(location.href).searchParams.get('id');if(id)await openPoll(id);else if(list.length)await openPoll(list[0].id)})();
 window.addEventListener('beforeunload',e=>{if(busy){e.preventDefault();e.returnValue=''}});window.addEventListener('pagehide',()=>{clearPreviews();clearInterval(deadlineTimer)});
 })();

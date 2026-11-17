@@ -33,7 +33,9 @@ button,a,input,textarea,select,summary{-webkit-tap-highlight-color:transparent}
 h1{font-size:14px;font-weight:550;color:var(--muted);margin:0;white-space:nowrap}
 .header-actions{margin-left:auto;display:flex;gap:18px;align-items:center;font-size:13px;min-width:0}
 #accountName{color:var(--muted);overflow-wrap:anywhere;max-width:180px}
-#theme{display:flex;align-items:center;gap:8px;padding:7px 10px;background:transparent}
+#theme{display:flex;align-items:center;justify-content:center;flex:0 0 32px;width:32px;height:32px;box-sizing:border-box;padding:0;border:1.5px solid var(--border);border-radius:9px;background:var(--surface);color:var(--ink);box-shadow:none;transform:none;transition:background-color .15s;touch-action:manipulation;line-height:1}
+#theme:hover{background:var(--raised)}
+#theme svg{width:22px;height:22px;stroke-width:1.8}
 .back-link{text-decoration:none;color:var(--muted);white-space:nowrap}
 .back-link span{margin-left:7px;color:var(--ink)}
 main{max-width:1312px;margin:auto;padding:28px 36px max(28px,env(safe-area-inset-bottom))}
@@ -171,8 +173,7 @@ main{padding:24px}
 h1{font-size:12px}
 .header-actions{gap:8px}
 #accountName{font-size:11px;max-width:100px}
-#theme{padding:7px}
-#theme span{display:none}
+
 main{padding:18px 18px max(26px,env(safe-area-inset-bottom))}
 .workspace{display:block}
 .activity-sidebar{margin-bottom:23px}
