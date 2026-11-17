@@ -52,7 +52,7 @@ html:root body .comment-level{font-size:11px;line-height:1.35;display:inline-blo
 <script src="meme-image-manager.js?v=609f434d9cf8c65f6b9653fe396c5794f90c61f78f007644e3ac54713decf440" defer></script>
 <link rel="stylesheet" href="search-filter-ui.css?v=3dbcb880d0467fce">
 <link rel="stylesheet" href="account-identity.css?v=204d993210c5979a">
-<script src="account-identity.js?v=40f1d65ca76e547a" defer></script>
+<script src="account-identity.js?v=422add02d09b64f1" defer></script>
 <link rel="stylesheet" href="message-center.css?v=a3205997806c4f95">
 </head>
 <script id="turnstileApi" src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer onerror="window._tsLoadFailed=true">
@@ -432,6 +432,7 @@ async function saveToCloud(){
  const token=adminToken;if(!token){openUserModal();return}
  try{
   const response=await fetch(WORKER_BASE+'/api/admin/panel',{headers:{Authorization:'Bearer '+token},cache:'no-store'}),data=await response.json();
+  if(adminToken!==token)return;
   if(!response.ok){const error=Error(data.error||'管理员验证暂不可用');error.status=response.status;throw error}
   window.adminProfile=data.admin;document.getElementById('adminHeaderSlot').innerHTML=data.header||'';document.getElementById('adminMainSlot').innerHTML=data.main||'';
   isEditMode=true;adminAuditMode=false;document.body.classList.add('admin-mode');document.body.classList.toggle('admin-contributor',data.admin.role==='contributor');
