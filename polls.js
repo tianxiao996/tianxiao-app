@@ -1,5 +1,7 @@
 (function(){
 'use strict';
+// Keep the same tab's return to the main site free of a second entry slider.
+try{sessionStorage.setItem('TX_RETURN_FROM_POLLS','1')}catch(_){}
 const API='https://api.tian-xiao.com',$=id=>document.getElementById(id),PHASE={submission:'征集投稿',voting:'开放投票',closed:'已结束'};
 let account=null,active=null,busy=false,selection=0,previewURLs=[],deadlineTimer=null,viewing=null,returnFocus=null;
 const token=()=>sessionStorage.getItem('ADMIN_TOKEN')||(()=>{try{return JSON.parse(localStorage.getItem('tx_user')||'{}').sessionToken||''}catch(_){return ''}})();

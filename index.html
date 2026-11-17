@@ -4,6 +4,19 @@
 
 <html data-color-scheme-option="auto"><head>
 <meta charset="UTF-8">
+<style id="entry-gate-session-style">html[data-entry-unlocked] #gateKeeper,html[data-entry-unlocked] #contentBlocker{display:none!important}</style>
+<script id="entry-gate-session">(function(){
+function restoreEntryGate(){
+ try{
+  if(sessionStorage.getItem('TX_RETURN_FROM_POLLS')==='1'){
+   sessionStorage.setItem('TX_GATE_PASSED','1');
+   sessionStorage.removeItem('TX_RETURN_FROM_POLLS');
+  }
+  if(sessionStorage.getItem('TX_GATE_PASSED')==='1')document.documentElement.setAttribute('data-entry-unlocked','');
+ }catch(_){}
+}
+restoreEntryGate();window.addEventListener('pageshow',restoreEntryGate);
+})();</script>
 <script>if(window.top!==window.self){try{window.top.location.href=window.self.location.href}catch(e){document.documentElement.innerHTML=""}}</script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: http:; media-src 'self' https:; connect-src 'self' https://api.tian-xiao.com https://challenges.cloudflare.com https://static.cloudflareinsights.com https://cloudflareinsights.com; frame-src 'self' https://challenges.cloudflare.com; worker-src 'self' blob:; manifest-src 'self' data:; object-src 'none'; base-uri 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
