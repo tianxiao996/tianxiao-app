@@ -17,8 +17,8 @@ function attachRules(form,rules={choiceMode:'single',minChoices:1,maxChoices:1,a
 function readRules(form){const f=form.elements,single=f.choiceMode.value==='single',endsAt=f.endsAt.value?new Date(f.endsAt.value).getTime():null;if(endsAt!==null&&!Number.isFinite(endsAt))throw Error('截止时间格式无效');return {choiceMode:single?'single':'multiple',minChoices:single?1:Number(f.minChoices.value),maxChoices:single?1:Number(f.maxChoices.value),allowChange:f.allowChange.checked,resultsVisibility:f.resultsVisibility.value,endsAt}}
 function renderEmpty(kind='none'){
  const fragment=$('emptyTemplate').content.cloneNode(true);
- if(kind==='error'){fragment.querySelector('.empty-title').textContent='暂时没能读取活动';fragment.querySelector('.empty-description').textContent='请点击“刷新活动”重试，你的投稿和选票不会因此改变。';fragment.querySelector('.eyebrow').textContent='连接遇到一点问题'}
- else if(kind==='choose'){fragment.querySelector('.empty-title').textContent='选一场票选，发现新期待';fragment.querySelector('.empty-description').textContent='从活动列表选择一场投票，查看候选游戏和参与规则。'}
+ if(kind==='error'){fragment.querySelector('.empty-title').textContent='暂时没能读取活动';fragment.querySelector('.empty-description').textContent='请点击“刷新活动”重试，你的投稿和选票不会因此改变。'}
+ else if(kind==='choose'){fragment.querySelector('.empty-title').textContent='请选择投票活动';fragment.querySelector('.empty-description').textContent='从活动列表选择一场投票。'}
  $('detail').replaceChildren(fragment);
 }
 async function loadList(){
@@ -40,7 +40,7 @@ function gallery(entry){
 }
 function render(){
  clearPreviews();clearInterval(deadlineTimer);if($('imageDialog').open)closeLarge();const p=active,fragment=$('detailTemplate').content.cloneNode(true),find=s=>fragment.querySelector(s),myEntry=p.entries.find(e=>e.mine);
- document.body.classList.add('has-poll');find('.poll-heading').dataset.phase=p.status;find('.entry-count').textContent=String(p.entries.length).padStart(2,'0');find('.title').textContent=p.title;find('.phase').textContent=PHASE[p.status];find('.description').textContent=p.description;find('.meta').textContent=p.creatorName+' 发起 · '+p.entries.length+'/'+p.participantLimit+' 人投稿'+(p.resultsVisible?' · '+p.voterCount+' 人投票 · '+p.totalSelections+' 票':' · 结果暂不公开');find('.rule-summary').textContent=ruleSummary(p);find('.reload').onclick=()=>openPoll(p.id);
+ find('.poll-heading').dataset.phase=p.status;find('.entry-count').textContent=String(p.entries.length).padStart(2,'0');find('.title').textContent=p.title;find('.phase').textContent=PHASE[p.status];find('.description').textContent=p.description;find('.meta').textContent=p.creatorName+' 发起 · '+p.entries.length+'/'+p.participantLimit+' 人投稿'+(p.resultsVisible?' · '+p.voterCount+' 人投票 · '+p.totalSelections+' 票':' · 结果暂不公开');find('.rule-summary').textContent=ruleSummary(p);find('.reload').onclick=()=>openPoll(p.id);
  const manage=find('.manage');manage.hidden=!p.canManage;if(p.canManage){manage.elements.limit.value=p.participantLimit;manage.elements.phase.value=p.status;attachRules(manage,p.rules,p.rulesLocked);manage.onsubmit=e=>{e.preventDefault();mutate(()=>api('/api/polls/detail',{method:'PUT',body:JSON.stringify({id:p.id,revision:p.revision,status:manage.elements.phase.value,participantLimit:Number(manage.elements.limit.value),rules:readRules(manage)})}),'投票设置已保存')}}
  const form=find('.nominate');form.hidden=!account||p.status!=='submission'||!!myEntry||p.entries.length>=p.participantLimit;let files=[];
  const paintPreviews=()=>{clearPreviews();form.querySelector('.submission-previews').replaceChildren();for(const [index,file] of files.entries()){const figure=node('figure'),img=node('img');img.src=URL.createObjectURL(file);previewURLs.push(img.src);img.alt='待投稿图片'+(index+1);const remove=node('button','移除第'+(index+1)+'张');remove.type='button';remove.onclick=()=>{files.splice(index,1);paintPreviews()};figure.append(img,remove);form.querySelector('.submission-previews').append(figure)}form.querySelector('.image-count').textContent='已选'+files.length+'/4张，可分次添加'};
@@ -48,7 +48,7 @@ function render(){
  form.onsubmit=e=>{e.preventDefault();mutate(async()=>{const title=form.elements.title.value.trim();if(!title||files.length<1||files.length>4)throw Error('请填写游戏名称并选择1–4张图片');const body=new FormData();body.append('pollId',p.id);body.append('title',title);for(const [i,file] of files.entries()){message('正在压缩第'+(i+1)+'/'+files.length+'张图片…');const image=await compress(file);body.append('images',image,'game-'+i+'.'+({'image/webp':'webp','image/png':'png','image/jpeg':'jpg'}[image.type]))}return api('/api/polls/entries',{method:'POST',body})},'游戏已提交，等待管理员开始投票')};
  find('.participation').textContent=myEntry?'你已投稿「'+myEntry.title+'」。':p.status==='submission'&&p.entries.length>=p.participantLimit?'投稿人数已满，等待管理员开始投票。':p.status==='voting'?'选择游戏后点击提交，才会记录选票。':p.status==='closed'?'投票已结束。':'每位登录用户可投稿一款游戏，每款1–4张图片。';
  find('.result-notice').textContent=!p.resultsVisible?(p.rules.resultsVisibility==='after_vote'?'提交投票后可查看结果，活动结束后向所有人公开。':'结果在活动结束后公开。'):p.canManage&&p.status!=='closed'&&p.rules.resultsVisibility!=='always'?'管理员可查看实时结果，其他用户按公开规则查看。':p.rules.choiceMode==='multiple'?'比例按参与投票人数计算，多选的比例合计可能超过100%。':'';
- const entries=find('.entries'),selected=new Set(p.myVotes),choices=[],locked=!account||p.status!=='voting'||!p.rules.allowChange&&p.myVotes.length>0;if(!p.entries.length){const empty=node('div',undefined,'candidates-empty');empty.append(node('span','第一份期待，会是谁的？','empty-candidate-title'),node('p',p.status==='submission'?'候选席位已就绪，等待大家投稿喜欢的游戏。':'当前活动还没有候选游戏。'));entries.append(empty)}
+ const entries=find('.entries'),selected=new Set(p.myVotes),choices=[],locked=!account||p.status!=='voting'||!p.rules.allowChange&&p.myVotes.length>0;if(!p.entries.length){const empty=node('div',undefined,'candidates-empty');empty.append(node('span','暂无候选游戏','empty-candidate-title'),node('p',p.status==='submission'?'投稿后会显示在这里。':'当前活动还没有候选游戏。'));entries.append(empty)}
  const submit=find('.submit-ballot'),withdraw=find('.withdraw-ballot'),countLabel=find('.selection-count'),identical=()=>selected.size===p.myVotes.length&&p.myVotes.every(id=>selected.has(id));
  const updateSelection=()=>{for(const {card,input} of choices){input.checked=selected.has(input.value);card.classList.toggle('selected',input.checked)}countLabel.textContent='已选 '+selected.size+' 款 · '+(p.rules.choiceMode==='single'?'请选择一款':'须选 '+p.rules.minChoices+'–'+p.rules.maxChoices+' 款');submit.disabled=!!locked||selected.size<p.rules.minChoices||selected.size>p.rules.maxChoices||identical();submit.textContent=identical()&&p.myVotes.length?'已提交投票':p.myVotes.length?'保存改投':'提交投票'};
  for(const [entryIndex,e] of p.entries.entries()){const card=node('article',undefined,'entry'),body=node('div',undefined,'entry-body');body.append(node('span','候选 '+String(entryIndex+1).padStart(2,'0'),'candidate-number'),node('h3',e.title),node('p',e.submitterName+' 投稿'+(e.mine?' · 我的投稿':''),'entry-meta'));const row=node('div',undefined,'vote-row');if(p.resultsVisible){const meter=node('progress',undefined,'meter');meter.max=Math.max(1,p.voterCount);meter.value=e.votes;meter.setAttribute('aria-label',e.title+'，'+e.votes+'票');body.append(meter);row.append(node('strong',e.votes+' 票'))}else row.append(node('span','结果暂未公开','hint'));
@@ -57,13 +57,77 @@ function render(){
  $('detail').replaceChildren(fragment);for(const b of document.querySelectorAll('#pollList button')){const current=b.dataset.pollId===p.id;b.setAttribute('aria-current',String(current));if(current){b.dataset.phase=p.status;b.querySelector('small').textContent=PHASE[p.status]+' · '+(p.rules.choiceMode==='multiple'?'多选':'单选')+' · '+p.entries.length+'/'+p.participantLimit+' 人投稿'+(p.resultsVisible?' · '+p.totalSelections+' 票':' · 结果未公开')}}const activityList=$('pollList'),currentActivity=activityList.querySelector('[aria-current=true]');if(currentActivity&&activityList.scrollWidth>activityList.clientWidth){activityList.scrollLeft+=currentActivity.getBoundingClientRect().left-activityList.getBoundingClientRect().left}startDeadline(p);
 }
 async function mutate(action,success){if(busy)return;busy=true;++selection;const controls=[...document.querySelectorAll('button,input,textarea,select')],old=controls.map(n=>n.disabled);controls.forEach(n=>n.disabled=true);try{const j=await action();active=j.poll;await loadList();busy=false;render();message(success)}catch(e){message(e.message,true)}finally{controls.forEach((n,i)=>{if(n.isConnected)n.disabled=old[i]});busy=false}}
-async function compress(file){
- if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>12*1024*1024)throw Error('请选择12MB以内的JPG、PNG或WebP图片');const image=await createImageBitmap(file);try{if(!image.width||!image.height||image.width*image.height>40000000)throw Error('图片尺寸过大');const scale=Math.min(1,960/Math.max(image.width,image.height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);for(const type of ['image/webp','image/jpeg']){if(type==='image/jpeg'){const paint=canvas.getContext('2d');paint.globalCompositeOperation='destination-over';paint.fillStyle='#fff';paint.fillRect(0,0,canvas.width,canvas.height);paint.globalCompositeOperation='source-over'}for(const quality of [.8,.65,.5]){const blob=await new Promise(r=>canvas.toBlob(r,type,quality));if(blob&&blob.size<=800000&&['image/webp','image/png','image/jpeg'].includes(blob.type))return blob;if(blob?.type!==type)break}}throw Error('图片仍过大，请选择较小的图片')}finally{image.close()}
+async function compress(file,maxEdge=960){
+ if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>12*1024*1024)throw Error('请选择12MB以内的JPG、PNG或WebP图片');const image=await createImageBitmap(file);try{if(!image.width||!image.height||image.width*image.height>40000000)throw Error('图片尺寸过大');const scale=Math.min(1,maxEdge/Math.max(image.width,image.height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);for(const type of ['image/webp','image/jpeg']){if(type==='image/jpeg'){const paint=canvas.getContext('2d');paint.globalCompositeOperation='destination-over';paint.fillStyle='#fff';paint.fillRect(0,0,canvas.width,canvas.height);paint.globalCompositeOperation='source-over'}for(const quality of [.8,.65,.5]){const blob=await new Promise(r=>canvas.toBlob(r,type,quality));if(blob&&blob.size<=800000&&['image/webp','image/png','image/jpeg'].includes(blob.type))return blob;if(blob?.type!==type)break}}throw Error('图片仍过大，请选择较小的图片')}finally{image.close()}
 }
+// Runs inside the voting page's existing scope; no second account or API client.
+let carousel={slides:[],canManage:false,maxSlides:20},carouselCurrent=null,carouselTimer=null,carouselHovered=false,carouselFocused=false,carouselUploadTarget=null;
+const carouselReduced=matchMedia('(prefers-reduced-motion:reduce)');
+function carouselSlide(){return carousel.slides.find(s=>s.id===carouselCurrent)||null}
+function carouselSchedule(){
+ clearTimeout(carouselTimer);
+ if(carousel.slides.filter(s=>s.imageUrl).length<2||carouselReduced.matches||document.hidden||carouselHovered||carouselFocused||!carouselSlide()?.imageUrl)return;
+ carouselTimer=setTimeout(()=>{if(!busy){const ready=carousel.slides.filter(s=>s.imageUrl),i=ready.findIndex(s=>s.id===carouselCurrent);carouselCurrent=ready[(i+1)%ready.length].id;paintCarousel()}else carouselSchedule()},6000);
+}
+function paintCarousel(){
+ const region=$('pollCarousel'),slide=carouselSlide(),image=$('pollCarouselImage');
+ region.hidden=!carousel.canManage&&!carousel.slides.some(s=>s.imageUrl);
+ $('carouselTools').hidden=!carousel.canManage;
+ $('carouselNew').disabled=busy;
+ $('carouselDelete').disabled=busy||!slide?.canEdit;
+ $('carouselUpload').disabled=busy||!!slide&&!slide.canEdit;
+ $('carouselPrevious').hidden=$('carouselNext').hidden=carousel.slides.length<2;
+ $('carouselPrevious').disabled=$('carouselNext').disabled=busy;
+ $('carouselPosition').textContent=carousel.slides.length?String(carousel.slides.findIndex(s=>s.id===carouselCurrent)+1)+' / '+carousel.slides.length:'0 / 0';
+ image.hidden=!slide?.imageUrl;
+ $('carouselHint').hidden=!!slide?.imageUrl;
+ $('carouselHint').textContent=slide?'点击左下角“上传”添加图片':'暂无轮播图';
+ if(slide?.imageUrl){const src=API+slide.imageUrl;if(image.getAttribute('src')!==src)image.src=src;image.alt='投票轮播图，第'+(carousel.slides.findIndex(s=>s.id===carouselCurrent)+1)+'张'}else image.removeAttribute('src');
+ const dots=$('carouselDots');dots.replaceChildren();
+ carousel.slides.forEach((s,i)=>{const b=node('button');b.type='button';b.setAttribute('aria-label','查看第'+(i+1)+'张轮播图');b.setAttribute('aria-pressed',String(s.id===carouselCurrent));b.disabled=busy;b.onclick=()=>{carouselCurrent=s.id;paintCarousel()};dots.append(b)});
+ carouselSchedule();
+}
+function carouselApply(j){
+ const oldIndex=carousel.slides.findIndex(s=>s.id===carouselCurrent);carousel=j.carousel;
+ carouselCurrent=j.selectedId||carousel.slides.find(s=>s.id===carouselCurrent)?.id||carousel.slides[Math.max(0,Math.min(oldIndex,carousel.slides.length-1))]?.id||null;
+}
+async function loadCarousel(){
+ try{carouselApply(await api('/api/polls/carousel'));paintCarousel()}catch(e){if(account?.kind==='admin')message('轮播图加载失败：'+e.message,true)}
+}
+async function carouselMutate(action,success){
+ if(busy)return;busy=true;clearTimeout(carouselTimer);
+ const controls=[...document.querySelectorAll('button,input,textarea,select')],old=controls.map(n=>n.disabled);controls.forEach(n=>n.disabled=true);
+ try{const result=await action();carouselApply(result);message(result.cleanupPending?'操作已保存，但 R2 图片清理暂未完成，系统会自动重试':success,!!result.cleanupPending)}catch(e){message(e.message,true);try{carouselApply(await api('/api/polls/carousel'))}catch(_){} }
+ finally{controls.forEach((n,i)=>{if(n.isConnected)n.disabled=old[i]});busy=false;paintCarousel()}
+}
+function carouselMove(step){if(busy||carousel.slides.length<2)return;const i=carousel.slides.findIndex(s=>s.id===carouselCurrent);carouselCurrent=carousel.slides[(i+step+carousel.slides.length)%carousel.slides.length].id;paintCarousel()}
+$('carouselNew').onclick=()=>carouselMutate(()=>api('/api/polls/carousel',{method:'POST',body:'{}'}),'已新增图片位置，请点击上传');
+$('carouselDelete').onclick=()=>{const slide=carouselSlide();if(!slide?.canEdit)return;carouselMutate(()=>api('/api/polls/carousel',{method:'DELETE',body:JSON.stringify({id:slide.id,revision:slide.revision})}),'轮播图及 R2 图片已删除')};
+$('carouselUpload').onclick=()=>{if(!busy){carouselUploadTarget=carouselSlide();$('carouselFile').value='';$('carouselFile').click()}};
+$('carouselFile').onchange=()=>{
+ const file=$('carouselFile').files[0];$('carouselFile').value='';if(!file)return;
+ const target=carouselUploadTarget;carouselUploadTarget=null;
+ carouselMutate(async()=>{
+  message('正在压缩并上传轮播图片…');const blob=await compress(file,1600);let slide=target;
+  if(!slide){const created=await api('/api/polls/carousel',{method:'POST',body:'{}'});carouselApply(created);slide=carouselSlide()}
+  const body=new FormData();body.append('id',slide.id);body.append('revision',String(slide.revision));body.append('image',blob,'carousel.'+({'image/webp':'webp','image/png':'png','image/jpeg':'jpg'}[blob.type]));
+  return api('/api/polls/carousel/upload',{method:'POST',body});
+ },'轮播图片已保存');
+};
+$('carouselPrevious').onclick=()=>carouselMove(-1);$('carouselNext').onclick=()=>carouselMove(1);
+$('pollCarouselImage').onerror=()=>{if(carouselSlide()?.imageUrl){$('pollCarouselImage').hidden=true;$('carouselHint').hidden=false;$('carouselHint').textContent='图片加载失败，请切换图片或刷新重试'}};
+$('pollCarousel').onkeydown=e=>{if(e.key==='ArrowLeft'){e.preventDefault();carouselMove(-1)}if(e.key==='ArrowRight'){e.preventDefault();carouselMove(1)}};
+$('pollCarousel').addEventListener('pointerenter',()=>{carouselHovered=true;clearTimeout(carouselTimer)});
+$('pollCarousel').addEventListener('pointerleave',()=>{carouselHovered=false;carouselSchedule()});
+$('pollCarousel').addEventListener('focusin',()=>{carouselFocused=true;clearTimeout(carouselTimer)});
+$('pollCarousel').addEventListener('focusout',e=>{if(!$('pollCarousel').contains(e.relatedTarget)){carouselFocused=false;carouselSchedule()}});
+document.addEventListener('visibilitychange',carouselSchedule);carouselReduced.addEventListener('change',carouselSchedule);
+window.addEventListener('pagehide',()=>clearTimeout(carouselTimer));
+
 attachRules($('createForm'));$('reloadList').onclick=()=>{if(!busy)loadList()};$('newPoll').onclick=()=>{$('createForm').hidden=false;$('pollTitle').focus()};$('cancelCreate').onclick=()=>{$('createForm').hidden=true};
 $('createForm').onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;++selection;$('createSubmit').disabled=true;try{const j=await api('/api/polls',{method:'POST',body:JSON.stringify({title:$('pollTitle').value,description:$('pollDescription').value,participantLimit:Number($('pollLimit').value),rules:readRules($('createForm'))})});active=j.poll;await loadList();busy=false;render();$('createForm').hidden=true;$('createForm').reset();attachRules($('createForm'));const u=new URL(location.href);u.searchParams.set('id',active.id);history.replaceState(null,'',u);message('投票已发起，现已开放投稿。')}catch(e){message(e.message,true)}finally{busy=false;$('createSubmit').disabled=false}};
 $('closeImage').onclick=closeLarge;$('imageDialog').addEventListener('cancel',e=>{e.preventDefault();closeLarge()});$('previousImage').onclick=()=>{if(viewing&&viewing.index>0){viewing.index--;paintLarge()}};$('nextImage').onclick=()=>{if(viewing&&viewing.index<viewing.entry.imageUrls.length-1){viewing.index++;paintLarge()}};$('imageDialog').onkeydown=e=>{if(e.key==='ArrowLeft')$('previousImage').click();if(e.key==='ArrowRight')$('nextImage').click()};
 let theme=localStorage.getItem('tx-resource-editor-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.dataset.theme=theme;$('theme').onclick=()=>{theme=theme==='dark'?'light':'dark';document.documentElement.dataset.theme=theme;localStorage.setItem('tx-resource-editor-theme',theme)};
-(async()=>{if(token()){try{account=(await api('/api/account/session')).account}catch(e){message(e.message,true);if(e.status===401){sessionStorage.removeItem('ADMIN_TOKEN');localStorage.removeItem('tx_user')}}}$('accountName').textContent=account?account.username+(account.kind==='admin'?' · 管理员':''):'未登录';$('loginHint').hidden=!!account;$('newPoll').hidden=account?.kind!=='admin';const list=await loadList(),id=new URL(location.href).searchParams.get('id');if(id)await openPoll(id);else if(list.length)await openPoll(list[0].id)})();
+(async()=>{if(token()){try{account=(await api('/api/account/session')).account}catch(e){message(e.message,true);if(e.status===401){sessionStorage.removeItem('ADMIN_TOKEN');localStorage.removeItem('tx_user')}}}$('accountName').textContent=account?account.username+(account.kind==='admin'?' · 管理员':''):'未登录';$('loginHint').hidden=!!account;$('newPoll').hidden=account?.kind!=='admin';const [list]=await Promise.all([loadList(),loadCarousel()]),id=new URL(location.href).searchParams.get('id');if(id)await openPoll(id);else if(list.length)await openPoll(list[0].id)})();
 window.addEventListener('beforeunload',e=>{if(busy){e.preventDefault();e.returnValue=''}});window.addEventListener('pagehide',()=>{clearPreviews();clearInterval(deadlineTimer)});
 })();
