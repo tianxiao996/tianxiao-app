@@ -55,21 +55,9 @@
     document.body.prepend(backdrop);
     images = [...backdrop.querySelectorAll('img')];
     const heading = document.createElement('div');
-    heading.className = 'illustration-section-label'; heading.setAttribute('role','heading');
-    heading.setAttribute('aria-level','2');
-    const title = document.createElement('span');
-    const count = document.createElement('small');
-    title.className = 'catalogue-heading-text';
-    heading.append(title, count);
+    heading.className = 'illustration-section-label'; heading.textContent = '作品一览';
     const box = document.getElementById('box');
-    if (box && box.parentNode === main) {
-      main.insertBefore(heading, box);
-      window.updateCatalogueHeading = function () {
-        title.textContent = box.dataset.catalogueTitle || '作品一览';
-        count.textContent = box.dataset.catalogueCount && box.children.length ? box.dataset.catalogueCount + ' 部' : '';
-      };
-      window.updateCatalogueHeading();
-    }
+    if (box && box.parentNode === main) main.insertBefore(heading, box);
     document.addEventListener('visibilitychange', schedule);
     reduced.addEventListener('change', schedule);
     if (navigator.connection && navigator.connection.addEventListener) navigator.connection.addEventListener('change', schedule);
