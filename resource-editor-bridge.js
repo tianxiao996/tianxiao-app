@@ -37,7 +37,7 @@ root.enterAdmin=async function(...args){
  document.getElementById('openRemarkSettings')?.remove();if(buttons&&root.adminProfile?.role==='owner'){const settings=node('button','','快捷备注设置');settings.id='openRemarkSettings';settings.type='button';settings.onclick=()=>root.openResourceEditor(null,{settings:'remarks'});buttons.append(settings)}root.renderResourceEditEntries();return result;
 };
 function displayCard(id,revision,m){
- const card=node('div','card'+(m.isPinned?' is-pinned':'')+(m.isFav?' is-fav':''));card.dataset.cardId=id;card.dataset.resourceRevision=String(revision);card.dataset.directDownload=m.directDl||'';
+ const card=node('div','card'+(m.isPinned?' is-pinned':'')+(m.isFav?' is-fav':''));card.dataset.cardId=id;card.dataset.resourceRevision=String(revision);
  if('size' in m)card.dataset.resourceSize=JSON.stringify(m.size);
  for(const [field,attr]of [['rjCode','resourceRj'],['company','resourceCompany'],['translationTeam','resourceTranslation'],['officialUrl','resourceOfficialUrl']])if(field in m)card.dataset[attr]=m[field];
  const slider=node('div','slider-box'),previous=node('button','slide-btn prev','‹'),next=node('button','slide-btn next','›');previous.onclick=()=>changeSlide(previous,-1);next.onclick=()=>changeSlide(next,1);previous.type=next.type='button';slider.append(previous);
@@ -62,7 +62,7 @@ async function syncRevision(data){
 async function applySaved(data){
  if(root.adminProfile?.role==='contributor')root.adminEditableResourceIds?.add(data.resourceId);
  const box=document.getElementById('box'),old=box.querySelector('[data-card-id="'+CSS.escape(data.resourceId)+'"]'),scroll=document.getElementById('mainScroll'),top=scroll?.scrollTop||0;
- if(data.published){if(!data.metadata||data.metadata.id!==data.resourceId||!Array.isArray(data.metadata.images))return;const card=displayCard(data.resourceId,data.revision,data.metadata);if(old)old.replaceWith(card);else box.prepend(card);initSliderTrack(card.querySelector('.slider-box'))}
+ if(data.published){if(!data.metadata||data.metadata.id!==data.resourceId||!Array.isArray(data.metadata.images))return;const card=displayCard(data.resourceId,data.revision,data.metadata);card.dataset.hasExternal=data.hasExternal?'1':'0';card.dataset.hasCloud=data.hasCloud===false?'0':'1';if(old)old.replaceWith(card);else box.prepend(card);initSliderTrack(card.querySelector('.slider-box'))}
  else old?.remove();
  initCardFavorites();refreshUI();root.ResourceSize?.render();root.ResourceWork?.render();initImagePreview();root.applyViewCounts?.();root.updateNavCounts?.();autoSave();if(scroll)scroll.scrollTop=top;
  await syncRevision(data);

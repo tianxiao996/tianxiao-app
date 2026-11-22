@@ -11,7 +11,7 @@ let pendingRemarkSettings=false;
 if(embedded)document.documentElement.classList.add('embedded-editor');
 window.addEventListener('message',event=>{if(!embedded||event.origin!==location.origin||event.source!==window.parent||event.data?.channel!==hostChannel)return;if(event.data.type==='resource-editor:request-close')leaveEditor();else if(event.data.type==='resource-editor:open-settings'&&event.data.settings==='remarks'){pendingRemarkSettings=true;openRemarkSettings()}});
 window.addEventListener('keydown',event=>{if(embedded&&event.key==='Escape'){event.preventDefault();leaveEditor()}});
-const names=['title','tags','rjCode','company','translationTeam','desc','directDl','officialUrl'];
+const names=['title','tags','rjCode','company','translationTeam','desc','officialUrl'];
 const makeId=prefix=>prefix+crypto.randomUUID().replaceAll('-','');
 function el(tag,cls,text){const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node}
 function button(text,action,cls){const node=el('button',cls,text);node.type='button';node.addEventListener('click',action);return node}
@@ -115,7 +115,8 @@ function parseSize(value){const text=value.trim();if(!text)return null;const mat
 function payload(){
  const metadata={...state.base.metadata,id:state.id};for(const name of names)metadata[name]=$(name).value;
  metadata.images=state.images.map(image=>image.url.trim());metadata.isPinned=state.admin.role==='owner'?$('isPinned').checked:!!state.base.metadata.isPinned;
- if(state.admin.role!=='owner'){metadata.directDl=state.base.metadata.directDl||'';metadata.isFav=!!state.base.metadata.isFav}
+ metadata.directDl='';
+ if(state.admin.role!=='owner'){metadata.isFav=!!state.base.metadata.isFav}
  if($('size').value!==(state.base.metadata.size?.label||''))metadata.size=parseSize($('size').value);
  if(!metadata.title.trim()){setEditorTab('basic');$('title').focus();throw Error('请填写资源标题')}
  metadata.officialUrl=metadata.officialUrl.trim();if(metadata.officialUrl&&!safeUrl(metadata.officialUrl)){setEditorTab('basic');$('officialUrl').focus();throw Error('正版链接请填写完整的 HTTP/HTTPS 网址，或留空')}
@@ -164,7 +165,7 @@ function linkField(record,index,key,name,max){const label=el('label',['url','rem
 }
 function renderLinks(){
  $('links').replaceChildren();$('linkCount').textContent=state.records.length+' 组';$('linkState').textContent='当前表单 '+state.records.length+' 组'+(state.base.published?' · 云端 '+state.base.records.length+' 组':' · 尚未发布');
- state.records.forEach((record,index)=>{const card=el('article','link-card');card.dataset.linkId=record.id;const head=rowHeader('链接 '+(index+1),state.records,index,renderLinks);head.append(el('small','',record.id));card.append(head);const fields=el('div','fields');
+ state.records.forEach((record,index)=>{const card=el('article','link-card');card.dataset.linkId=record.id;const head=rowHeader((record.channel==='external'?'外盘下载 ':'网盘链接 ')+(index+1),state.records,index,renderLinks);head.append(el('small','',record.id));card.append(head);const fields=el('div','fields');
   for(const [key,label,max] of [['url','链接',4096],['driveName','网盘名称',100],['extractionCode','提取码',500],['unzipPassword','解压码',2000],['remark','备注',2000]]){
    const field=linkField(record,index,key,label,max);
    if(key==='unzipPassword'&&state.presets.length){const quick=el('div','quick-code'),select=el('select');select.setAttribute('aria-label','第'+(index+1)+'组快捷解压码');const blank=el('option','','快捷解压码');blank.value='';select.append(blank);for(const preset of state.presets){const option=el('option','',preset.label);option.value=preset.id;select.append(option)}const input=field.querySelector('input');select.onchange=()=>{const preset=state.presets.find(p=>p.id===select.value);if(!preset)return;record.unzipPassword=preset.value;input.value=preset.value;changed()};quick.append(input,select);field.append(quick)}if(key==='remark'){const select=el('select');select.className='quick-remark';select.setAttribute('aria-label','第'+(index+1)+'组快捷备注');const blank=el('option','',state.remarks.length?'选择快捷备注':!state.remarksLoaded?'正在读取快捷备注':state.remarksError?'快捷备注读取失败':'暂无快捷备注');blank.value='';select.disabled=!state.remarks.length;select.append(blank);for(const preset of state.remarks){const option=el('option','',preset.label);option.value=preset.id;select.append(option)}select.onchange=()=>{const preset=state.remarks.find(p=>p.id===select.value);if(!preset)return;record.remark=preset.value;field.querySelector('textarea').value=preset.value;changed();select.value=''};field.append(select);if(state.admin.role==='owner')field.append(button('设置快捷备注',openRemarkSettings,'quick-remark-settings'));if(state.remarksError)field.append(button('重试读取快捷备注',loadRemarks))}fields.append(field)
@@ -200,7 +201,7 @@ async function save(event){
  if(!body.records.length&&!confirm(state.base.published&&state.base.records.length?'这将清空当前已发布资源的 '+state.base.records.length+' 组下载链接。资源 ID：'+state.id+'。确认仍要发布这份空链接内容吗？':'此资源没有下载链接，仍要保存云端吗？'))return;
  const beforeSiteRevision=state.base.siteRevision;const fingerprint=JSON.stringify(body);if(state.lastSubmission?.fingerprint!==fingerprint)state.lastSubmission={fingerprint,requestId:makeId('edit_')};body.requestId=state.lastSubmission.requestId;persistDraft(true);busy(true);status('正在保存当前资源的资料、图片和链接…');
  try{const result=await request('/api/admin/resource',{method:'POST',body:JSON.stringify(body)});if(result.contractVersion!==1||result.resource.id!==state.id)throw Error('保存响应与当前资源不匹配，请保留草稿并重新读取核对');
-  clearTimeout(draftTimer);const key=storageKey();removeDraft(state.id);resourceCache.set(state.id,copy(result.resource));showResource(result.resource);$('saveState').textContent=result.unchanged?'内容未变，仍为当前云端版本':'已保存云端 · 版本 '+result.resource.revision;status('当前资源已保存云端，其他资源和站点设置未改动。');notifyHost('saved',{resourceId:result.resource.id,revision:result.resource.revision,metadata:result.resource.metadata,published:result.resource.published,siteRevision:result.resource.siteRevision,beforeSiteRevision,changed:!result.unchanged});
+  clearTimeout(draftTimer);const key=storageKey();removeDraft(state.id);resourceCache.set(state.id,copy(result.resource));showResource(result.resource);$('saveState').textContent=result.unchanged?'内容未变，仍为当前云端版本':'已保存云端 · 版本 '+result.resource.revision;status('当前资源已保存云端，其他资源和站点设置未改动。');notifyHost('saved',{resourceId:result.resource.id,revision:result.resource.revision,metadata:result.resource.metadata,hasExternal:result.resource.records.some(r=>r.channel==='external'),hasCloud:result.resource.records.some(r=>r.channel!=='external'),published:result.resource.published,siteRevision:result.resource.siteRevision,beforeSiteRevision,changed:!result.unchanged});
 
   const summary={id:result.resource.id,publisherAccountId:result.resource.publisherAccountId,title:result.resource.metadata.title,tags:result.resource.metadata.tags,revision:result.resource.revision,createdAt:result.resource.createdAt||0,published:result.resource.published,copySourceId:result.resource.copySourceId||null},index=state.resources.findIndex(r=>r.id===summary.id);listChanges.set(summary.id,summary);if(index>=0)state.resources[index]=summary;else state.resources.unshift(summary);renderList();
  }catch(error){status(error.message,true);$('saveState').textContent='尚未确认保存，编辑内容已保留';persistDraft()}
@@ -272,6 +273,12 @@ $('copyResource').onclick=copyResource;
 $('newResource').onclick=()=>createResource();$('resourceSearch').oninput=renderList;$('resourceFilter').onchange=renderList;$('refreshList').onclick=()=>loadList(true);$('saveDraft').onclick=()=>{clearTimeout(draftTimer);if(persistDraft())status('草稿已保存，可在资源列表的“草稿”中继续编辑；尚未发布。')};
 $('editor').addEventListener('submit',save);$('editor').addEventListener('input',event=>{if(event.target.closest('#basic'))changed()});
 $('isPinned').addEventListener('change',changed);$('addImage').onclick=()=>{if(state.images.length>=100)return status('每个资源最多100张图片',true);state.images.push({id:makeId('img_'),url:''});state.imageIndex=state.images.length-1;changed();renderImages()};$('imageUpload').onchange=()=>uploadImages();$('replaceUpload').onchange=()=>uploadImages(true);
+$('addExternalLink').onclick=()=>{
+ if(state.records.length>=64)return status('每个资源最多64组链接',true);
+ state.records.push({...emptyRecord(),channel:'external'});
+ changed();renderLinks();
+ $('links').lastElementChild?.querySelector('input')?.focus();
+};
 $('addLink').onclick=()=>{if(state.records.length>=64)return status('每个资源最多64组链接',true);state.records.push(emptyRecord());changed();renderLinks()};$('recognize').onclick=recognize;$('clearShareText').onclick=()=>{$('shareText').value='';$('importPreview').replaceChildren();$('importStatus').textContent='';$('shareText').focus()};
 $('addPreset').onclick=()=>{if(presetDraft.length>=20)return;$('presetStatus').textContent='';presetDraft.push({id:makeId('preset_'),label:'',value:''});renderPresets()};
 $('savePresets').onclick=async()=>{const b=$('savePresets');b.disabled=true;try{const result=await request('/api/admin/link-presets',{method:'PUT',body:JSON.stringify({baseRevision:state.presetRevision,presets:presetDraft})});state.presets=result.presets;state.presetRevision=result.revision;presetDraft=copy(result.presets);renderPresets();if(state.id)renderLinks();$('presetStatus').textContent='快捷码已保存，不会自动更改已有链接。'}catch(error){$('presetStatus').textContent=error.message}finally{b.disabled=false}};
