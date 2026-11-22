@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="resource-editor.css?v=93b189e02583daa2">
 <script src="link-editor.js?v=1b7552e0a142" defer></script>
 <script src="resource-image-tools.js?v=9caf76ecff9a8f7a0aef314f0232ffd304c6d58545f6aff3442119c2c370e272" defer></script>
-<script src="resource-editor.js?v=0f38c2d1ac2975b5" defer></script>
+<script src="resource-editor.js?v=48a6fc216ec9966a" defer></script>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/site-icons/cat-f881eec6c104-32.png">
 <link rel="icon" type="image/svg+xml" sizes="any" href="assets/site-icons/cat-face-e758088f6eb0.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/site-icons/cat-f881eec6c104-180.png">
@@ -20,7 +20,7 @@
 <p id="status" class="status" role="status" aria-live="polite">正在读取管理员信息…</p>
 <section id="locked" class="empty" hidden><h1 id="accessTitle">正在验证管理员</h1><p id="accessMessage" role="status"></p><div class="toolbar"><button id="retryAccess" type="button" hidden>重新验证</button><a id="accessReturn" class="primary button-link" href="./">返回网站</a></div></section>
 <div id="workspace" class="workspace" hidden>
-<aside><button id="newResource" class="primary wide" type="button">新增资源</button><details id="resourceBrowser"><summary>切换资源 <span id="resourceCount"></span></summary><label class="search-label"><span>搜索资源</span><input id="resourceSearch" type="search" placeholder="标题、编号或标签" autocomplete="off"></label><div class="resource-list-tools"><select id="resourceFilter" aria-label="资源状态"><option value="all">全部资源</option><option value="drafts">草稿</option><option value="published">已发布</option></select><button id="refreshList" type="button">刷新列表</button></div><p id="draftCount" class="hint"></p><p id="listStatus" class="hint" role="status"></p><div id="resourceList" class="resource-list"></div></details><p class="aside-note">每次只保存当前资源。其他资源和站点设置不会随表单一起提交。</p></aside>
+<aside><button id="newResource" class="primary wide" type="button">新增资源</button><details id="resourceBrowser"><summary>切换资源 <span id="resourceCount"></span></summary><label class="search-label"><span>搜索资源</span><input id="resourceSearch" type="search" placeholder="标题、编号或标签" autocomplete="off"></label><div class="resource-list-tools"><select id="resourceFilter" aria-label="资源状态"><option value="all">全部资源</option><option value="mine">我的发布</option><option value="drafts">草稿</option><option value="published">已发布</option></select><button id="refreshList" type="button">刷新列表</button></div><p id="draftCount" class="hint"></p><p id="listStatus" class="hint" role="status"></p><div id="resourceList" class="resource-list"></div></details><p class="aside-note">每次只保存当前资源。其他资源和站点设置不会随表单一起提交。</p></aside>
 <main><div id="resourceLoading" class="notice" role="status" hidden><span id="resourceLoadingText"></span><button id="retryResource" type="button" hidden>重试读取</button></div>
 <section id="welcome" class="empty"><h1>集中编辑一份资源</h1><p>切换资源，或点击新增。标题、图片、作品信息和下载链接在同一个页面管理。</p></section>
 <details id="remarkManager" class="subpanel owner-field"><summary>管理快捷备注</summary><p class="hint">最多20条，支持换行。选择后直接填入备注；修改预设不会改动已有链接。</p><div id="remarkRows"></div><div class="toolbar"><button id="addRemark" type="button">添加快捷备注</button><button id="saveRemarks" type="button">保存快捷备注</button></div><p id="remarkStatus" class="hint" role="status"></p></details>

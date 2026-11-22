@@ -6,6 +6,7 @@ root.renderResourceEditEntries=function(){
  for(const card of document.querySelectorAll('#box>.card')){
   card.querySelectorAll('.resource-edit-entry').forEach(el=>el.remove());
   if(!root.adminToken||!['owner','contributor'].includes(root.adminProfile?.role)||!document.body.classList.contains('admin-mode')||adminAuditMode)continue;
+  if(root.adminProfile?.role==='contributor'&&!root.adminEditableResourceIds?.has(card.dataset.cardId))continue;
   const slot=card.querySelector('.card-preview-bottom');if(!slot)continue;
   const edit=node('button','resource-edit-entry','编辑资源');edit.type='button';edit.onclick=event=>{event.stopPropagation();root.openResourceEditor(card.dataset.cardId)};slot.append(edit);
  }
@@ -19,7 +20,7 @@ function closeHost(){
 function requestClose(){if(!host)return;if(!host.ready){closeHost();return}host.frame.contentWindow.postMessage({type:'resource-editor:request-close',channel:host.channel},location.origin)}
 root.openResourceEditor=function(id,options={}){
  if(!root.adminToken){root.showToast?.('请先登录管理员');return}if(host){if(options.settings==='remarks')host.frame.contentWindow.postMessage({type:'resource-editor:open-settings',settings:'remarks',channel:host.channel},location.origin);host.frame.focus();return}
- const channel=crypto.randomUUID(),url=new URL('admin-resource.html',location.href);url.searchParams.set('embedded','1');if(options.settings==='remarks')url.searchParams.set('settings','remarks');url.searchParams.set('editorChannel',channel);url.searchParams.set('siteRevision',String(root.resourceSiteRevision||0));if(id==='new')url.searchParams.set('new','1');else if(id)url.searchParams.set('id',id);
+ const channel=crypto.randomUUID(),url=new URL('admin-resource.html',location.href);url.searchParams.set('embedded','1');if(options.settings==='remarks')url.searchParams.set('settings','remarks');if(options.mine)url.searchParams.set('mine','1');url.searchParams.set('editorChannel',channel);url.searchParams.set('siteRevision',String(root.resourceSiteRevision||0));if(id==='new')url.searchParams.set('new','1');else if(id)url.searchParams.set('id',id);
  const layer=node('section','resource-editor-host'),frame=node('iframe'),close=node('button','resource-editor-host-close','×');layer.id='resourceEditorHost';layer.setAttribute('role','dialog');layer.setAttribute('aria-modal','true');layer.setAttribute('aria-label','资源编辑');frame.title='资源编辑';frame.src=url.href;close.type='button';close.setAttribute('aria-label','关闭资源编辑');close.onclick=requestClose;layer.append(frame,close);
  const focus=document.activeElement,inert=new Map();for(const el of document.body.children)if(el instanceof HTMLElement&&!['SCRIPT','STYLE','LINK'].includes(el.tagName)){inert.set(el,el.inert);el.inert=true}
  const scroll=document.getElementById('mainScroll');host={channel,layer,frame,inert,focus,overflow:document.body.style.overflow,mainTop:scroll?.scrollTop||0,windowTop:root.scrollY,ready:false};
@@ -29,7 +30,10 @@ root.addCard=function(){root.openResourceEditor('new')};
 const enter=root.enterAdmin;
 root.enterAdmin=async function(...args){
  const result=await enter.apply(this,args);
+ const token=sessionStorage.getItem('ADMIN_TOKEN');root.adminEditableResourceIds=new Set();
+ if(root.adminProfile?.role==='contributor')try{const r=await fetch(WORKER_BASE+'/api/admin/resources',{cache:'no-store',headers:{Authorization:'Bearer '+token}}),j=await r.json();if(r.ok&&token===sessionStorage.getItem('ADMIN_TOKEN'))root.adminEditableResourceIds=new Set((j.resources||[]).map(x=>x.id))}catch(_){}
  document.getElementById('openResourceManager')?.remove();const buttons=document.getElementById('adminBarBtns')||document.getElementById('adminBar');const add=buttons&&[...buttons.querySelectorAll('button')].find(button=>button.getAttribute('onclick')==='addCard()');if(add)buttons.prepend(add);
+ document.getElementById('openMyResources')?.remove();if(buttons){const mine=node('button','','我的发布');mine.id='openMyResources';mine.type='button';mine.onclick=()=>root.openResourceEditor(null,{mine:true});buttons.append(mine)}
  document.getElementById('openRemarkSettings')?.remove();if(buttons&&root.adminProfile?.role==='owner'){const settings=node('button','','快捷备注设置');settings.id='openRemarkSettings';settings.type='button';settings.onclick=()=>root.openResourceEditor(null,{settings:'remarks'});buttons.append(settings)}root.renderResourceEditEntries();return result;
 };
 function displayCard(id,revision,m){
@@ -56,6 +60,7 @@ async function syncRevision(data){
  }catch(error){root.showToast?.('资源已保存；主页版本同步未完成，本页未保存的设置仍保留。',6500)}
 }
 async function applySaved(data){
+ if(root.adminProfile?.role==='contributor')root.adminEditableResourceIds?.add(data.resourceId);
  const box=document.getElementById('box'),old=box.querySelector('[data-card-id="'+CSS.escape(data.resourceId)+'"]'),scroll=document.getElementById('mainScroll'),top=scroll?.scrollTop||0;
  if(data.published){if(!data.metadata||data.metadata.id!==data.resourceId||!Array.isArray(data.metadata.images))return;const card=displayCard(data.resourceId,data.revision,data.metadata);if(old)old.replaceWith(card);else box.prepend(card);initSliderTrack(card.querySelector('.slider-box'))}
  else old?.remove();

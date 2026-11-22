@@ -56,9 +56,9 @@ function canLeave(){if(state.busy||state.uploading)return false;if(!state.dirty)
 function renderList(){
  if(!state.admin)return;
  syncControls();const saved=drafts(),entries=new Map(state.resources.filter(r=>!removedDraftIds.has(r.id)).map(r=>[r.id,{...r,published:r.published!==false}]));
- for(const [id,d]of saved){if(removedDraftIds.has(id))continue;const cloud=entries.get(id);entries.set(id,{...(cloud||{id,revision:d.baseRevision,published:false}),copySourceId:d.copySourceId||d.baseSnapshot?.copySourceId||cloud?.copySourceId||null,title:d.metadata.title||cloud?.title||'未命名草稿',tags:d.metadata.tags||'',draft:d})}
+ for(const [id,d]of saved){if(removedDraftIds.has(id))continue;if(state.admin.role==='contributor'&&d.baseRevision>0&&listLoaded&&!entries.has(id))continue;const cloud=entries.get(id);entries.set(id,{...(cloud||{id,revision:d.baseRevision,published:false}),copySourceId:d.copySourceId||d.baseSnapshot?.copySourceId||cloud?.copySourceId||null,title:d.metadata.title||cloud?.title||'未命名草稿',tags:d.metadata.tags||'',draft:d})}
  const query=$('resourceSearch').value.trim().toLowerCase(),filter=$('resourceFilter').value;
- const matched=[...entries.values()].filter(r=>(filter!=='drafts'||r.draft||r.cloudDraft)&&(filter!=='published'||r.published)&&(r.title+' '+r.tags+' '+r.id).toLowerCase().includes(query));
+ const matched=[...entries.values()].filter(r=>(filter!=='mine'||(r.publisherAccountId||r.draft&&state.admin.id)===state.admin.id)&&(filter!=='drafts'||r.draft||r.cloudDraft)&&(filter!=='published'||r.published)&&(r.title+' '+r.tags+' '+r.id).toLowerCase().includes(query));
  const created=r=>r.published||r.cloudDraft?r.createdAt||0:r.draft?.createdAt||r.draft?.savedAt||0;matched.sort((a,b)=>created(b)-created(a));
  $('resourceCount').textContent='('+entries.size+')';$('draftCount').textContent='草稿 '+[...entries.values()].filter(r=>r.draft||r.cloudDraft).length;$('resourceList').replaceChildren();
  for(const resource of matched.slice(0,100)){const item=button('',()=>loadResource(resource.id),resource.id===state.id?'selected':'');item.dataset.resourceId=resource.id;item.title='资源 ID：'+resource.id;item.setAttribute('aria-current',String(resource.id===state.id));item.append(el('span','',resource.title||'未命名资源'),el('small','',(resource.published?'已发布 · 版本 '+resource.revision:'未发布草稿')+(resource.draft?' · 有本机草稿':'')));if(resource.id===loadingId)item.append(el('small','','正在读取…'));$('resourceList').append(item)}
@@ -91,6 +91,7 @@ async function loadResource(id,skipGuard=false,force=false){
  if(removedDraftIds.has(id)){status('这份草稿已删除，请选择其他资源。');return}
  if(!force&&(id===loadingId||(id===state.id&&!loadingId)))return;
  if(!skipGuard&&!canLeave())return;const turn=++navigation;
+ if(state.admin?.role==='contributor'){await loadList();if(!listLoaded){status('请先重试资源列表，再打开编辑资料。',true);return}if(!state.resources.some(r=>r.id===id)&&draftFor(id)?.baseRevision!==0){status('只能编辑自己发布的资源。',true);return}}
  const draft=!force&&draftFor(id);setLoading(null);$('resourceLoading').hidden=true;
  try{
   let resource=!force&&resourceCache.get(id);
@@ -201,7 +202,7 @@ async function save(event){
  try{const result=await request('/api/admin/resource',{method:'POST',body:JSON.stringify(body)});if(result.contractVersion!==1||result.resource.id!==state.id)throw Error('保存响应与当前资源不匹配，请保留草稿并重新读取核对');
   clearTimeout(draftTimer);const key=storageKey();removeDraft(state.id);resourceCache.set(state.id,copy(result.resource));showResource(result.resource);$('saveState').textContent=result.unchanged?'内容未变，仍为当前云端版本':'已保存云端 · 版本 '+result.resource.revision;status('当前资源已保存云端，其他资源和站点设置未改动。');notifyHost('saved',{resourceId:result.resource.id,revision:result.resource.revision,metadata:result.resource.metadata,published:result.resource.published,siteRevision:result.resource.siteRevision,beforeSiteRevision,changed:!result.unchanged});
 
-  const summary={id:result.resource.id,title:result.resource.metadata.title,tags:result.resource.metadata.tags,revision:result.resource.revision,createdAt:result.resource.createdAt||0,published:result.resource.published,copySourceId:result.resource.copySourceId||null},index=state.resources.findIndex(r=>r.id===summary.id);listChanges.set(summary.id,summary);if(index>=0)state.resources[index]=summary;else state.resources.unshift(summary);renderList();
+  const summary={id:result.resource.id,publisherAccountId:result.resource.publisherAccountId,title:result.resource.metadata.title,tags:result.resource.metadata.tags,revision:result.resource.revision,createdAt:result.resource.createdAt||0,published:result.resource.published,copySourceId:result.resource.copySourceId||null},index=state.resources.findIndex(r=>r.id===summary.id);listChanges.set(summary.id,summary);if(index>=0)state.resources[index]=summary;else state.resources.unshift(summary);renderList();
  }catch(error){status(error.message,true);$('saveState').textContent='尚未确认保存，编辑内容已保留';persistDraft()}
  finally{busy(false)}
 }
@@ -239,6 +240,7 @@ let booting=false;async function boot(){if(booting)return;booting=true;$('locked
  $('themeButton').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
  try{const result=await request('/api/admin/session');state.admin=result.admin;if(!['owner','contributor'].includes(state.admin.role))throw Object.assign(Error('此账号没有资源编辑权限'),{status:403});$('account').textContent=state.admin.role==='owner'?'主管理员':'资源管理员';$('account').textContent=state.admin.displayName||$('account').textContent;$('account').title=state.admin.role==='owner'?'主管理员':'资源管理员';document.body.classList.toggle('contributor',state.admin.role==='contributor');$('workspace').hidden=false;
   if(matchMedia('(max-width:720px)').matches)$('resourceBrowser').open=false;
+  if(hostQuery.get('mine')==='1'){$('resourceFilter').value='mine';$('resourceBrowser').open=true}
   renderList();loadList();loadPresets();loadRemarks();request('/api/admin/imgbed-folders').then(result=>{for(const folder of result.folders||[]){const option=el('option','',folder);option.value=folder;$('imageFolder').append(option)}}).catch(error=>$('uploadStatus').textContent='文件夹暂不可用，将使用默认文件夹。');
   const query=new URLSearchParams(location.search),id=query.get('id');if(query.get('settings')==='remarks'||pendingRemarkSettings)openRemarkSettings();if(id&&/^[a-zA-Z0-9_-]{1,160}$/.test(id)){if(query.get('new')==='1')createResource(id);else await loadResource(id,true)}else if(query.get('new')==='1')createResource();else status('请选择已有资源，或新增一份资源。');
  }catch(error){const unauthorized=[401,403].includes(error.status);$('locked').hidden=false;$('workspace').hidden=true;$('accessTitle').textContent=unauthorized?'需要管理员登录':'验证连接暂不可用';$('accessMessage').textContent=unauthorized?'管理员登录已失效或无编辑权限，请返回网站重新登录。':'暂时未能连接验证服务，登录状态已保留。请重试，无需因此重新登录。';$('accessReturn').textContent=unauthorized?'返回网站登录':'返回网站';$('retryAccess').hidden=unauthorized;status(error.message,true)}finally{booting=false;$('retryAccess').disabled=false}
@@ -256,7 +258,7 @@ async function copyResource(){
   const r=result.resource;if(result.contractVersion!==1||!r||r.id===source.id||r.metadata?.id!==r.id||(!r.published&&(!result.draftOnly||r.revision!==0||r.records?.length!==0||r.copySourceId!==source.id)))throw Error('复制响应无效，请保留当前页面后重试');
   ++navigation;clearTimeout(draftTimer);resourceCache.set(r.id,copy(r));
   if(r.published){
-   const summary={id:r.id,title:r.metadata.title,tags:r.metadata.tags,revision:r.revision,createdAt:r.createdAt||0,published:true,copySourceId:r.copySourceId||source.id};listChanges.set(r.id,summary);state.resources=[summary,...state.resources.filter(x=>x.id!==r.id)];
+   const summary={id:r.id,publisherAccountId:r.publisherAccountId,title:r.metadata.title,tags:r.metadata.tags,revision:r.revision,createdAt:r.createdAt||0,published:true,copySourceId:r.copySourceId||source.id};listChanges.set(r.id,summary);state.resources=[summary,...state.resources.filter(x=>x.id!==r.id)];
   }
   showResource(r);
   if(!r.published){state.dirty=true;state.draftPending=true;if(!persistDraft(true))throw Error('复制草稿未能写入本机，请保留当前表单并导出草稿')}
