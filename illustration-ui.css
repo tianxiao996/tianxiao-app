@@ -148,3 +148,33 @@ html:root body.illustration-ui #slideUnlock{border:1px solid var(--border)!impor
 @media(prefers-reduced-motion:reduce){html:root body.illustration-ui *,html:root body.illustration-ui *::before,html:root body.illustration-ui *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 @media(max-width:1023px){html:root body.illustration-ui #bannerSection{margin:16px auto 6px!important}}
+
+/* Catalogue typography and section navigation. */
+html:root body.illustration-ui {
+  --catalogue-ink:#373149; --catalogue-accent:#79516e; --catalogue-tint:#f5e9ee;
+}
+html:root[data-theme="dark"] body.illustration-ui {
+  --catalogue-ink:#f5ecf4; --catalogue-accent:#e6bad1; --catalogue-tint:#433246;
+}
+html:root body.illustration-ui .illustration-section-label {
+  color:var(--catalogue-ink);gap:.55rem;line-height:1.4;
+}
+.illustration-section-label .catalogue-heading-text {overflow-wrap:anywhere;min-width:0}
+.illustration-section-label small {white-space:nowrap;color:var(--muted);font-size:.74rem;font-weight:500;font-variant-numeric:tabular-nums}
+html:root body.illustration-ui .illustration-section-label::before {background:var(--catalogue-accent)}
+html:root body.illustration-ui #box .card-preview-title {color:var(--catalogue-ink)!important;font-weight:720!important;line-height:1.42!important}
+.catalogue-code {display:inline-block;font:600 .65rem/1.45 ui-monospace,monospace;color:var(--catalogue-accent);border-bottom:1px solid currentColor;vertical-align:.14em;margin-inline-end:.55em;white-space:nowrap}
+html:root body.illustration-ui #nav li.active {box-shadow:inset 3px 0 var(--catalogue-accent)!important}
+#cardDetailBody .work-section-nav {box-sizing:border-box;display:flex;align-items:center;gap:6px;width:calc(100% - 40px);max-width:680px;margin:0 auto 14px;padding:4px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+#cardDetailBody .work-section-nav button {flex:1;color:var(--catalogue-accent);background:transparent;border:0;border-radius:8px;min-height:40px;font-size:14px;line-height:1.4;font-family:inherit;font-weight:600;cursor:pointer}
+#cardDetailBody .work-section-nav button:is(:hover,:focus-visible) {background:var(--catalogue-tint)}
+#cardDetailBody :is(.detail-glass,#commentSection)[tabindex="-1"] {scroll-margin-block-start:12px}
+@media(max-width:600px){#cardDetailBody .work-section-nav button{min-height:44px}}
+
+html:root body.illustration-ui > header .search-row:focus-within {border-color:var(--catalogue-accent)!important;box-shadow:0 0 0 3px var(--catalogue-tint)!important}
+html:root body.illustration-ui #nav li.active {color:var(--catalogue-accent)!important;background:var(--catalogue-tint)!important}
+html:root body.illustration-ui #box .card-expand-hint {color:var(--catalogue-accent)!important;background:var(--catalogue-tint)!important}
+html:root body.illustration-ui #box .card-preview-bottom {padding-top:4px;border-top:1px solid var(--rule)}
+html:root body.illustration-ui .quiet-detail-meta {border-top:2px solid var(--catalogue-accent)!important}
+#cardDetailBody .work-section-nav {position:sticky;top:0;z-index:5;margin-block:6px 8px;color:var(--text);backdrop-filter:blur(12px)}
+#cardDetailBody :is(.detail-glass,#commentSection)[tabindex="-1"] {scroll-margin-block-start:62px}
