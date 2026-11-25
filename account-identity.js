@@ -43,12 +43,13 @@ function openAdminAccount(){
 }
 function closeAccount(){if($('adminIdentityDialog').open)$('adminIdentityDialog').close();focusReturn?.focus();focusReturn=null}
 const dialog=document.createElement('dialog');dialog.id='adminIdentityDialog';dialog.setAttribute('aria-labelledby','adminIdentityTitle');
-dialog.innerHTML='<div class="identity-heading"><h2 id="adminIdentityTitle">管理员账号</h2><button id="closeAdminIdentity" type="button" aria-label="关闭">×</button></div><p><strong id="adminPublicName">正在读取</strong> <span id="adminPublicRole"></span></p><form id="adminNicknameForm"><label for="adminNickname">对外昵称</label><input id="adminNickname" maxlength="20" autocomplete="nickname" required><button id="saveAdminNickname" type="submit">保存昵称</button></form><p id="adminIdentityStatus" role="status"></p><div class="identity-actions"><button id="adminMyResources" type="button">我的发布</button><button id="adminViewFavorites" type="button">我的收藏</button><a href="polls.html">游戏投票</a><button id="adminAccountLogout" type="button">退出管理员账号</button></div>';
+dialog.innerHTML='<div class="identity-heading"><h2 id="adminIdentityTitle">管理员账号</h2><button id="closeAdminIdentity" type="button" aria-label="关闭">×</button></div><p><strong id="adminPublicName">正在读取</strong> <span id="adminPublicRole"></span></p><form id="adminNicknameForm"><label for="adminNickname">对外昵称</label><input id="adminNickname" maxlength="20" autocomplete="nickname" required><button id="saveAdminNickname" type="submit">保存昵称</button></form><p id="adminIdentityStatus" role="status"></p><div class="identity-actions"><button id="adminMyResources" type="button">我的发布</button><button id="adminMyGameSaves" type="button">我的投稿</button><button id="adminViewFavorites" type="button">我的收藏</button><a href="polls.html">游戏投票</a><button id="adminAccountLogout" type="button">退出管理员账号</button></div>';
 document.body.append(dialog);$('closeAdminIdentity').onclick=closeAccount;
 $('adminNicknameForm').onsubmit=async e=>{
  e.preventDefault();const b=$('saveAdminNickname');b.disabled=true;
  try{const j=await api('/api/account/profile',{method:'PUT',body:JSON.stringify({displayName:$('adminNickname').value})});if(currentUser?.isAdmin){Object.assign(currentUser,j.account);updateUserEntryBtn();showAccountData(currentUser);if(window.adminProfile)window.adminProfile.displayName=currentUser.username}$('adminIdentityStatus').textContent='昵称已保存，登录账号保持不变。';if(currentCommentCardId)loadComments(currentCommentCardId)}catch(e){$('adminIdentityStatus').textContent=e.message}finally{b.disabled=false}
 };
+$('adminMyGameSaves').onclick=()=>window.openMyGameSaves();
 $('adminMyResources').onclick=()=>{closeAccount();window.openResourceEditor(null,{mine:true})};
 $('adminViewFavorites').onclick=()=>{closeAccount();currentCat='收藏';currentPage=1;refreshUI()};
 $('adminAccountLogout').onclick=async()=>{closeAccount();await exitAdmin()};
