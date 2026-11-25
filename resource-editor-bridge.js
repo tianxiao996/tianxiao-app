@@ -39,7 +39,7 @@ root.enterAdmin=async function(...args){
 function displayCard(id,revision,m){
  const card=node('div','card'+(m.isPinned?' is-pinned':'')+(m.isFav?' is-fav':''));card.dataset.cardId=id;card.dataset.resourceRevision=String(revision);
  if('size' in m)card.dataset.resourceSize=JSON.stringify(m.size);
- for(const [field,attr]of [['rjCode','resourceRj'],['company','resourceCompany'],['translationTeam','resourceTranslation'],['officialUrl','resourceOfficialUrl']])if(field in m)card.dataset[attr]=m[field];
+ for(const [field,attr]of [['gameVersion','resourceVersion'],['rjCode','resourceRj'],['company','resourceCompany'],['translationTeam','resourceTranslation'],['officialUrl','resourceOfficialUrl']])if(field in m)card.dataset[attr]=m[field];
  const slider=node('div','slider-box'),previous=node('button','slide-btn prev','‹'),next=node('button','slide-btn next','›');previous.onclick=()=>changeSlide(previous,-1);next.onclick=()=>changeSlide(next,1);previous.type=next.type='button';slider.append(previous);
  const images=m.images?.length?m.images:['images/image_404.jpg'];for(const [i,url]of images.entries()){const img=node('img',i===0?'active':'');img.src=url;img.loading='lazy';img.draggable=false;slider.append(img)}slider.append(next,node('div','img-index','1 / '+images.length));
  const favorite=node('div','fav-btn');favorite.innerHTML=heartSvg(favorites.has(id));favorite.onclick=()=>toggleFavorite(favorite);slider.append(favorite);

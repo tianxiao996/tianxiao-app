@@ -21,8 +21,12 @@ function detectDrive(raw){
  return '';
 }
 function parseShareText(input){
- const text=String(input||'').replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/https?：\/\//gi,m=>m.replace('：',':')).replace(/\r\n?/g,'\n');
- if(text.length>60000)throw Error('一次粘贴的内容最多60,000字符，请分批识别');
+ const raw=String(input||'').replace(/[\u200B-\u200D\uFEFF]/g,'').replace(/https?：\/\//gi,m=>m.replace('：',':')).replace(/\r\n?/g,'\n');
+ if(raw.length>60000)throw Error('一次粘贴的内容最多60,000字符，请分批识别');
+ // Markdown hard breaks and link labels are formatting, not additional shares.
+ const text=raw.replace(/\\[ \t]*(?=\n|$)/g,'')
+  .replace(/\[[^\]\n]*\]\((https?:\/\/[^\s()]+)\)/gi,'$1')
+  .replace(/^[ \t]*(分卷[ \t]*[0-9０-９一二三四五六七八九十百]+)[ \t]*[：:]?[ \t]*$/gm,'\n$1');
  const links=[],warnings=[];
  const pattern=/https?:\/\/[^\s<>"'“”‘’（）()\[\]【】]+/gi;let match;
  while((match=pattern.exec(text))){
@@ -62,12 +66,18 @@ function parseShareText(input){
   if(/解压|解壓|压缩密码/.test(text.slice(blockStart,blockEnd)))notes.push('解压码请手动填写，未自动导入');
   const identity=new URL(link.url);if(link.driveName)for(const key of ['pwd','password','passcode','access_code'])identity.searchParams.delete(key);
   const key=identity.toString();if(seen.has(key)){warnings.push('已忽略重复分享链接，请核对提取码');continue}seen.add(key);
-  records.push({url:link.url,driveName:link.driveName,extractionCode,remark:'',warnings:notes});
+  const prefix=text.slice(i?links[i-1].end:0,link.start);
+  const volume=prefix.match(/(?:^|\n)[ \t]*分卷[ \t]*([0-9０-９一二三四五六七八九十百]+)[ \t]*[：:]?[ \t]*(?:\n\s*)?(?:链接|連結|网址|網址)?[ \t]*[：:]?[ \t]*$/u);
+  const remarkText=inBlock.length===1?text.slice(blockStart,blockEnd):text.slice(link.end,Math.min(blockEnd,links[i+1]?.start??text.length));
+  const explicit=remarkText.match(/(?:^|\n)[ \t]*(?:备注|備註)[ \t]*[：:][ \t]*([^\n]+)/u)?.[1].trim()||'';
+  const part=volume?'分卷'+volume[1].normalize('NFKC'):'';
+  const remark=part && explicit && !explicit.includes(part) ? part+' · '+explicit : explicit||part;
+  records.push({url:link.url,driveName:link.driveName,extractionCode,remark,warnings:notes});
  }
  if(!records.length)warnings.push('没有识别到 HTTP/HTTPS 链接');
  return {records,warnings};
 }
 // Explicitly leaves the manually entered unzip password alone.
-function applyDetected(existing,detected){return {...existing,url:detected.url,driveName:existing.driveName.trim()?existing.driveName:detected.driveName,extractionCode:detected.extractionCode,remark:existing.remark,unzipPassword:existing.unzipPassword}}
+function applyDetected(existing,detected){return {...existing,url:detected.url,driveName:existing.driveName.trim()?existing.driveName:detected.driveName,extractionCode:detected.extractionCode,remark:existing.remark||detected.remark||'',unzipPassword:existing.unzipPassword}}
 const api={parseShareText,detectDrive,applyDetected};if(typeof module!=='undefined'&&module.exports)module.exports=api;root.ResourceLinkEditor=api;
 })(typeof window!=='undefined'?window:globalThis);

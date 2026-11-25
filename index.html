@@ -542,7 +542,7 @@ function compactResourcePage(data){
   if(!m||typeof m.id!=='string'||typeof m.title!=='string'||typeof m.tags!=='string'||!Array.isArray(m.images))throw Error('资源资料无效');
   const card=document.createElement('div');card.className='card'+(m.isPinned?' is-pinned':'')+(m.isFav?' is-fav':'');
   card.dataset.cardId=m.id;card.dataset.resourceRevision=m.resourceRevision;card.dataset.detailPending='1';card.dataset.hasExternal=m.hasExternal?'1':'0';card.dataset.hasCloud=m.hasCloud===false?'0':'1';
-  for(const [key,attr]of Object.entries({rjCode:'resourceRj',company:'resourceCompany',translationTeam:'resourceTranslation',officialUrl:'resourceOfficialUrl'}))if(key in m)card.dataset[attr]=m[key];
+  for(const [key,attr]of Object.entries({rjCode:'resourceRj',company:'resourceCompany',gameVersion:'resourceVersion',translationTeam:'resourceTranslation',officialUrl:'resourceOfficialUrl'}))if(key in m)card.dataset[attr]=m[key];
   if('size'in m)card.dataset.resourceSize=JSON.stringify(m.size);
   card.innerHTML='<div class="slider-box"><button class="slide-btn prev" onclick="changeSlide(this,-1)">‹</button><button class="slide-btn next" onclick="changeSlide(this,1)">›</button><div class="img-index">1 / 1</div><div class="fav-btn" onclick="toggleFavorite(this)"></div></div><div class="info-box"><div class="g-name"></div><div class="g-tags"></div><div class="desc-wrap"><div class="desc-text"></div><div class="desc-expand-btn" onclick="toggleDescExpand(this)">展开简介</div></div><div class="link-wrap"><div class="link-text" data-kv-placeholder="1"></div></div></div>';
   card.querySelector('.g-name').textContent=m.title;card.querySelector('.g-tags').textContent=m.tags;
@@ -575,7 +575,7 @@ async function loadResourceDetail(card,retry=false){
    const slider=card.querySelector('.slider-box');slider.replaceChildren();
    for(const src of m.images){if(typeof src!=='string'||!/^https?:\/\//i.test(src))continue;const img=document.createElement('img');img.loading='lazy';img.src=src;slider.append(img)}
    const fav=document.createElement('div');fav.className='fav-btn';fav.onclick=()=>toggleFavorite(fav);slider.append(fav);
-   for(const [key,attr]of Object.entries({rjCode:'resourceRj',company:'resourceCompany',translationTeam:'resourceTranslation',officialUrl:'resourceOfficialUrl'})){if(key in m)card.dataset[attr]=m[key];else delete card.dataset[attr]}
+   for(const [key,attr]of Object.entries({rjCode:'resourceRj',company:'resourceCompany',gameVersion:'resourceVersion',translationTeam:'resourceTranslation',officialUrl:'resourceOfficialUrl'})){if(key in m)card.dataset[attr]=m[key];else delete card.dataset[attr]}
    if('size'in m)card.dataset.resourceSize=JSON.stringify(m.size);else delete card.dataset.resourceSize;
    card.dataset.resourceRevision=m.resourceRevision;
    card.dataset.hasExternal=m.hasExternal?'1':'0';
@@ -1213,9 +1213,9 @@ async function sendEmailCodeFor(inputId,buttonId,storagePrefix){
 const adminOriginalRefreshUI=refreshUI;refreshUI=function(...args){const result=adminOriginalRefreshUI.apply(this,args);applyContributorAccess();return result};
 </script>
 <script>window.ResourceLinkEditorConfig={base:WORKER_BASE};</script>
-<script src="link-editor.js?v=1b7552e0a142"></script>
+<script src="link-editor.js?v=792563cdda2f6e77"></script>
 <script src="resource-size.js?v=c9bc8b873d76"></script>
-<script src="resource-work.js?v=d11194237068304d"></script>
+<script src="resource-work.js?v=a6a98e71018a1381"></script>
 </body></html>
 
 
@@ -1256,7 +1256,7 @@ html:root body .reply-input-box button:disabled{opacity:.45;cursor:default}
 
 <style id="turnstileReliabilityStyle">#turnstileModal{z-index:2147483000!important}#turnstileBox{max-height:90vh;max-height:90dvh;overflow-y:auto}#turnstileStatus{white-space:normal;overflow-wrap:anywhere;line-height:1.65;color:var(--text)!important;font-size:12px!important;margin:12px 0 4px!important}#turnstileRetry[hidden]{display:none!important}#turnstileWidget[data-state=loading]{border-radius:8px;background:var(--soft);min-height:80px}#turnstileRetry:focus-visible,#turnstileBox [data-ts-cancel]:focus-visible{outline:2px solid var(--primary);outline-offset:2px}</style>
 
-<script src="resource-editor-bridge.js?v=cc5158172640dfb4" defer></script>
+<script src="resource-editor-bridge.js?v=1036c22b24ebf073" defer></script>
 
 <style id="resource-admin-entry-style">.resource-edit-entry{flex-shrink:0;padding:5px 9px;min-height:32px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font:inherit;font-size:12px;cursor:pointer}.resource-edit-entry:hover{filter:brightness(.95)}.resource-edit-entry:focus-visible{outline:2px solid var(--text);outline-offset:2px}</style>
 
