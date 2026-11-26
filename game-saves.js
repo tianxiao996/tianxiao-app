@@ -72,10 +72,26 @@
   const node=el('div',null,'sv-empty');node.append(icon('archive'),el('p',text));if(action)node.append(action);return node;
  }
  const share=()=>btn('分享存档',()=>{if(login())submitForm()},'primary','plus');
+ function scanPanel(){
+  const panel=el('aside',null,'sv-safety');
+  const title=el('strong','存档文件查毒');
+  title.prepend(icon('shield'));
+  const links=el('div',null,'sv-scanners');
+  for(const [name,url] of [
+   ['VirScan','https://www.virscan.org/'],
+   ['VirusTotal','https://www.virustotal.com/gui/home/upload'],
+   ['MetaDefender Cloud','https://metadefender.com/']
+  ]){
+   const link=el('a',name);
+   link.href=url;link.target='_blank';link.rel='noopener noreferrer';links.append(link);
+  }
+  panel.append(title,el('p','使用前请任选一个网站，上传下载好的存档或压缩包进行检测。样本可能被共享，请勿上传含个人信息的文件。'),links);
+  return panel;
+ }
  async function showList(mine=false){
   if(mine&&!login())return;
   view(mine?'我的投稿':'玩家存档',mine&&card?()=>showList(false):null);const turn=epoch;
-  if(!mine)main.append(gameStrip(game,card,source));
+  if(!mine)main.append(gameStrip(game,card,source),scanPanel());
   const bar=el('div',null,'sv-toolbar'),count=el('h3',mine?'已发布的存档':'存档列表'),actions=el('div',null,'sv-actions');
   bar.append(count,actions);if(!mine)actions.append(btn('我的投稿',()=>showList(true),'text','user'));
   const list=el('div',null,'sv-list');main.append(bar,list);let offset=0;
@@ -109,15 +125,11 @@
  }
  function detail(item,mine){
   view('存档详情',()=>showList(mine));const turn=epoch;
-  const info=el('div',null,'sv-panel'),links=el('div',null,'sv-links'),tools=el('div',null,'sv-actions'),safety=el('aside',null,'sv-safety'),scanner=el('div',null,'sv-scanners');
+  const info=el('div',null,'sv-panel'),links=el('div',null,'sv-links'),tools=el('div',null,'sv-actions');
   info.append(el('h3',item.note||item.authorName+'的存档'),chips(item),byline(item.authorName,item.created));if(item.reports>=10)info.append(warning(item));
-  const tip=el('strong','使用前请先扫毒');tip.prepend(icon('shield'));safety.append(tip,el('p','未知文件请先检测。在线检测可能公开样本，请勿上传含个人信息的文件。'),scanner);
-  for(const [name,url] of [['VirusTotal','https://www.virustotal.com/gui/home/upload'],['VirScan','https://www.virscan.org/'],['MetaDefender Cloud','https://metadefender.com/']]){
-   const a=el('a',name);a.href=url;a.target='_blank';a.rel='noopener noreferrer';scanner.append(a);
-  }
   tools.append(btn('下载存档',async()=>{if(!login())return;notice('正在核实网盘文件…');const j=await api('download',{id:item.id},'POST');if(turn!==epoch)return;notice('');const a=el('a','打开'+item.provider);a.href=j.url;a.target='_blank';a.rel='noopener noreferrer';links.replaceChildren(a);if(j.code)links.append(el('span','提取码 '+j.code))},'primary','download'),
    btn('举报投毒',async()=>{if(!login()||!confirm('确认举报这份存档可能含有恶意文件？'))return;await api('report',{id:item.id},'POST');if(turn===epoch){await showList(mine);notice('举报已记录')}},'text'));
-  info.append(safety,tools,links);
+  info.append(scanPanel(),tools,links);
   const comments=el('section',null,'sv-comments'),form=el('form'),input=el('textarea'),to=el('small'),send=el('button','发表评论','sv-btn sv-secondary'),list=el('div');
   let parent=null,offset=0;const cancel=btn('取消回复',()=>{parent=null;to.textContent='';cancel.hidden=true},'text');cancel.hidden=true;
   input.required=true;send.type='submit';comments.append(el('h3','存档评论'),form,list);form.append(to,cancel,label('评论或回复',input),send);

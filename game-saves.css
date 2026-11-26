@@ -63,6 +63,8 @@ html[data-theme="dark"] .game-saves .sv-warning {color:#ffb3b7}
 .game-saves .sv-safety p {margin:3px 0}
 .game-saves .sv-scanners,.game-saves .sv-links {display:flex;gap:6px 14px;align-items:center;flex-wrap:wrap}
 .game-saves a {font:inherit;font-weight:600;color:var(--primary-dark);text-underline-offset:3px}
+.game-saves .sv-scanners {gap:4px 8px;margin-top:6px}
+.game-saves .sv-scanners a {display:inline-flex;align-items:center;min-height:32px;padding:4px 9px;border:1px solid var(--rule);border-radius:7px;background:var(--surface)}
 .game-saves .sv-links:not(:empty) {margin-top:14px;padding:10px 12px;background:var(--soft);border-radius:10px}
 .game-saves .sv-field {display:grid;gap:5px;min-width:0;color:var(--text);font-weight:600;font-size:14px}
 .game-saves .sv-fields {display:grid;grid-template-columns:minmax(0,1fr) minmax(102px,30%);gap:12px}

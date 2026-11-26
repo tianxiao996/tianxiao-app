@@ -1,1 +1,89 @@
-#adminIdentityDialog{width:min(92vw,480px);padding:24px;border:1px solid var(--border,#ccd4dd);border-radius:18px;background:var(--surface,#fff);color:var(--text,#222);box-sizing:border-box}#adminIdentityDialog::backdrop{background:#0009}#adminIdentityDialog .identity-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}#adminIdentityDialog h2{font-size:21px;margin:0}#adminIdentityDialog button,#adminIdentityDialog a{font:inherit;color:inherit;border:1px solid var(--border,#ccd4dd);background:var(--soft,#edf0f5);padding:9px 12px;border-radius:9px;cursor:pointer;text-decoration:none}#adminIdentityDialog label{display:block;margin-bottom:6px}#adminIdentityDialog input{width:100%;box-sizing:border-box;font:inherit;padding:11px;border:1px solid var(--border,#ccd4dd);border-radius:8px;background:var(--surface,#fff);color:inherit;margin-bottom:10px}#adminIdentityDialog .identity-actions{display:flex;flex-wrap:wrap;gap:10px}#adminIdentityStatus{font-size:13px;line-height:1.6;min-height:2em}#adminPublicRole{font-size:12px;padding:3px 7px;border:1px solid var(--border);border-radius:6px}#sidebarPolls{color:inherit;text-decoration:none}[data-theme=dark] #adminIdentityDialog{background:#222d42;color:#fff}#adminIdentityDialog :focus-visible{outline:3px solid #809fcb;outline-offset:2px}
+#adminIdentityDialog {
+ --id-bg:var(--bg,#edf0f7);
+ --id-card:var(--surface,#fff);
+ --id-text:var(--text,#333c55);
+ --id-muted:var(--muted,#69768e);
+ --id-border:var(--border,#d7deea);
+ --id-line:var(--rule,#e1e5ee);
+ --id-blue:var(--primary-dark,#445c89);
+ --id-wash:var(--accent-soft,#e8edf7);
+ width:min(660px,calc(100vw - 32px));max-height:min(800px,calc(100dvh - 48px));margin:auto;padding:0;
+ border:1px solid var(--id-border);border-radius:23px;background:var(--id-bg);color:var(--id-text);
+ font:inherit;overflow:hidden;box-sizing:border-box;box-shadow:var(--panel-shadow,0 18px 60px #2634512b)
+}
+#adminIdentityDialog[open]{display:flex;flex-direction:column}
+#adminIdentityDialog::backdrop{background:rgba(20,29,47,.42);backdrop-filter:blur(3px)}
+html[data-theme=dark] #adminIdentityDialog::backdrop{background:rgba(8,13,26,.58)}
+#adminIdentityDialog *,#adminIdentityDialog *::before,#adminIdentityDialog *::after{box-sizing:border-box}
+#adminIdentityDialog :is(h2,h3,p){margin:0;color:inherit;text-shadow:none}
+#adminIdentityDialog :is(button,a,summary,input){font:inherit;color:inherit;text-shadow:none;box-shadow:none}
+#adminIdentityDialog :is(button,a,summary){cursor:pointer;touch-action:manipulation}
+#adminIdentityDialog svg{display:block;width:18px;height:18px;flex:none}
+#adminIdentityDialog .identity-top{display:flex;flex:none;justify-content:space-between;align-items:center;padding:16px 24px;background:var(--id-card);border-bottom:1px solid var(--id-line)}
+#adminIdentityDialog h2{font-size:20px;font-weight:700;line-height:1.4}
+#closeAdminIdentity{display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--id-border);border-radius:11px;background:var(--soft)}
+#adminIdentityDialog .identity-scroll{padding:20px 24px 12px;overflow:auto;min-height:0;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--primary-light) transparent}
+#adminIdentityDialog .identity-profile{position:relative;isolation:isolate;display:flex;align-items:center;gap:18px;min-height:136px;padding:26px;border:1px solid var(--id-border);border-radius:18px;overflow:hidden;background:var(--id-card);box-shadow:var(--shadow)}
+#adminIdentityDialog[open] .identity-profile::before{content:"";position:absolute;inset:0 0 0 24%;z-index:-1;background-image:url("https://img.tian-xiao.com/site-ui/illustration-20261104/desktop-blue.jpg");background-position:60% 37%;background-size:cover;mask-image:linear-gradient(to right,transparent 0%,#000 72%);opacity:.82;pointer-events:none}
+html[data-theme=dark] #adminIdentityDialog .identity-profile::before{opacity:.52}
+#adminIdentityDialog .identity-portrait{position:relative;display:grid;place-items:center;width:76px;height:76px;flex:none;overflow:hidden;border-radius:50%;border:3px solid var(--id-card);background:var(--id-wash);color:var(--id-blue);box-shadow:0 0 0 1px var(--id-line);font-size:29px;font-weight:700}
+#adminPublicAvatar{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#adminPublicAvatar[hidden]{display:none}
+#adminIdentityDialog .identity-name{display:grid;justify-items:start;min-width:0;max-width:63%;gap:7px}
+#adminPublicName{font-size:28px;line-height:1.25;overflow-wrap:anywhere;color:var(--id-text)}
+#adminPublicRole{display:inline-block;font-size:12px;line-height:1.5;font-weight:600;color:var(--id-blue);padding:2px 9px;border-radius:6px;background:var(--id-wash);border:1px solid var(--id-line)}
+#adminPublicRole:empty{display:none}
+#adminIdentityDialog .identity-content{margin:20px 0 16px}
+#adminIdentityDialog h3{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:16px;font-weight:700;line-height:1.5}
+#adminIdentityDialog h3::before{content:"";width:4px;height:15px;border-radius:4px;background:var(--primary-light)}
+#adminIdentityDialog .identity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#adminIdentityDialog .identity-grid>:is(a,button){display:flex;align-items:center;gap:11px;min-width:0;padding:13px 12px;background:var(--id-card);border:1px solid var(--id-border);border-radius:15px;text-align:start;text-decoration:none;box-shadow:var(--shadow)}
+#adminIdentityDialog .identity-grid>button:first-child .identity-mark{background:var(--button);color:var(--button-text)}
+#adminIdentityDialog .identity-mark{display:grid;place-items:center;flex:none;width:37px;height:39px;border-radius:11px;background:var(--id-wash);color:var(--id-blue)}
+#adminIdentityDialog .identity-mark svg{width:20px;height:20px}
+#adminIdentityDialog .identity-link-text{min-width:0;flex:1;display:grid;gap:3px}
+#adminIdentityDialog .identity-link-text strong{color:var(--id-text);font-size:15px;line-height:1.4}
+#adminIdentityDialog .identity-link-text small{color:var(--id-muted);font-size:12px;line-height:1.45;font-weight:400}
+#adminIdentityDialog .identity-grid>:is(a,button)>svg,#adminNicknameEditor summary>svg:last-child{width:13px;height:13px;color:var(--id-muted)}
+#adminNicknameEditor{border:1px solid var(--id-line);border-radius:14px;background:var(--id-card);overflow:hidden}
+#adminNicknameEditor summary{display:flex;align-items:center;gap:9px;padding:12px 15px;color:var(--id-text);font-size:14px;font-weight:600;list-style:none}
+#adminNicknameEditor summary::-webkit-details-marker{display:none}
+#adminNicknameEditor summary>svg:first-child{color:var(--id-muted);width:16px;height:16px}
+#adminNicknameEditor summary>span{flex:1}
+#adminNicknameEditor[open] summary>svg:last-child{transform:rotate(90deg)}
+#adminNicknameForm{padding:0 15px 14px}
+#adminNicknameForm label{display:block;margin-bottom:6px;color:var(--id-muted);font-size:12px}
+#adminNicknameForm>div{display:flex;gap:8px}
+#adminNickname{min-width:0;flex:1;border:1px solid var(--id-border);border-radius:10px;background:var(--soft);padding:9px 12px;font-size:16px;line-height:1.3}
+#adminIdentityDialog #saveAdminNickname{flex:none;border:0;border-radius:10px;background:var(--button);color:var(--button-text);padding:9px 14px;font-size:14px;font-weight:600}
+#adminIdentityDialog button:disabled{opacity:.6;cursor:wait}
+#adminIdentityDialog #adminIdentityStatus{margin:8px 0 0;color:var(--id-blue);font-size:13px;line-height:1.5}
+#adminIdentityDialog #adminIdentityStatus:empty{display:none}
+#adminIdentityDialog .identity-footer{display:flex;justify-content:flex-end;margin-top:6px}
+#adminIdentityDialog #adminAccountLogout{display:flex;align-items:center;gap:7px;min-height:38px;border:0;background:transparent;color:var(--id-muted);font-weight:500;font-size:13px;padding:6px}
+#adminAccountLogout svg{width:15px;height:15px}
+#sidebarPolls{color:inherit;text-decoration:none}
+#adminIdentityDialog :focus-visible{outline:3px solid var(--primary-light,#9baed0);outline-offset:2px}
+#adminNicknameEditor summary:focus-visible{outline-offset:-3px}
+@media(hover:hover){
+ #adminIdentityDialog .identity-grid>:is(a,button):hover,#closeAdminIdentity:hover{border-color:var(--primary-light)}
+ #adminIdentityDialog #adminAccountLogout:hover{color:var(--id-text)}
+}
+@media(max-width:540px){
+ #adminIdentityDialog{width:calc(100vw - 20px);max-height:calc(100dvh - 26px - env(safe-area-inset-bottom,0px));border-radius:19px}
+ #adminIdentityDialog .identity-top{padding:12px 16px}
+ #adminIdentityDialog h2{font-size:18px}
+ #adminIdentityDialog .identity-scroll{padding:12px 13px 6px}
+ #adminIdentityDialog .identity-profile{min-height:108px;padding:17px 15px;gap:13px;border-radius:15px}
+ #adminIdentityDialog .identity-portrait{width:61px;height:61px}
+ #adminPublicName{font-size:23px}
+ #adminIdentityDialog .identity-content{margin:16px 0 12px}
+ #adminIdentityDialog .identity-grid{gap:7px}
+ #adminIdentityDialog .identity-grid>:is(a,button){align-items:flex-start;gap:6px;flex-direction:column;position:relative;padding:12px;border-radius:13px}
+ #adminIdentityDialog .identity-grid>:is(a,button)>svg{position:absolute;right:12px;top:19px}
+ #adminIdentityDialog .identity-mark{width:31px;height:31px;border-radius:9px}
+ #adminIdentityDialog .identity-mark svg{width:17px;height:17px}
+ #adminIdentityDialog .identity-link-text{gap:0}
+ #adminIdentityDialog .identity-link-text strong{font-size:14px}
+ #adminIdentityDialog .identity-link-text small{font-size:11px}
+}

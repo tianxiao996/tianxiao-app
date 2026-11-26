@@ -24,8 +24,14 @@ async function api(path,options={}){
  if(!r.ok||j.success===false){const e=Error(j.error||'请求失败');e.status=r.status;throw e}return j;
 }
 function showAccountData(a){
- $('adminPublicName').textContent=a.username;$('adminPublicRole').textContent=a.role==='owner'?'主管理员':'资源管理员';$('adminNickname').value=a.username;
- $('adminIdentityStatus').textContent='昵称用于评论、投稿和投票，不会修改登录账号。';
+ $('adminPublicName').textContent=a.username;
+ $('adminPublicRole').textContent=a.role==='owner'?'主管理员':'资源管理员';
+ $('adminAvatarInitial').textContent=Array.from(a.username||'管')[0];
+ const avatar=$('adminPublicAvatar');
+ if(a.avatar){avatar.src=a.avatar;avatar.hidden=false}else{avatar.hidden=true;avatar.removeAttribute('src')}
+ if(!$('adminNicknameEditor').open)$('adminNickname').value=a.username;
+ $('adminFavoriteCount').textContent=favorites.size+' 部作品';
+ $('adminIdentityStatus').textContent='';
 }
 async function refreshAdminIdentity(){
  if(loading)return loading;const token=sessionStorage.getItem('ADMIN_TOKEN');if(!token)return;
@@ -38,16 +44,72 @@ async function refreshAdminIdentity(){
  })().catch(e=>{if(token===sessionStorage.getItem('ADMIN_TOKEN')&&turn===epoch){$('adminIdentityStatus').textContent=e.message;if(e.status===401){sessionStorage.removeItem('ADMIN_TOKEN');clearSocial();clearAdminView();showToast('管理员登录已过期，请重新登录')}}throw e}).finally(()=>loading=null);return loading;
 }
 function openAdminAccount(){
- focusReturn=document.activeElement;$('adminIdentityDialog').showModal();$('adminIdentityStatus').textContent='正在读取管理员身份…';$('adminNickname').focus();
+ if(dialog.open)return;
+ focusReturn=document.activeElement;
+ $('adminNicknameEditor').open=false;
+ if(currentUser?.isAdmin&&currentUser.sessionToken===sessionStorage.getItem('ADMIN_TOKEN'))showAccountData(currentUser);
+ else{
+  $('adminPublicName').textContent='读取账号中…';$('adminPublicRole').textContent='';
+  $('adminPublicAvatar').hidden=true;$('adminPublicAvatar').removeAttribute('src');$('adminAvatarInitial').textContent='';
+  $('adminNickname').value='';$('adminFavoriteCount').textContent='';
+ }
+ $('adminIdentityStatus').textContent='';dialog.showModal();
  refreshAdminIdentity().catch(()=>{});
 }
 function closeAccount(){if($('adminIdentityDialog').open)$('adminIdentityDialog').close();focusReturn?.focus();focusReturn=null}
 const dialog=document.createElement('dialog');dialog.id='adminIdentityDialog';dialog.setAttribute('aria-labelledby','adminIdentityTitle');
-dialog.innerHTML='<div class="identity-heading"><h2 id="adminIdentityTitle">管理员账号</h2><button id="closeAdminIdentity" type="button" aria-label="关闭">×</button></div><p><strong id="adminPublicName">正在读取</strong> <span id="adminPublicRole"></span></p><form id="adminNicknameForm"><label for="adminNickname">对外昵称</label><input id="adminNickname" maxlength="20" autocomplete="nickname" required><button id="saveAdminNickname" type="submit">保存昵称</button></form><p id="adminIdentityStatus" role="status"></p><div class="identity-actions"><button id="adminMyResources" type="button">我的发布</button><button id="adminMyGameSaves" type="button">我的投稿</button><button id="adminViewFavorites" type="button">我的收藏</button><a href="polls.html">游戏投票</a><button id="adminAccountLogout" type="button">退出管理员账号</button></div>';
+const identityPaths={
+ close:'M6 6l12 12M18 6L6 18', next:'m9 6 6 6-6 6',
+ works:'M3 8V6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8zm0 2h18',
+ saves:'M3 4h18v5H3zM5 9v11h14V9M10 13h4',
+ heart:'M12 20S3 14.4 3 8.7c0-4.4 5.7-6 9-1.5 3.3-4.5 9-2.9 9 1.5 0 5.7-9 11.3-9 11.3z',
+ polls:'M4 20h16M6 16v-5m6 5V4m6 12V8',
+ edit:'m14.5 4.5 5 5M4 20l4.5-1 12-12a1.7 1.7 0 0 0 0-2.4l-2.1-2.1a1.7 1.7 0 0 0-2.4 0L4.9 15.6 4 20z',
+ leave:'M10 4H5v16h5M10 12h11m-5-5 5 5-5 5'
+};
+const icon=key=>`<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="${identityPaths[key]}"/></svg>`;
+function actionText(mark,title,desc){
+ return `<span class="identity-mark">${icon(mark)}</span><span class="identity-link-text"><strong>${title}</strong><small>${desc}</small></span>${icon('next')}`;
+}
+dialog.innerHTML=`
+ <div class="identity-top">
+  <h2 id="adminIdentityTitle">我的主页</h2>
+  <button id="closeAdminIdentity" type="button" aria-label="关闭" autofocus>${icon('close')}</button>
+ </div>
+ <div class="identity-scroll">
+  <div class="identity-profile">
+   <div class="identity-portrait"><span id="adminAvatarInitial" aria-hidden="true"></span><img id="adminPublicAvatar" alt="" hidden></div>
+   <div class="identity-name"><strong id="adminPublicName">读取账号中…</strong><span id="adminPublicRole"></span></div>
+  </div>
+  <section class="identity-content">
+   <h3>我的内容</h3>
+   <div class="identity-grid">
+    <button id="adminMyResources" type="button">${actionText('works','我的发布','查看与编辑游戏资源')}</button>
+    <button id="adminMyGameSaves" type="button">${actionText('saves','我的投稿','管理分享的玩家存档')}</button>
+    <button id="adminViewFavorites" type="button">${actionText('heart','我的收藏','<span id="adminFavoriteCount"></span>')}</button>
+    <a href="polls.html">${actionText('polls','游戏投票','进入活动列表')}</a>
+   </div>
+  </section>
+  <details id="adminNicknameEditor">
+   <summary>${icon('edit')}<span>修改昵称</span>${icon('next')}</summary>
+   <form id="adminNicknameForm"><label for="adminNickname">对外显示的昵称</label>
+    <div><input id="adminNickname" maxlength="20" autocomplete="nickname" required><button id="saveAdminNickname" type="submit">保存昵称</button></div>
+   </form>
+  </details>
+  <p id="adminIdentityStatus" role="status"></p>
+  <div class="identity-footer"><button id="adminAccountLogout" type="button">${icon('leave')}退出管理员账号</button></div>
+ </div>`;
 document.body.append(dialog);$('closeAdminIdentity').onclick=closeAccount;
+$('adminPublicAvatar').onerror=()=>{$('adminPublicAvatar').hidden=true};
+$('adminNicknameEditor').addEventListener('toggle',()=>{
+ if($('adminNicknameEditor').open){
+  $('adminNickname').value=currentUser?.isAdmin?currentUser.username:'';
+  $('adminNickname').focus();
+ }
+});
 $('adminNicknameForm').onsubmit=async e=>{
  e.preventDefault();const b=$('saveAdminNickname');b.disabled=true;
- try{const j=await api('/api/account/profile',{method:'PUT',body:JSON.stringify({displayName:$('adminNickname').value})});if(currentUser?.isAdmin){Object.assign(currentUser,j.account);updateUserEntryBtn();showAccountData(currentUser);if(window.adminProfile)window.adminProfile.displayName=currentUser.username}$('adminIdentityStatus').textContent='昵称已保存，登录账号保持不变。';if(currentCommentCardId)loadComments(currentCommentCardId)}catch(e){$('adminIdentityStatus').textContent=e.message}finally{b.disabled=false}
+ try{const j=await api('/api/account/profile',{method:'PUT',body:JSON.stringify({displayName:$('adminNickname').value})});if(currentUser?.isAdmin){Object.assign(currentUser,j.account);updateUserEntryBtn();$('adminNicknameEditor').open=false;showAccountData(currentUser);if(window.adminProfile)window.adminProfile.displayName=currentUser.username;dialog.querySelector('summary').focus()}$('adminIdentityStatus').textContent='昵称已保存。';if(currentCommentCardId)loadComments(currentCommentCardId)}catch(e){$('adminIdentityStatus').textContent=e.message}finally{b.disabled=false}
 };
 $('adminMyGameSaves').onclick=()=>window.openMyGameSaves();
 $('adminMyResources').onclick=()=>{closeAccount();window.openResourceEditor(null,{mine:true})};
