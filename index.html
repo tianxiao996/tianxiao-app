@@ -65,7 +65,20 @@ html:root body .comment-level{font-size:11px;line-height:1.35;display:inline-blo
 <script src="meme-image-manager.js?v=609f434d9cf8c65f6b9653fe396c5794f90c61f78f007644e3ac54713decf440" defer></script>
 <link rel="stylesheet" href="search-filter-ui.css?v=3dbcb880d0467fce">
 <link rel="stylesheet" href="account-identity.css?v=8afe568f2abead9c">
-<script src="account-identity.js?v=ca41bab5aae0d06e" defer></script>
+<script src="account-identity.js?v=01b0e12fa0796903" defer></script>
+
+<style id="pollPanelStyle">
+#pollPanel {box-sizing:border-box; width:min(1180px,calc(100% - 48px)); max-width:none; height:min(940px,calc(100vh - 48px)); height:min(940px,calc(100dvh - 48px)); max-height:none; margin:auto; padding:0; overflow:hidden; border:1px solid var(--border); border-radius:20px; background:var(--bg); color:var(--text); box-shadow:var(--panel-shadow)}
+#pollPanel::backdrop {background:rgba(20,28,46,.48);backdrop-filter:blur(3px)}
+#pollPanelFrame {display:block;width:100%;height:100%;border:0}
+#closePollPanel {position:absolute;z-index:2;right:max(14px,env(safe-area-inset-right));top:16px;display:grid;place-items:center;width:36px;height:36px;padding:0;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);cursor:pointer}
+#pollPanelStatus:not([hidden]) {position:absolute;inset:0;margin:0;display:grid;place-content:center;justify-items:center;gap:8px;background:var(--bg)}
+html:has(#pollPanel[open]),body:has(#pollPanel[open]) {overflow:hidden!important}
+@media(max-width:640px){
+ #pollPanel {width:100%;height:100vh;height:100dvh;border:0;border-radius:0}
+ #closePollPanel {right:max(12px,env(safe-area-inset-right))}
+}
+</style>
 <link rel="stylesheet" href="message-center.css?v=a3205997806c4f95">
 </head>
 <script id="turnstileApi" src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer onerror="window._tsLoadFailed=true">
@@ -621,7 +634,7 @@ function loadResourceDetailRetry(card){
 <span class="sidebar-item-icon" id="sidebarLoginIcon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></span>
 <span id="sidebarLoginText">登录</span>
 </div>
-<a class="sidebar-item" id="sidebarPolls" href="polls.html"><span class="sidebar-item-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20V10h4v10M10 20V4h4v16M16 20v-7h4v7M2 20h20"/></svg></span><span>游戏投票</span></a>
+<a class="sidebar-item" id="sidebarPolls" href="polls.html" data-open-poll aria-haspopup="dialog" aria-controls="pollPanel"><span class="sidebar-item-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20V10h4v10M10 20V4h4v16M16 20v-7h4v7M2 20h20"/></svg></span><span>游戏投票</span></a>
 <div class="sidebar-item active" id="sidebarHome" onclick="sidebarGoHome()">
 <span class="sidebar-item-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/><path d="M5 10v11h14V10"/></svg></span>
 <span>首页</span>
@@ -1215,6 +1228,100 @@ const adminOriginalRefreshUI=refreshUI;refreshUI=function(...args){const result=
 <script>window.ResourceLinkEditorConfig={base:WORKER_BASE};</script>
 <script src="link-editor.js?v=792563cdda2f6e77"></script>
 <script src="resource-size.js?v=c9bc8b873d76"></script>
+
+<dialog id="pollPanel" aria-label="游戏投票">
+ <button id="closePollPanel" type="button" aria-label="关闭游戏投票" title="关闭游戏投票"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+ <p id="pollPanelStatus" role="status" hidden></p>
+</dialog>
+<script>
+(function(){
+ 'use strict';
+ const panel=document.getElementById('pollPanel'),close=document.getElementById('closePollPanel'),status=document.getElementById('pollPanelStatus');
+ let frame=null,trigger=null,loginObserver=null,requestedBack=false;
+ function mount(id){
+  status.hidden=false;status.textContent='正在打开游戏投票…';
+  const next=document.createElement('iframe');next.id='pollPanelFrame';next.title='游戏投票';
+  const url=new URL('polls.html',location.href);url.searchParams.set('panel','1');
+  if(id)url.searchParams.set('id',id);
+  next.src=url.href;
+  next.addEventListener('load',()=>{
+   if(next!==frame)return;
+   if(next.contentDocument?.getElementById('pollList'))status.hidden=true;
+   else {
+    status.textContent='投票页未能加载。';
+    const retry=document.createElement('button');retry.type='button';retry.textContent='重试';
+    retry.onclick=()=>mount(id);status.append(' ',retry);
+   }
+  });
+  frame?.remove();frame=next;panel.append(next);
+ }
+ function present(id){
+  panel.showModal();mount(id);
+ }
+ function open(from){
+  if(frame)return;
+  trigger=from||document.activeElement;
+  if(history.state?.page!=='pollPanel')history.pushState({page:'pollPanel'},'',location.href);
+  present();
+ }
+ function mayClose(){
+  try{return frame?.contentWindow?.pollPanelCanClose?.()!==false}catch{return true}
+ }
+ function dismiss(){
+  const loginOpen=!!loginObserver;
+  loginObserver?.disconnect();loginObserver=null;
+  if(loginOpen)closeUserModal();
+  requestedBack=false;frame?.remove();frame=null;
+  if(panel.open)panel.close();
+  trigger?.focus?.({preventScroll:true});
+ }
+ function requestClose(){
+  if(!frame||requestedBack||!mayClose())return;
+  if(history.state?.page==='pollPanel'){requestedBack=true;history.back()}
+  else dismiss();
+ }
+ function openLogin(id){
+  if(loginObserver||!panel.open)return;
+  const modal=document.getElementById('userModal');
+  const auth=()=>sessionStorage.getItem('ADMIN_TOKEN')||currentUser?.sessionToken||'';
+  const previous=auth();
+  panel.close();openUserModal();
+  loginObserver=new MutationObserver(()=>{
+   if(modal.classList.contains('show'))return;
+   loginObserver.disconnect();loginObserver=null;
+   if(!frame||history.state?.page!=='pollPanel')return;
+   panel.showModal();
+   if(previous!==auth())mount(id);
+  });
+  loginObserver.observe(modal,{attributes:true,attributeFilter:['class']});
+ }
+ close.onclick=requestClose;
+ panel.addEventListener('cancel',event=>{event.preventDefault();requestClose()});
+ window.addEventListener('message',event=>{
+  if(!frame||event.origin!==location.origin||event.source!==frame.contentWindow)return;
+  if(event.data?.type==='tx-poll:close')requestClose();
+  if(event.data?.type==='tx-poll:login')openLogin(typeof event.data.id==='string'?event.data.id:'');
+ });
+ window.addEventListener('popstate',event=>{
+  if(event.state?.page==='pollPanel'){
+   event.stopImmediatePropagation();requestedBack=false;
+   if(!frame)present();
+  }else if(frame){
+   event.stopImmediatePropagation();
+   if(!mayClose()){requestedBack=false;history.pushState({page:'pollPanel'},'',location.href);return}
+   dismiss();
+  }
+ },true);
+ document.addEventListener('click',event=>{
+  const link=event.target.closest?.('a[data-open-poll]');
+  if(link&&!event.defaultPrevented&&event.button===0&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey){
+   event.preventDefault();open(link);
+  }
+ });
+ window.openPollPanel=open;
+ if(history.state?.page==='pollPanel')present();
+})();
+</script>
 <link rel="stylesheet" href="game-saves.css?v=6adadad49715a872">
 <script src="game-saves.js?v=1eacb8c96eea521b" defer></script>
 <script src="resource-work.js?v=a6a98e71018a1381"></script>

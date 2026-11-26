@@ -1,7 +1,29 @@
 (function(){
 'use strict';
-// Keep the same tab's return to the main site free of a second entry slider.
-try{sessionStorage.setItem('TX_RETURN_FROM_POLLS','1')}catch(_){}
+
+const inMainSite=window.frameElement?.id==='pollPanelFrame';
+if(inMainSite){
+ document.documentElement.classList.add('poll-embedded');
+ const send=(type,id)=>window.parent.postMessage({type,id},location.origin);
+ document.addEventListener('click',event=>{
+  const link=event.target.closest?.('.brand,.back-link,#loginHint a');
+  if(!link)return;
+  event.preventDefault();
+  if(link.closest('#loginHint'))send('tx-poll:login',active?.id);
+  else send('tx-poll:close');
+ });
+ document.addEventListener('keydown',event=>{
+  if(event.key!=='Escape'||event.defaultPrevented||document.querySelector('dialog[open]'))return;
+  event.preventDefault();send('tx-poll:close');
+ });
+ window.pollPanelCanClose=()=>{
+  if(!busy||voteSession&&!voteSession.sending)return true;
+  message('正在提交，请稍候再关闭投票页。');return false;
+ };
+}else{
+ try{sessionStorage.setItem('TX_RETURN_FROM_POLLS','1')}catch(_){}
+}
+
 const API='https://api.tian-xiao.com',$=id=>document.getElementById(id),PHASE={submission:'征集投稿',voting:'开放投票',closed:'已结束'};
 let account=null,active=null,busy=false,selection=0,previewURLs=[],deadlineTimer=null,viewing=null,returnFocus=null;
 const token=()=>sessionStorage.getItem('ADMIN_TOKEN')||(()=>{try{return JSON.parse(localStorage.getItem('tx_user')||'{}').sessionToken||''}catch(_){return ''}})();
@@ -35,7 +57,7 @@ async function loadList(){
  $('reloadList').disabled=true;try{const j=await api('/api/polls');$('pollList').replaceChildren();$('pollCount').textContent=j.polls.length;document.querySelector('.workspace').classList.toggle('empty-mode',!j.polls.length);for(const p of j.polls){const b=node('button');b.type='button';b.dataset.pollId=p.id;b.dataset.phase=p.status;b.setAttribute('aria-current',String(active?.id===p.id));b.append(node('strong',p.title),node('small',PHASE[p.status]+' · '+(p.choiceMode==='multiple'?'多选':'单选')+' · '+p.entries+'/'+p.participantLimit+' 人投稿'+(p.votes===null?' · 结果未公开':' · '+p.votes+' 票')));b.onclick=()=>openPoll(p.id);$('pollList').append(b)}if(!active)renderEmpty(j.polls.length?'choose':'none');return j.polls}catch(e){message(e.message,true);if(!active)renderEmpty('error');return []}finally{$('reloadList').disabled=false}
 }
 function clearPreviews(){for(const url of previewURLs)URL.revokeObjectURL(url);previewURLs=[]}
-async function openPoll(id){if(busy)return;const turn=++selection;message('正在读取投票…');try{const j=await api('/api/polls/detail?id='+encodeURIComponent(id));if(turn!==selection)return;active=j.poll;render();const u=new URL(location.href);u.searchParams.set('id',id);history.replaceState(null,'',u);message('')}catch(e){if(turn===selection)message(e.message,true)}}
+async function openPoll(id){if(busy)return;const turn=++selection;message('正在读取投票…');try{const j=await api('/api/polls/detail?id='+encodeURIComponent(id));if(turn!==selection)return;active=j.poll;render();const u=new URL(location.href);u.searchParams.set('id',id);if(!inMainSite)history.replaceState(null,'',u);message('')}catch(e){if(turn===selection)message(e.message,true)}}
 function ruleSummary(p){const r=p.rules;return (r.choiceMode==='single'?'单选，每个账号选择一款':'多选，每个账号选择'+r.minChoices+'–'+r.maxChoices+'款')+' · '+(r.allowChange?'允许改投与撤回':'提交后不可更改')}
 function startDeadline(p){
  clearInterval(deadlineTimer);const el=document.querySelector('#detail .deadline');if(!el)return;if(!p.rules.endsAt){el.textContent='';return}const end=new Date(p.rules.endsAt).toLocaleString(),start=performance.now(),serverTime=p.serverNow||Date.now();
@@ -227,7 +249,7 @@ document.addEventListener('visibilitychange',carouselSchedule);carouselReduced.a
 window.addEventListener('pagehide',()=>clearTimeout(carouselTimer));
 
 attachRules($('createForm'));$('reloadList').onclick=()=>{if(!busy)loadList()};$('newPoll').onclick=()=>{$('createForm').hidden=false;$('pollTitle').focus()};$('cancelCreate').onclick=()=>{$('createForm').hidden=true;$('newPoll').focus()};
-$('createForm').onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;++selection;$('createSubmit').disabled=true;try{const j=await api('/api/polls',{method:'POST',body:JSON.stringify({title:$('pollTitle').value,description:$('pollDescription').value,participantLimit:Number($('pollLimit').value),rules:readRules($('createForm'))})});active=j.poll;await loadList();busy=false;render();$('createForm').hidden=true;$('createForm').reset();attachRules($('createForm'));const u=new URL(location.href);u.searchParams.set('id',active.id);history.replaceState(null,'',u);message('投票已发起，现已开放投稿。')}catch(e){message(e.message,true)}finally{busy=false;$('createSubmit').disabled=false}};
+$('createForm').onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;++selection;$('createSubmit').disabled=true;try{const j=await api('/api/polls',{method:'POST',body:JSON.stringify({title:$('pollTitle').value,description:$('pollDescription').value,participantLimit:Number($('pollLimit').value),rules:readRules($('createForm'))})});active=j.poll;await loadList();busy=false;render();$('createForm').hidden=true;$('createForm').reset();attachRules($('createForm'));const u=new URL(location.href);u.searchParams.set('id',active.id);if(!inMainSite)history.replaceState(null,'',u);message('投票已发起，现已开放投稿。')}catch(e){message(e.message,true)}finally{busy=false;$('createSubmit').disabled=false}};
 $('closeImage').onclick=closeLarge;$('imageDialog').addEventListener('cancel',e=>{e.preventDefault();closeLarge()});$('previousImage').onclick=()=>{if(viewing&&viewing.index>0){viewing.index--;paintLarge()}};$('nextImage').onclick=()=>{if(viewing&&viewing.index<viewing.entry.imageUrls.length-1){viewing.index++;paintLarge()}};$('imageDialog').onkeydown=e=>{if(e.key==='ArrowLeft')$('previousImage').click();if(e.key==='ArrowRight')$('nextImage').click()};
 // Match the main site's icons and TX_DARK_MODE preference.
 const mainThemeKey='TX_DARK_MODE',themeMedia=matchMedia('(prefers-color-scheme: dark)');
@@ -244,6 +266,6 @@ window.addEventListener('storage',event=>{if(event.key===mainThemeKey||event.key
 window.addEventListener('pageshow',syncVoteTheme);
 themeMedia.addEventListener('change',()=>{if(savedMainTheme()===null)syncVoteTheme()});
 syncVoteTheme();
-(async()=>{if(token()){try{account=(await api('/api/account/session')).account}catch(e){message(e.message,true);if(e.status===401){sessionStorage.removeItem('ADMIN_TOKEN');localStorage.removeItem('tx_user')}}}$('accountName').textContent=account?account.username+(account.kind==='admin'?' · 管理员':''):'未登录';$('loginHint').hidden=!!account;$('newPoll').hidden=account?.kind!=='admin';const [list]=await Promise.all([loadList(),loadCarousel()]),id=new URL(location.href).searchParams.get('id');if(id)await openPoll(id);else if(list.length)await openPoll(list[0].id)})();
+(async()=>{if(token()){try{account=(await api('/api/account/session')).account}catch(e){message(e.message,true);if(e.status===401){sessionStorage.removeItem('ADMIN_TOKEN');localStorage.removeItem('tx_user');if(inMainSite)window.parent.postMessage({type:'tx-poll:expired'},location.origin)}}}$('accountName').textContent=account?account.username+(account.kind==='admin'?' · 管理员':''):'未登录';$('loginHint').hidden=!!account;$('newPoll').hidden=account?.kind!=='admin';const [list]=await Promise.all([loadList(),loadCarousel()]),id=new URL(location.href).searchParams.get('id');if(id)await openPoll(id);else if(list.length)await openPoll(list[0].id)})();
 window.addEventListener('beforeunload',e=>{if(busy){e.preventDefault();e.returnValue=''}});window.addEventListener('pagehide',()=>{clearPreviews();clearInterval(deadlineTimer)});
 })();

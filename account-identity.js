@@ -9,6 +9,17 @@ function clearAdminView(){
  $('adminHeaderSlot')?.replaceChildren();$('adminMainSlot')?.replaceChildren();$('adminDashboard')?.remove();
  updateSidebarAdminUI();resetAllCardStates();refreshUI();
 }
+// The poll frame has independently revalidated the shared account on the server.
+window.addEventListener('message',event=>{
+ const frame=$('pollPanelFrame');
+ if(!frame||event.origin!==location.origin||event.source!==frame.contentWindow||event.data?.type!=='tx-poll:expired')return;
+ if(adminActive()||localStorage.getItem('tx_user'))return;
+ if(currentUser?.isAdmin||document.body.classList.contains('admin-mode')){
+  ++epoch;loading=null;clearSocial();clearAdminView();closeAccount();
+ }else if(currentUser){
+  currentUser=null;_userHomeData=null;_isUserBanned=false;_banInfo=null;updateUserEntryBtn();
+ }
+});
 function restoreAdminView(){
  if(!adminActive()||adminViewReady())return;
  return window.enterAdmin().catch(e=>showToast(e.message));
@@ -87,7 +98,7 @@ dialog.innerHTML=`
     <button id="adminMyResources" type="button">${actionText('works','我的发布','查看与编辑游戏资源')}</button>
     <button id="adminMyGameSaves" type="button">${actionText('saves','我的投稿','管理分享的玩家存档')}</button>
     <button id="adminViewFavorites" type="button">${actionText('heart','我的收藏','<span id="adminFavoriteCount"></span>')}</button>
-    <a href="polls.html">${actionText('polls','游戏投票','进入活动列表')}</a>
+    <a href="polls.html" data-open-poll aria-haspopup="dialog" aria-controls="pollPanel">${actionText('polls','游戏投票','进入活动列表')}</a>
    </div>
   </section>
   <details id="adminNicknameEditor">
@@ -135,7 +146,7 @@ window.enterAdmin=async function(){
   if(token!==sessionStorage.getItem('ADMIN_TOKEN')||!adminViewReady())return r;
   const bar=$('adminBarBtns');
   if(bar&&!$('adminPublicAccount')){const account=document.createElement('button');account.id='adminPublicAccount';account.type='button';account.textContent='我的账号';account.onclick=openAdminAccount;bar.append(account)}
-  if(bar&&!$('adminOpenPolls')){const poll=document.createElement('button');poll.id='adminOpenPolls';poll.type='button';poll.textContent='游戏投票';poll.onclick=()=>location.assign('polls.html');bar.append(poll)}return r;
+  if(bar&&!$('adminOpenPolls')){const poll=document.createElement('button');poll.id='adminOpenPolls';poll.type='button';poll.textContent='游戏投票';poll.setAttribute('aria-haspopup','dialog');poll.setAttribute('aria-controls','pollPanel');poll.onclick=()=>window.openPollPanel(poll);bar.append(poll)}return r;
  })();
  entering=flight;try{return await flight.promise}finally{if(entering===flight)entering=null}
 };
