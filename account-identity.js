@@ -17,14 +17,14 @@ window.addEventListener('message',event=>{
  if(currentUser?.isAdmin||document.body.classList.contains('admin-mode')){
   ++epoch;loading=null;clearSocial();clearAdminView();closeAccount();
  }else if(currentUser){
-  currentUser=null;_userHomeData=null;_isUserBanned=false;_banInfo=null;updateUserEntryBtn();
+  window.resetMailWorkspace?.();currentUser=null;_userHomeData=null;_isUserBanned=false;_banInfo=null;updateUserEntryBtn();
  }
 });
 function restoreAdminView(){
  if(!adminActive()||adminViewReady())return;
  return window.enterAdmin().catch(e=>showToast(e.message));
 }
-function clearSocial(){currentUser=null;_userHomeData=null;_isUserBanned=false;_banInfo=null;favorites=new Set();updateUserEntryBtn();initCardFavorites()}
+function clearSocial(){if(currentUser)window.resetMailWorkspace?.();currentUser=null;_userHomeData=null;_isUserBanned=false;_banInfo=null;favorites=new Set();updateUserEntryBtn();initCardFavorites()}
 // Admin favorites are server-owned; preserve the ordinary account's existing
 // browser cache rather than sharing or erasing it when switching identities.
 const oldSaveFavorites=saveFavorites;window.saveFavorites=function(){if(!adminActive())return oldSaveFavorites.apply(this,arguments)};
@@ -42,6 +42,7 @@ function showAccountData(a){
  if(a.avatar){avatar.src=a.avatar;avatar.hidden=false}else{avatar.hidden=true;avatar.removeAttribute('src')}
  if(!$('adminNicknameEditor').open)$('adminNickname').value=a.username;
  $('adminFavoriteCount').textContent=favorites.size+' 部作品';
+ $('adminMailboxHint').textContent=a.role==='owner'?'写站内信和查看回复':'查看评论回复';
  $('adminIdentityStatus').textContent='';
 }
 async function refreshAdminIdentity(){
@@ -62,7 +63,7 @@ function openAdminAccount(){
  else{
   $('adminPublicName').textContent='读取账号中…';$('adminPublicRole').textContent='';
   $('adminPublicAvatar').hidden=true;$('adminPublicAvatar').removeAttribute('src');$('adminAvatarInitial').textContent='';
-  $('adminNickname').value='';$('adminFavoriteCount').textContent='';
+  $('adminNickname').value='';$('adminFavoriteCount').textContent='';$('adminMailboxHint').textContent='';
  }
  $('adminIdentityStatus').textContent='';dialog.showModal();
  refreshAdminIdentity().catch(()=>{});
@@ -74,6 +75,7 @@ const identityPaths={
  works:'M3 8V6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8zm0 2h18',
  saves:'M3 4h18v5H3zM5 9v11h14V9M10 13h4',
  heart:'M12 20S3 14.4 3 8.7c0-4.4 5.7-6 9-1.5 3.3-4.5 9-2.9 9 1.5 0 5.7-9 11.3-9 11.3z',
+ mail:'M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm0 2 8 6 8-6',
  polls:'M4 20h16M6 16v-5m6 5V4m6 12V8',
  edit:'m14.5 4.5 5 5M4 20l4.5-1 12-12a1.7 1.7 0 0 0 0-2.4l-2.1-2.1a1.7 1.7 0 0 0-2.4 0L4.9 15.6 4 20z',
  leave:'M10 4H5v16h5M10 12h11m-5-5 5 5-5 5'
@@ -98,6 +100,7 @@ dialog.innerHTML=`
     <button id="adminMyResources" type="button">${actionText('works','我的发布','查看与编辑游戏资源')}</button>
     <button id="adminMyGameSaves" type="button">${actionText('saves','我的投稿','管理分享的玩家存档')}</button>
     <button id="adminViewFavorites" type="button">${actionText('heart','我的收藏','<span id="adminFavoriteCount"></span>')}</button>
+    <button id="adminMailbox" type="button" aria-haspopup="dialog" aria-controls="mailPanel">${actionText('mail','消息中心','<span id="adminMailboxHint"></span>')}</button>
     <a href="polls.html" data-open-poll aria-haspopup="dialog" aria-controls="pollPanel">${actionText('polls','游戏投票','进入活动列表')}</a>
    </div>
   </section>
@@ -124,13 +127,26 @@ $('adminNicknameForm').onsubmit=async e=>{
 };
 $('adminMyGameSaves').onclick=()=>window.openMyGameSaves();
 $('adminMyResources').onclick=()=>{closeAccount();window.openResourceEditor(null,{mine:true})};
+$('adminMailbox').onclick=async()=>{
+ const token=sessionStorage.getItem('ADMIN_TOKEN');
+ if(!token){$('adminIdentityStatus').textContent='管理员登录已过期，请重新登录';return}
+ try{
+  if(loading||!currentUser?.isAdmin||currentUser.sessionToken!==token)await refreshAdminIdentity();
+ }catch(error){
+  if(dialog.open&&token===sessionStorage.getItem('ADMIN_TOKEN'))$('adminIdentityStatus').textContent=error.message;
+  return;
+ }
+ if(!dialog.open||!currentUser?.isAdmin||currentUser.sessionToken!==token||sessionStorage.getItem('ADMIN_TOKEN')!==token)return;
+ closeAccount();
+ window.openMailPanel();
+};
 $('adminViewFavorites').onclick=()=>{closeAccount();currentCat='收藏';currentPage=1;refreshUI()};
 $('adminAccountLogout').onclick=async()=>{closeAccount();await exitAdmin()};
 const userModal=openUserModal,userHome=openUserHome,oldLogout=doLogout,oldEnter=enterAdmin,oldExit=exitAdmin;
 window.openUserModal=function(){if(adminActive())return openAdminAccount();return userModal.apply(this,arguments)};
 window.openUserHome=function(){if(adminActive())return openAdminAccount();return userHome.apply(this,arguments)};
 const oldSidebarLogin=onSidebarLoginClick;window.onSidebarLoginClick=function(){if(adminActive()){closeSidebar();return adminViewReady()?openAdminAccount():restoreAdminView()}return oldSidebarLogin.apply(this,arguments)};
-window.doLogout=async function(){if(adminActive())return exitAdmin();return oldLogout.apply(this,arguments)};
+window.doLogout=async function(){if(adminActive())return exitAdmin();if(currentUser)window.resetMailWorkspace?.();return oldLogout.apply(this,arguments)};
 window.enterAdmin=async function(){
  const token=sessionStorage.getItem('ADMIN_TOKEN');
  if(!token)return oldEnter.apply(this,arguments);
