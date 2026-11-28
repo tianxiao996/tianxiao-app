@@ -390,9 +390,105 @@ $('saveRemarks').onclick=async()=>{
  finally{remarkBusy=false;renderRemarks()}
 };
 
+let reportQueueVersion = 0;
+let reportListVersion = 0;
+function reportStatus(item) {
+ if (item.status === 'dead') return item.source === 'review' ? '人工确认失效' : '网盘已确认失效';
+ if (item.status === 'alive') return item.source === 'review' ? '人工确认可用' : '网盘核验可用';
+ return '待人工核实';
+}
+async function loadReportQueue(cursor = null) {
+ const list = $('linkReportQueue');
+ const page = ++reportQueueVersion;
+ const more = $('moreLinkReports');
+ const hint = $('reportQueueHint');
+ if (!cursor) list.replaceChildren();
+ more.hidden = true;
+ hint.textContent = '正在读取链接报告…';
+ try {
+  const data = await request('/api/admin/link-reports' + (cursor ? '?cursor=' + encodeURIComponent(cursor) : ''));
+  if (page !== reportQueueVersion) return;
+  for (const item of data.items) {
+   const open = button('', async () => {
+    if (loadingId || state.busy) return;
+    if (state.id !== item.cardId) await loadResource(item.cardId);
+    if (state.id !== item.cardId || $('editor').hidden) return;
+    setEditorTab('downloads');
+   });
+   open.append(el('span','',item.title || '未命名资源'),el('small','',[item.driveName,item.remark,reportStatus(item)].filter(Boolean).join(' · ')));
+   list.append(open);
+  }
+  hint.textContent = list.childElementCount ? '' : '暂无需要处理的链接报告。';
+  more.hidden = !data.nextCursor;
+  if (data.nextCursor) more.onclick = () => loadReportQueue(data.nextCursor);
+ } catch (error) {
+  if (page !== reportQueueVersion) return;
+  hint.textContent = '链接报告读取失败：' + error.message;
+  hint.append(button('重试', () => loadReportQueue(cursor)));
+ }
+}
+$('linkReportInbox').addEventListener('toggle', () => {
+ if ($('linkReportInbox').open) loadReportQueue();
+});
+async function loadResourceReports() {
+ const list = $('resourceReports');
+ const turn = ++reportListVersion;
+ const cardId = state.id;
+ list.replaceChildren();
+ list.hidden = true;
+ if (!state.base?.published || !cardId) return;
+ const isCurrent = () => state.id === cardId && turn === reportListVersion && activeEditorTab === 'downloads' && !$('editor').hidden;
+ try {
+  const data = await request('/api/admin/link-reports?cardId=' + encodeURIComponent(cardId));
+  if (!isCurrent() || !data.items.length) return;
+
+  for (const item of data.items) {
+   const record = item;
+   if (!record || !safeUrl(record.url)) continue;
+   const row = el('article','link-card');
+   const summary = el('strong','', [record.driveName || '网盘链接', record.remark].filter(Boolean).join(' · '));
+   const stateLabel = el('p','hint',reportStatus(item));
+   const link = el('a','button-link','查看已发布链接');
+   link.href = record.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+   const actions = el('div','actions');
+   const revise = async verdict => {
+    if (!isCurrent()) return;
+    for (const input of actions.querySelectorAll('button')) input.disabled = true;
+    try {
+     await request('/api/admin/link-reports',{method:'POST',body:JSON.stringify({cardId,linkId:item.linkId,version:item.version,status:verdict})});
+     if (isCurrent()) await loadResourceReports();
+     if ($('linkReportInbox').open) loadReportQueue();
+    } catch (error) {
+     if (!isCurrent()) return;
+     stateLabel.textContent = error.message;
+     if (error.status === 409) {
+      actions.replaceChildren(button('重新读取状态',loadResourceReports));
+     } else {
+      for (const input of actions.querySelectorAll('button')) input.disabled = false;
+     }
+    }
+   };
+   actions.append(link);
+   if (item.source !== 'review' || item.status !== 'alive') actions.append(button('确认可用', () => revise('alive')));
+   if (item.source !== 'review' || item.status !== 'dead') actions.append(button('确认失效', () => revise('dead')));
+   row.append(summary,stateLabel);
+   if (record.extractionCode) row.append(el('p','hint','提取码：'+record.extractionCode));
+   row.append(actions);list.append(row);
+  }
+  if (list.childElementCount) {
+   list.prepend(el('h3','','链接报告'));
+   list.hidden = false;
+  }
+ } catch (error) {
+  if (!isCurrent()) return;
+  list.hidden = false;
+  list.append(el('span','hint','链接报告读取失败：'+error.message),button('重试',loadResourceReports));
+ }
+}
 let activeEditorTab='basic';
 function setEditorTab(name){
  const tab=document.querySelector('[data-editor-tab="'+name+'"]');if(!tab||tab.hidden)name='basic';activeEditorTab=name;
+ if (name === 'downloads') loadResourceReports(); else ++reportListVersion;
  for(const panel of document.querySelectorAll('#editorFields>.panel'))panel.hidden=panel.id!==name;
  for(const button of document.querySelectorAll('[data-editor-tab]')){const selected=button.dataset.editorTab===name;button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1}
  window.scrollTo({top:0});
