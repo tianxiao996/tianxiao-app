@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="resource-editor.css?v=93b189e02583daa2">
 <script src="link-editor.js?v=792563cdda2f6e77" defer></script>
 <script src="resource-image-tools.js?v=9caf76ecff9a8f7a0aef314f0232ffd304c6d58545f6aff3442119c2c370e272" defer></script>
-<script src="resource-editor.js?v=a17ea696973ed7b5" defer></script>
+<script src="resource-editor.js?v=409898fbec834416" defer></script>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/site-icons/cat-f881eec6c104-32.png">
 <link rel="icon" type="image/svg+xml" sizes="any" href="assets/site-icons/cat-face-e758088f6eb0.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/site-icons/cat-f881eec6c104-180.png">
@@ -49,7 +49,7 @@
 <section class="panel" id="downloads"><div class="section-heading"><h2>下载链接 <span id="linkCount" class="count"></span></h2><span>每条链接独立保存密码和备注</span></div>
 <p id="linkState" class="hint" role="status"></p><p class="hint">每组链接的备注框下方可直接选择快捷备注。<button id="linkRemarkSettings" class="owner-field" type="button">快捷备注设置</button></p><details class="subpanel"><summary>批量导入网盘链接</summary><label>网盘分享文案<textarea id="shareText" rows="5" maxlength="60000" placeholder="粘贴整段分享文案，可包含网盘名、分卷、链接和提取码。"></textarea></label><div class="actions"><button id="importShare" type="button">一键导入网盘链接</button><button id="recognize" type="button">预览识别结果</button><button id="clearShareText" type="button">清空</button></div><p id="importStatus" class="hint" role="status"></p><div id="importPreview"></div></details>
 <details id="presetManager" class="subpanel owner-field"><summary>管理快捷解压码</summary><p class="hint">天笑账号新增链接时自动填入名为“天笑”的快捷解压码。可以逐组修改。</p><div id="presetRows"></div><div class="toolbar"><button id="addPreset" type="button">添加快捷码</button><button id="savePresets" type="button">保存快捷码</button></div><p id="presetStatus" class="hint" role="status"></p></details>
-<div id="links" class="link-list"></div><button id="addLink" type="button">添加网盘链接</button> <button id="addExternalLink" type="button">添加高速下载</button>
+<div id="links" class="link-list"></div><button id="addLink" type="button">添加网盘链接</button> <button id="addExternalLink" type="button">添加外盘下载</button>
 </section>
 <section class="panel" id="history"><div class="section-heading"><h2>历史版本</h2><span>载入历史后仍需保存才会生效</span></div><details id="historyDetails"><summary>查看云端历史版本</summary><div id="historyList"></div></details></section>
 </fieldset>
